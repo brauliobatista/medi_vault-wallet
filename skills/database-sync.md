@@ -1,0 +1,176 @@
+# Skill: Database Schema Sync
+
+## Trigger
+Use this skill whenever a database schema change is requested — adding a table, adding/removing/renaming a column, changing a type, adding a constraint, or any other DDL alteration.
+
+## Rule
+**Every schema change must be applied to all 4 dialect files, the ERD, the seed script, and the Confluence page, in the same response.** Never update only one file.
+
+## Files to always update together
+
+| File | What |
+|---|---|
+| `database/schema_sqlserver.sql` | SQL Server 2016+ |
+| `database/schema_sqlite.sql` | SQLite 3.x |
+| `database/schema_mysql.sql` | MySQL 8+ / MariaDB 10.5+ |
+| `database/schema_postgres.sql` | PostgreSQL 14+ |
+| `database/erd.md` | Mermaid ERD |
+| `database/seed.sql` | Dados de teste em Português |
+| Confluence page (ID `22740994`) | Documentation |
+
+---
+
+## Type equivalence table
+
+| Concept | SQL Server | SQLite | MySQL | PostgreSQL |
+|---|---|---|---|---|
+| Auto PK | `INT IDENTITY(1,1) PRIMARY KEY` | `INTEGER PRIMARY KEY AUTOINCREMENT` | `INT NOT NULL AUTO_INCREMENT PRIMARY KEY` | `SERIAL PRIMARY KEY` |
+| Short text | `NVARCHAR(n)` | `TEXT` | `VARCHAR(n)` | `TEXT` |
+| Long text | `NVARCHAR(MAX)` | `TEXT` | `TEXT` | `TEXT` |
+| Boolean | `BIT` (0/1, DEFAULT 0/1) | `INTEGER` (0/1) | `BOOLEAN` (DEFAULT TRUE/FALSE) | `BOOLEAN` (DEFAULT TRUE/FALSE) |
+| Date | `DATE` | `TEXT` | `DATE` | `DATE` |
+| Datetime | `DATETIME2` | `TEXT` | `DATETIME` | `TIMESTAMP` |
+| Decimal | `DECIMAL(p,s)` | `REAL` | `DECIMAL(p,s)` | `NUMERIC(p,s)` |
+| Integer | `INT` | `INTEGER` | `INT` | `INT` |
+| Binary | `VARBINARY(MAX)` | `BLOB` | `LONGBLOB` | `BYTEA` |
+| JSON | `NVARCHAR(MAX)` | `TEXT` | `JSON` | `JSONB` |
+| Enum | `NVARCHAR(n) CHECK (col IN (...))` | `TEXT CHECK (col IN (...))` | `ENUM('a','b',...)` | `TEXT CHECK (col IN (...))` |
+
+## Default value equivalence
+
+| Concept | SQL Server | SQLite | MySQL | PostgreSQL |
+|---|---|---|---|---|
+| Current timestamp | `DEFAULT GETDATE()` | `DEFAULT (datetime('now'))` | `DEFAULT CURRENT_TIMESTAMP` | `DEFAULT NOW()` |
+| Auto-update timestamp | — (use trigger) | — (use trigger) | `ON UPDATE CURRENT_TIMESTAMP` | — (use trigger) |
+| Boolean true | `DEFAULT 1` | `DEFAULT 1` | `DEFAULT TRUE` | `DEFAULT TRUE` |
+| Boolean false | `DEFAULT 0` | `DEFAULT 0` | `DEFAULT FALSE` | `DEFAULT FALSE` |
+
+## FK constraint syntax
+
+**SQL Server / MySQL / PostgreSQL:**
+```sql
+CONSTRAINT fk_table_column FOREIGN KEY (column) REFERENCES other_table(id)
+```
+
+**SQLite:**
+```sql
+FOREIGN KEY (column) REFERENCES other_table(id)
+-- also requires: PRAGMA foreign_keys = ON;
+```
+
+---
+
+## ERD update rules (database/erd.md)
+
+- New table → add block with all columns inside `erDiagram`, add all relationship lines
+- New column → add line inside the table block with format: `type column_name [PK|FK|UK]`
+- Removed column → delete the line
+- Renamed table/column → update name everywhere it appears (block + all relationship lines)
+- Column type change → update the type label in the block
+- New FK → add a relationship line: `TABLE1 ||--o{ TABLE2 : "label"`
+
+### Mermaid column format
+```
+type column_name [PK|FK|UK]
+```
+- Only one of PK, FK, UK per column (pick the most specific)
+- Types are labels only: use `int`, `string`, `bool`, `date`, `datetime`, `decimal`, `text`, `binary`, `json`
+- No quotes or special characters in column names
+
+---
+
+## Confluence update
+
+**Page:** Esquema de Base de Dados - MediVault
+**URL:** https://monicacccerquido.atlassian.net/wiki/spaces/~71202052b1aa8dba4c4a99b5f01900bb31f1ed/pages/22740994/Esquema+de+Base+de+Dados+-+MediVault
+**Page ID:** `22740994`
+
+The Confluence page must be updated via the REST API using the Chrome MCP (the user must be logged into Confluence in the browser).
+
+### Step 1 — get current version
+
+```javascript
+const res = await fetch('/wiki/rest/api/content/22740994?expand=version', {
+  headers: { 'Accept': 'application/json' }
+});
+const data = await res.json();
+({ version: data.version.number, title: data.title })
+```
+
+### Step 2 — PUT updated content (increment version by 1)
+
+```javascript
+const content = `<p>...full updated HTML content...</p>`;
+
+const res = await fetch('/wiki/rest/api/content/22740994', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  body: JSON.stringify({
+    id: '22740994',
+    type: 'page',
+    title: 'Esquema de Base de Dados - MediVault',
+    version: { number: <current_version + 1> },
+    body: {
+      storage: {
+        value: content,
+        representation: 'storage'
+      }
+    }
+  })
+});
+const data = await res.json();
+({ status: res.status, version: data.version?.number })
+```
+
+### Confluence content rules
+- Use `<h2>` for numbered sections, `<h3>` for table names, `<p>` for descriptions
+- When adding a table: add a new `<h3>TABLE_NAME</h3><p>description</p>` in the correct section
+- When adding a column: mention it in the table's `<p>` description using `<strong>column_name</strong>`
+- When consolidating or removing tables: update the section accordingly and note what was replaced
+- Keep section numbering consistent (1. Utilizadores e Autenticação, 2. Identificação Médica Pessoal, etc.)
+
+---
+
+## Seed script rules (database/seed.sql)
+
+The seed file contains Portuguese test data and must be kept in sync with the schema.
+
+### When adding a new table
+- Add INSERT statements with realistic Portuguese data (minimum 2-3 rows)
+- Place the block in the same logical order as in the schema files
+- Use a comment header: `-- -------------------------------------------------------`
+
+### When adding a new column
+- Add the column value to every existing INSERT for that table
+- If the column is NOT NULL without a default, all existing rows must have a value
+
+### Data conventions
+- **Names:** Portuguese first/last names (João, Ana, Miguel, Maria, Pedro, Sofia, António, Filipa...)
+- **Cities:** Lisboa, Porto, Braga, Coimbra, Aveiro, Faro, Évora, Setúbal
+- **Postal codes:** format `XXXX-XXX`
+- **Phones:** format `9XX XXX XXX`
+- **Emails:** `nome.apelido@email.pt`
+- **Dates:** ISO 8601 `'YYYY-MM-DD'`
+- **Datetimes:** `'YYYY-MM-DD HH:MM:SS'`
+- **Booleans:** `1`/`0` (compatible with all dialects; PostgreSQL also accepts `TRUE`/`FALSE`)
+- **JSON (details field):** valid JSON string with type-specific fields
+- **Binary (note_text):** always `NULL` — encryption is done at application layer
+- **Password hashes:** placeholder `'$2b$12$hashN'` — never real passwords
+- **Enums:** use the exact values defined in the schema CHECK constraints
+
+---
+
+## Checklist before finishing
+
+- [ ] `schema_sqlserver.sql` updated
+- [ ] `schema_sqlite.sql` updated
+- [ ] `schema_mysql.sql` updated
+- [ ] `schema_postgres.sql` updated
+- [ ] `database/erd.md` updated
+- [ ] `database/seed.sql` updated with Portuguese test data
+- [ ] Confluence page updated (via REST API)
+- [ ] Syntax verified for each dialect (types, defaults, FK syntax)
+- [ ] Table creation order respects FK dependencies (referenced tables first)

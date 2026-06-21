@@ -1,0 +1,436 @@
+-- =============================================================
+-- MediVault -- Database Schema
+-- Target: MySQL 8.0+ / MariaDB 10.5+
+-- =============================================================
+
+CREATE DATABASE IF NOT EXISTS medivault CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE medivault;
+
+-- -------------------------------------------------------
+-- INDEPENDENT REFERENCE TABLES
+-- -------------------------------------------------------
+
+CREATE TABLE subscription_plans (
+    id               INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name             ENUM('basic', 'medium', 'premium') NOT NULL,
+    storage_limit_mb INT           NOT NULL,
+    price_annual     DECIMAL(10,2) NOT NULL,
+    price_monthly    DECIMAL(10,2) NOT NULL
+);
+
+CREATE TABLE institutions (
+    id        INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name      VARCHAR(255) NOT NULL,
+    type      ENUM('hospital', 'clinic', 'lab', 'pharmacy', 'other') NOT NULL,
+    address   VARCHAR(500),
+    phone     VARCHAR(50),
+    is_active BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE vaccines (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(255) NOT NULL,
+    description VARCHAR(1000)
+);
+
+CREATE TABLE icpc2_codes (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(10)  NOT NULL UNIQUE,
+    description VARCHAR(500) NOT NULL,
+    chapter     VARCHAR(100)
+);
+
+CREATE TABLE medical_specialties (
+    id   INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);
+
+-- -------------------------------------------------------
+-- USERS
+-- -------------------------------------------------------
+
+CREATE TABLE users (
+    id                    INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    utent_number          VARCHAR(50)  NOT NULL UNIQUE,
+    fiscal_number         VARCHAR(20)  NOT NULL UNIQUE,
+    citizen_number        VARCHAR(20)  NOT NULL UNIQUE,
+    email                 VARCHAR(255) NOT NULL UNIQUE,
+    password_hash         VARCHAR(255) NOT NULL,
+    first_name            VARCHAR(100) NOT NULL,
+    last_name             VARCHAR(100) NOT NULL,
+    birthday              DATE         NOT NULL,
+    biological_gender     ENUM('M', 'F') NOT NULL,
+    sex                   ENUM('M', 'F', 'Other') NOT NULL,
+    marital_status        VARCHAR(50),
+    blood_type            ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
+    accepts_transfusion   BOOLEAN      NOT NULL DEFAULT TRUE,
+    accepts_resuscitation BOOLEAN      NOT NULL DEFAULT TRUE,
+    emergency_access_code BOOLEAN      NOT NULL DEFAULT FALSE,
+    is_dependent          BOOLEAN      NOT NULL DEFAULT FALSE,
+    profession            VARCHAR(255),
+    phone                 VARCHAR(50),
+    is_active             BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- -------------------------------------------------------
+-- DOCTORS
+-- -------------------------------------------------------
+
+CREATE TABLE doctors (
+    id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    ordem_medicos_id VARCHAR(50)  NOT NULL UNIQUE,
+    first_name       VARCHAR(100) NOT NULL,
+    last_name        VARCHAR(100) NOT NULL,
+    email            VARCHAR(255) NOT NULL UNIQUE,
+    password_hash    VARCHAR(255) NOT NULL,
+    speciality       VARCHAR(255),
+    institution_id   INT          NOT NULL,
+    is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_doctors_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+
+-- -------------------------------------------------------
+-- USER PROFILE
+-- -------------------------------------------------------
+
+CREATE TABLE user_addresses (
+    id          INT         NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT         NOT NULL,
+    street      VARCHAR(500),
+    city        VARCHAR(100),
+    postal_code VARCHAR(20),
+    country     VARCHAR(100),
+    is_primary  BOOLEAN     NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_user_addresses_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE emergency_contacts (
+    id      INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT          NOT NULL,
+    type    ENUM('emergency', 'tutor') NOT NULL,
+    name    VARCHAR(255) NOT NULL,
+    phone   VARCHAR(50),
+    address VARCHAR(500),
+    CONSTRAINT fk_emergency_contacts_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE female_medical_info (
+    id                   INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id              INT          NOT NULL UNIQUE,
+    menarche_age         INT,
+    pregnancies          INT          NOT NULL DEFAULT 0,
+    births               INT          NOT NULL DEFAULT 0,
+    abortions            INT          NOT NULL DEFAULT 0,
+    menopause            BOOLEAN      NOT NULL DEFAULT FALSE,
+    menopause_age        INT,
+    contraceptive_use    BOOLEAN      NOT NULL DEFAULT FALSE,
+    intraceptive_method  VARCHAR(255),
+    contraceptive_reason VARCHAR(500),
+    CONSTRAINT fk_female_medical_info_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- -------------------------------------------------------
+-- SUBSCRIPTIONS & LICENSES
+-- -------------------------------------------------------
+
+CREATE TABLE user_subscriptions (
+    id         INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT      NOT NULL,
+    plan_id    INT      NOT NULL,
+    card_type  ENUM('SC1', 'SC2') NOT NULL,
+    start_date DATE     NOT NULL,
+    end_date   DATE,
+    is_active  BOOLEAN  NOT NULL DEFAULT TRUE,
+    CONSTRAINT fk_user_subscriptions_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_user_subscriptions_plan FOREIGN KEY (plan_id) REFERENCES subscription_plans(id)
+);
+
+CREATE TABLE institution_licenses (
+    id             INT     NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    institution_id INT     NOT NULL,
+    billing_type   ENUM('annual', 'monthly') NOT NULL,
+    start_date     DATE    NOT NULL,
+    end_date       DATE,
+    is_active      BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT fk_institution_licenses_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+
+-- -------------------------------------------------------
+-- ACCESS CONTROL
+-- -------------------------------------------------------
+
+CREATE TABLE access_requests (
+    id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT          NOT NULL,
+    doctor_id    INT          NOT NULL,
+    requested_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    approved_at  DATETIME,
+    expires_at   DATETIME,
+    status       ENUM('pending', 'approved', 'revoked') NOT NULL DEFAULT 'pending',
+    is_emergency BOOLEAN      NOT NULL DEFAULT FALSE,
+    access_code  VARCHAR(100),
+    CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_access_requests_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- -------------------------------------------------------
+-- FILES
+-- -------------------------------------------------------
+
+CREATE TABLE medical_files (
+    id          INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT           NOT NULL,
+    file_name   VARCHAR(255)  NOT NULL,
+    file_type   VARCHAR(100),
+    file_path   VARCHAR(1000) NOT NULL,
+    uploaded_by INT,
+    uploaded_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_medical_files_user   FOREIGN KEY (user_id)     REFERENCES users(id),
+    CONSTRAINT fk_medical_files_doctor FOREIGN KEY (uploaded_by) REFERENCES doctors(id)
+);
+
+-- -------------------------------------------------------
+-- MEDICAL HISTORY
+-- -------------------------------------------------------
+
+CREATE TABLE surgical_history (
+    id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id        INT          NOT NULL,
+    surgery_name   VARCHAR(255) NOT NULL,
+    surgery_date   DATE,
+    location       VARCHAR(255),
+    notes          TEXT,
+    report_file_id INT,
+    added_by       INT,
+    is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_surgical_history_user   FOREIGN KEY (user_id)        REFERENCES users(id),
+    CONSTRAINT fk_surgical_history_file   FOREIGN KEY (report_file_id) REFERENCES medical_files(id),
+    CONSTRAINT fk_surgical_history_doctor FOREIGN KEY (added_by)       REFERENCES doctors(id)
+);
+
+CREATE TABLE chronic_medications (
+    id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id          INT          NOT NULL,
+    active_substance VARCHAR(255) NOT NULL,
+    dose             VARCHAR(100),
+    posology         VARCHAR(255),
+    start_date       DATE,
+    end_date         DATE,
+    prescribed_by    INT,
+    is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_chronic_medications_user   FOREIGN KEY (user_id)       REFERENCES users(id),
+    CONSTRAINT fk_chronic_medications_doctor FOREIGN KEY (prescribed_by) REFERENCES doctors(id)
+);
+
+CREATE TABLE drug_allergies (
+    id                INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id           INT          NOT NULL,
+    active_substance  VARCHAR(255) NOT NULL,
+    allergic_reaction VARCHAR(500),
+    severity          ENUM('mild', 'moderate', 'severe'),
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_drug_allergies_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE family_history (
+    id             INT     NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id        INT     NOT NULL,
+    condition      ENUM('cardiovascular', 'cancer', 'autoimmune', 'genetic', 'ophthalmic', 'psychological', 'consanguinity', 'other') NOT NULL,
+    has_condition  BOOLEAN NOT NULL DEFAULT FALSE,
+    kinship_degree VARCHAR(100),
+    notes          TEXT,
+    CONSTRAINT fk_family_history_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE user_pathologies (
+    id           INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT      NOT NULL,
+    icpc2_id     INT      NOT NULL,
+    type         ENUM('active', 'passive') NOT NULL,
+    diagnosed_at DATE,
+    notes        TEXT,
+    added_by     INT,
+    CONSTRAINT fk_user_pathologies_user   FOREIGN KEY (user_id)  REFERENCES users(id),
+    CONSTRAINT fk_user_pathologies_icpc2  FOREIGN KEY (icpc2_id) REFERENCES icpc2_codes(id),
+    CONSTRAINT fk_user_pathologies_doctor FOREIGN KEY (added_by) REFERENCES doctors(id)
+);
+
+CREATE TABLE user_specialty_followups (
+    id           INT  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id      INT  NOT NULL,
+    specialty_id INT  NOT NULL,
+    institution  VARCHAR(255),
+    start_date   DATE,
+    notes        TEXT,
+    CONSTRAINT fk_user_specialty_followups_user      FOREIGN KEY (user_id)      REFERENCES users(id),
+    CONSTRAINT fk_user_specialty_followups_specialty FOREIGN KEY (specialty_id) REFERENCES medical_specialties(id)
+);
+
+-- -------------------------------------------------------
+-- EXAMS (MCDTS)
+-- -------------------------------------------------------
+
+CREATE TABLE analytical_exams (
+    id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT          NOT NULL,
+    exam_date  DATE         NOT NULL,
+    laboratory VARCHAR(255),
+    file_id    INT,
+    notes      TEXT,
+    added_by   INT,
+    is_active  BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_analytical_exams_user   FOREIGN KEY (user_id)  REFERENCES users(id),
+    CONSTRAINT fk_analytical_exams_file   FOREIGN KEY (file_id)  REFERENCES medical_files(id),
+    CONSTRAINT fk_analytical_exams_doctor FOREIGN KEY (added_by) REFERENCES doctors(id)
+);
+
+CREATE TABLE analytical_exam_parameters (
+    id             INT           NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    exam_id        INT           NOT NULL,
+    parameter_name VARCHAR(255)  NOT NULL,
+    value          DECIMAL(18,6),
+    unit           VARCHAR(50),
+    reference_min  DECIMAL(18,6),
+    reference_max  DECIMAL(18,6),
+    is_abnormal    BOOLEAN       NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_analytical_exam_parameters_exam FOREIGN KEY (exam_id) REFERENCES analytical_exams(id)
+);
+
+CREATE TABLE imaging_exams (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT          NOT NULL,
+    exam_type   VARCHAR(100) NOT NULL,
+    body_area   VARCHAR(100),
+    exam_date   DATE         NOT NULL,
+    institution VARCHAR(255),
+    file_id     INT,
+    report_text TEXT,
+    added_by    INT,
+    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_imaging_exams_user   FOREIGN KEY (user_id)  REFERENCES users(id),
+    CONSTRAINT fk_imaging_exams_file   FOREIGN KEY (file_id)  REFERENCES medical_files(id),
+    CONSTRAINT fk_imaging_exams_doctor FOREIGN KEY (added_by) REFERENCES doctors(id)
+);
+
+CREATE TABLE optometry_exams (
+    id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id        INT          NOT NULL,
+    exam_date      DATE         NOT NULL,
+    right_sphere   DECIMAL(5,2),
+    right_cylinder DECIMAL(5,2),
+    right_axis     INT,
+    left_sphere    DECIMAL(5,2),
+    left_cylinder  DECIMAL(5,2),
+    left_axis      INT,
+    disease_report TEXT,
+    added_by       INT,
+    is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_optometry_exams_user   FOREIGN KEY (user_id)  REFERENCES users(id),
+    CONSTRAINT fk_optometry_exams_doctor FOREIGN KEY (added_by) REFERENCES doctors(id)
+);
+
+-- -------------------------------------------------------
+-- VACCINATIONS
+-- -------------------------------------------------------
+
+CREATE TABLE user_vaccinations (
+    id              INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT          NOT NULL,
+    vaccine_id      INT          NOT NULL,
+    dose_number     VARCHAR(20),
+    administered_at DATE,
+    next_due_date   DATE,
+    batch_number    VARCHAR(100),
+    institution     VARCHAR(255),
+    notes           TEXT,
+    added_by        INT,
+    CONSTRAINT fk_user_vaccinations_user    FOREIGN KEY (user_id)    REFERENCES users(id),
+    CONSTRAINT fk_user_vaccinations_vaccine FOREIGN KEY (vaccine_id) REFERENCES vaccines(id),
+    CONSTRAINT fk_user_vaccinations_doctor  FOREIGN KEY (added_by)   REFERENCES doctors(id)
+);
+
+-- -------------------------------------------------------
+-- HEALTH HABITS (consolidated)
+-- details (JSON): type-specific fields
+--   alcohol  -> { consumes, alcohol_type, in_detox, audit_c_score, audit_score }
+--   tobacco  -> { consumes, cigarettes_per_day, years_consumption, pack_years, fagerstrom_score, richmond_score }
+--   drugs    -> { drug_name, quantity }
+--   gambling -> { game_name }
+--   physical_activity -> { activity }
+-- -------------------------------------------------------
+
+CREATE TABLE health_habits (
+    id         INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT      NOT NULL,
+    type       ENUM('alcohol', 'tobacco', 'drugs', 'gambling', 'physical_activity') NOT NULL,
+    name       VARCHAR(255),
+    consumes   BOOLEAN,
+    frequency  VARCHAR(100),
+    quantity   VARCHAR(100),
+    start_date DATE,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    details    JSON,
+    CONSTRAINT fk_health_habits_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- -------------------------------------------------------
+-- DOCTOR NOTES & FLAGS
+-- note_text stored encrypted (application-layer encryption)
+-- -------------------------------------------------------
+
+CREATE TABLE doctor_notes (
+    id         INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT      NOT NULL,
+    doctor_id  INT      NOT NULL,
+    section    ENUM('identification', 'medical_info', 'mcdts', 'habits', 'history', 'other') NOT NULL,
+    note_text  LONGBLOB,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_doctor_notes_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_doctor_notes_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+CREATE TABLE pending_review_flags (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT          NOT NULL,
+    section     VARCHAR(100) NOT NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at DATETIME,
+    reviewed_by INT,
+    CONSTRAINT fk_pending_review_flags_user   FOREIGN KEY (user_id)     REFERENCES users(id),
+    CONSTRAINT fk_pending_review_flags_doctor FOREIGN KEY (reviewed_by) REFERENCES doctors(id)
+);
+
+-- -------------------------------------------------------
+-- VERSIONING
+-- -------------------------------------------------------
+
+CREATE TABLE schema_versions (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    version     VARCHAR(20)  NOT NULL,
+    description VARCHAR(255),
+    script      VARCHAR(255),
+    applied_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    applied_by  VARCHAR(100),
+    checksum    VARCHAR(64),
+    success     BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE app_versions (
+    id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    version      VARCHAR(20)  NOT NULL,
+    release_date DATE,
+    description  VARCHAR(255),
+    deployed_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deployed_by  VARCHAR(100),
+    environment  ENUM('dev', 'staging', 'prod') NOT NULL,
+    is_current   BOOLEAN      NOT NULL DEFAULT FALSE
+);
