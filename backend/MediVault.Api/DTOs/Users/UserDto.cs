@@ -1,7 +1,7 @@
 namespace MediVault.Api.DTOs.Users;
 
 public record UserProfileDto(
-    int Id,
+    string Id,
     string UtentNumber,
     string Email,
     string FirstName,

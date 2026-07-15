@@ -17,8 +17,8 @@ public static class DatabaseSeeder
         db.SubscriptionPlans.AddRange(planBasic, planMedium, planPremium);
 
         // --- Institutions ---
-        var hospital = new Institution { Name = "Hospital de Santa Maria", Type = "hospital", Address = "Av. Prof. Egas Moniz, Lisboa", Phone = "217 805 000", IsActive = 1 };
-        var clinica  = new Institution { Name = "CUF Descobertas",         Type = "clinic",   Address = "R. Mário Botas, Lisboa",       Phone = "210 025 200", IsActive = 1 };
+        var hospital = new Institution { Id = Guid.NewGuid().ToString(), Name = "Hospital de Santa Maria", Type = "hospital", Address = "Av. Prof. Egas Moniz, Lisboa", Phone = "217 805 000", IsActive = 1 };
+        var clinica  = new Institution { Id = Guid.NewGuid().ToString(), Name = "CUF Descobertas",         Type = "clinic",   Address = "R. Mário Botas, Lisboa",       Phone = "210 025 200", IsActive = 1 };
         db.Institutions.AddRange(hospital, clinica);
 
         // --- Vaccines ---
@@ -49,7 +49,7 @@ public static class DatabaseSeeder
         // --- Patients ---
         var braulio = new User
         {
-            PublicId = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000001", FiscalNumber = "100000001", CitizenNumber = "10000001",
+            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000001", FiscalNumber = "100000001", CitizenNumber = "10000001",
             Email = "braulio@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Braulio", LastName = "Batista", Birthday = "1990-05-10",
             BiologicalGender = "M", Sex = "M", BloodType = "A+",
@@ -60,7 +60,7 @@ public static class DatabaseSeeder
 
         var cesar = new User
         {
-            PublicId = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000002", FiscalNumber = "100000002", CitizenNumber = "10000002",
+            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000002", FiscalNumber = "100000002", CitizenNumber = "10000002",
             Email = "cesar@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Cesar", LastName = "Oliveira", Birthday = "1988-11-23",
             BiologicalGender = "M", Sex = "M", BloodType = "O+",
@@ -71,7 +71,7 @@ public static class DatabaseSeeder
 
         var joka = new User
         {
-            PublicId = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000003", FiscalNumber = "100000003", CitizenNumber = "10000003",
+            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000003", FiscalNumber = "100000003", CitizenNumber = "10000003",
             Email = "joka@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Joka", LastName = "Ferreira", Birthday = "1995-02-14",
             BiologicalGender = "M", Sex = "M", BloodType = "B+",
@@ -82,7 +82,7 @@ public static class DatabaseSeeder
 
         var tiago = new User
         {
-            PublicId = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000004", FiscalNumber = "100000004", CitizenNumber = "10000004",
+            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000004", FiscalNumber = "100000004", CitizenNumber = "10000004",
             Email = "tiago@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Tiago", LastName = "Costa", Birthday = "1993-08-30",
             BiologicalGender = "M", Sex = "M", BloodType = "AB+",
@@ -97,7 +97,7 @@ public static class DatabaseSeeder
         // --- Doctors ---
         var monica = new Doctor
         {
-            OrdemMedicosId = "OM10001", FirstName = "Monica", LastName = "Sousa",
+            Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10001", FirstName = "Monica", LastName = "Sousa",
             Email = "monica.sousa@hsm.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             Speciality = "Medicina Geral e Familiar", InstitutionId = hospital.Id,
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
@@ -105,7 +105,7 @@ public static class DatabaseSeeder
 
         var diana = new Doctor
         {
-            OrdemMedicosId = "OM10002", FirstName = "Diana", LastName = "Pereira",
+            Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10002", FirstName = "Diana", LastName = "Pereira",
             Email = "diana.pereira@cuf.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             Speciality = "Cardiologia", InstitutionId = clinica.Id,
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
@@ -113,7 +113,7 @@ public static class DatabaseSeeder
 
         var maria = new Doctor
         {
-            OrdemMedicosId = "OM10003", FirstName = "Maria", LastName = "Gomes",
+            Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10003", FirstName = "Maria", LastName = "Gomes",
             Email = "maria.gomes@hsm.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             Speciality = "Endocrinologia", InstitutionId = hospital.Id,
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")

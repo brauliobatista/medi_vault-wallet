@@ -7,14 +7,14 @@ namespace MediVault.Api.Services;
 
 public class HealthHabitService(MediVaultDbContext db, UserService userService)
 {
-    public async Task<List<HealthHabitDto>> GetHabitsAsync(int userId) =>
+    public async Task<List<HealthHabitDto>> GetHabitsAsync(string userId) =>
         await db.HealthHabits
             .Where(h => h.UserId == userId)
             .OrderBy(h => h.Type)
             .Select(h => new HealthHabitDto(h.Id, h.Type, h.Name, h.Consumes == 1, h.Frequency, h.Quantity, h.StartDate, h.Details, h.UpdatedAt))
             .ToListAsync();
 
-    public async Task<HealthHabitDto> UpsertHabitAsync(int userId, UpsertHealthHabitRequest req)
+    public async Task<HealthHabitDto> UpsertHabitAsync(string userId, UpsertHealthHabitRequest req)
     {
         var entry = await db.HealthHabits.FirstOrDefaultAsync(h => h.UserId == userId && h.Type == req.Type);
         if (entry is null)

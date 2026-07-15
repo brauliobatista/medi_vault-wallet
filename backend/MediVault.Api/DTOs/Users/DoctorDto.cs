@@ -1,13 +1,13 @@
 namespace MediVault.Api.DTOs.Users;
 
 public record DoctorProfileDto(
-    int Id,
+    string Id,
     string OrdemMedicosId,
     string Email,
     string FirstName,
     string LastName,
     string? Speciality,
-    int InstitutionId,
+    string InstitutionId,
     string InstitutionName
 );
 

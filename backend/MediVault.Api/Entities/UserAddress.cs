@@ -7,7 +7,7 @@ namespace MediVault.Api.Entities;
 public class UserAddress
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("user_id")] public int UserId { get; set; }
+    [Column("user_id")] public string UserId { get; set; }
     [Column("street")] public string? Street { get; set; }
     [Column("city")] public string? City { get; set; }
     [Column("postal_code")] public string? PostalCode { get; set; }

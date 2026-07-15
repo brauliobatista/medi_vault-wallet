@@ -78,19 +78,10 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
     db.Database.EnsureCreated();
 
-    // Schema evolution: add new columns if missing
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN share_code TEXT NOT NULL DEFAULT ''"); }
-    catch { }
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN public_id TEXT NOT NULL DEFAULT ''"); }
-    catch { }
-
-    // Backfill missing share codes and public IDs
-    var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "" || u.PublicId == null || u.PublicId == "").ToList();
+    // Backfill missing share codes
+    var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)
-    {
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
-        if (string.IsNullOrEmpty(u.PublicId)) u.PublicId = Guid.NewGuid().ToString();
-    }
     if (usersToBackfill.Count > 0) db.SaveChanges();
 
     DatabaseSeeder.Seed(db);

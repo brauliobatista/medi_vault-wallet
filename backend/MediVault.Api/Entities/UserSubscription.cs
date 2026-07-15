@@ -7,7 +7,7 @@ namespace MediVault.Api.Entities;
 public class UserSubscription
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("user_id")] public int UserId { get; set; }
+    [Column("user_id")] public string UserId { get; set; }
     [Column("plan_id")] public int PlanId { get; set; }
     [Column("card_type")] public string CardType { get; set; } = null!;
     [Column("start_date")] public string StartDate { get; set; } = null!;

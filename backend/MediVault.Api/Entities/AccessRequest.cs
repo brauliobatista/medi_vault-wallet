@@ -7,8 +7,8 @@ namespace MediVault.Api.Entities;
 public class AccessRequest
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("user_id")] public int UserId { get; set; }
-    [Column("doctor_id")] public int DoctorId { get; set; }
+    [Column("user_id")] public string UserId { get; set; } = null!;
+    [Column("doctor_id")] public string DoctorId { get; set; } = null!;
     [Column("requested_at")] public string RequestedAt { get; set; } = DateTime.UtcNow.ToString("o");
     [Column("approved_at")] public string? ApprovedAt { get; set; }
     [Column("expires_at")] public string? ExpiresAt { get; set; }

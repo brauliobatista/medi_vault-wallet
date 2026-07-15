@@ -7,7 +7,7 @@ namespace MediVault.Api.Services;
 
 public class AccessControlService(MediVaultDbContext db)
 {
-    public async Task<bool> DoctorHasAccessAsync(int doctorId, int userId)
+    public async Task<bool> DoctorHasAccessAsync(string doctorId, string userId)
     {
         var now = DateTime.UtcNow.ToString("o");
 
@@ -20,7 +20,7 @@ public class AccessControlService(MediVaultDbContext db)
         return candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
     }
 
-    public async Task<List<AccessRequestDto>> GetPatientRequestsAsync(int userId)
+    public async Task<List<AccessRequestDto>> GetPatientRequestsAsync(string userId)
     {
         return await db.AccessRequests
             .Where(r => r.UserId == userId)
@@ -28,13 +28,13 @@ public class AccessControlService(MediVaultDbContext db)
             .Include(r => r.User)
             .OrderByDescending(r => r.RequestedAt)
             .Select(r => new AccessRequestDto(
-                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.PublicId,
+                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
                 r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
                 r.Status, r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
             .ToListAsync();
     }
 
-    public async Task<List<AccessRequestDto>> GetDoctorRequestsAsync(int doctorId)
+    public async Task<List<AccessRequestDto>> GetDoctorRequestsAsync(string doctorId)
     {
         return await db.AccessRequests
             .Where(r => r.DoctorId == doctorId)
@@ -42,22 +42,22 @@ public class AccessControlService(MediVaultDbContext db)
             .Include(r => r.Doctor)
             .OrderByDescending(r => r.RequestedAt)
             .Select(r => new AccessRequestDto(
-                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.PublicId,
+                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
                 r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
                 r.Status, r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
             .ToListAsync();
     }
 
-    public async Task<(AccessRequest Request, string PatientName, string PublicId)?> GrantAccessByQrAsync(int doctorId, string qrCode)
+    public async Task<(AccessRequest Request, string PatientName, string PublicId)?> GrantAccessByQrAsync(string doctorId, string qrCode)
     {
         var parts = qrCode.Trim().Split(':');
         if (parts.Length != 3 || parts[0] != "MV") return null;
-        if (!int.TryParse(parts[1], out var userId)) return null;
+        var userId = parts[1];
         var shareCode = parts[2];
 
         var user = await db.Users
             .Where(u => u.Id == userId && u.IsActive == 1 && u.ShareCode == shareCode)
-            .Select(u => new { u.Id, u.FirstName, u.LastName, u.PublicId })
+            .Select(u => new { u.Id, u.FirstName, u.LastName })
             .FirstOrDefaultAsync();
         if (user is null) return null;
 
@@ -70,7 +70,7 @@ public class AccessControlService(MediVaultDbContext db)
         {
             existing.ExpiresAt = expiry;
             await db.SaveChangesAsync();
-            return (existing, $"{user.FirstName} {user.LastName}", user.PublicId);
+            return (existing, $"{user.FirstName} {user.LastName}", user.Id);
         }
 
         var request = new AccessRequest
@@ -86,21 +86,21 @@ public class AccessControlService(MediVaultDbContext db)
         };
         db.AccessRequests.Add(request);
         await db.SaveChangesAsync();
-        return (request, $"{user.FirstName} {user.LastName}", user.PublicId);
+        return (request, $"{user.FirstName} {user.LastName}", user.Id);
     }
 
-    public async Task<(int UserId, string Name, string PublicId)?> FindPatientByUtentNumberAsync(string utentNumber)
+    public async Task<(string UserId, string Name, string PublicId)?> FindPatientByUtentNumberAsync(string utentNumber)
     {
         var user = await db.Users
             .Where(u => u.UtentNumber == utentNumber && u.IsActive == 1)
-            .Select(u => new { u.Id, u.FirstName, u.LastName, u.PublicId })
+            .Select(u => new { u.Id, u.FirstName, u.LastName })
             .FirstOrDefaultAsync();
 
         if (user is null) return null;
-        return (user.Id, $"{user.FirstName} {user.LastName}", user.PublicId);
+        return (user.Id, $"{user.FirstName} {user.LastName}", user.Id);
     }
 
-    public async Task<AccessRequest> RequestAccessAsync(int doctorId, int userId)
+    public async Task<AccessRequest> RequestAccessAsync(string doctorId, string userId)
     {
         var existing = await db.AccessRequests.FirstOrDefaultAsync(r =>
             r.DoctorId == doctorId && r.UserId == userId && r.Status == "pending");
@@ -121,7 +121,7 @@ public class AccessControlService(MediVaultDbContext db)
         return request;
     }
 
-    public async Task<bool> RespondToRequestAsync(int requestId, int userId, string action)
+    public async Task<bool> RespondToRequestAsync(int requestId, string userId, string action)
     {
         var request = await db.AccessRequests
             .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId && r.Status == "pending");
@@ -142,7 +142,7 @@ public class AccessControlService(MediVaultDbContext db)
         return true;
     }
 
-    public async Task<bool> RevokeAccessAsync(int requestId, int userId)
+    public async Task<bool> RevokeAccessAsync(int requestId, string userId)
     {
         var request = await db.AccessRequests
             .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId);

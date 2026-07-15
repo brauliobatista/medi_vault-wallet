@@ -7,7 +7,7 @@ namespace MediVault.Api.Entities;
 public class UserSpecialtyFollowup
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("user_id")] public int UserId { get; set; }
+    [Column("user_id")] public string UserId { get; set; }
     [Column("specialty_id")] public int SpecialtyId { get; set; }
     [Column("institution")] public string? Institution { get; set; }
     [Column("start_date")] public string? StartDate { get; set; }

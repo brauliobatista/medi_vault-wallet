@@ -11,16 +11,15 @@ namespace MediVault.Api.Controllers;
 [Authorize]
 public class UsersController(UserService userService) : ControllerBase
 {
-    private int CurrentUserId => int.Parse(
-        User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+    private string CurrentUserId => (User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"))!;
 
-    [HttpGet("{userId:int}/public-info")]
+    [HttpGet("{userId}/public-info")]
     [Authorize(Roles = "Doctor")]
-    public async Task<IActionResult> GetPublicInfo(int userId)
+    public async Task<IActionResult> GetPublicInfo(string userId)
     {
         var info = await userService.GetPublicInfoAsync(userId);
         if (info is null) return NotFound();
-        return Ok(new { name = info.Value.Name, publicId = info.Value.PublicId });
+        return Ok(new { name = info.Value.Name, publicId = info.Value.Id });
     }
 
     [HttpGet("me")]

@@ -9,7 +9,7 @@ public class ExamService(MediVaultDbContext db, UserService userService)
 {
     // --- Analytical Exams ---
 
-    public async Task<List<AnalyticalExamDto>> GetAnalyticalExamsAsync(int userId) =>
+    public async Task<List<AnalyticalExamDto>> GetAnalyticalExamsAsync(string userId) =>
         await db.AnalyticalExams
             .Where(e => e.UserId == userId && e.IsActive == 1)
             .Include(e => e.Parameters)
@@ -21,7 +21,7 @@ public class ExamService(MediVaultDbContext db, UserService userService)
                 .ToList()))
             .ToListAsync();
 
-    public async Task<AnalyticalExamDto> AddAnalyticalExamAsync(int userId, CreateAnalyticalExamRequest req, int? doctorId = null)
+    public async Task<AnalyticalExamDto> AddAnalyticalExamAsync(string userId, CreateAnalyticalExamRequest req, string? doctorId = null)
     {
         var exam = new AnalyticalExam
         {
@@ -50,7 +50,7 @@ public class ExamService(MediVaultDbContext db, UserService userService)
             exam.Parameters.Select(p => new AnalyticalExamParameterDto(p.Id, p.ParameterName, p.Value, p.Unit, p.ReferenceMin, p.ReferenceMax, p.IsAbnormal == 1)).ToList());
     }
 
-    public async Task<bool> SoftDeleteAnalyticalExamAsync(int id, int userId)
+    public async Task<bool> SoftDeleteAnalyticalExamAsync(int id, string userId)
     {
         var exam = await db.AnalyticalExams.FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
         if (exam is null) return false;
@@ -61,14 +61,14 @@ public class ExamService(MediVaultDbContext db, UserService userService)
 
     // --- Imaging Exams ---
 
-    public async Task<List<ImagingExamDto>> GetImagingExamsAsync(int userId) =>
+    public async Task<List<ImagingExamDto>> GetImagingExamsAsync(string userId) =>
         await db.ImagingExams
             .Where(e => e.UserId == userId && e.IsActive == 1)
             .OrderByDescending(e => e.ExamDate)
             .Select(e => new ImagingExamDto(e.Id, e.ExamType, e.BodyArea, e.ExamDate, e.Institution, e.ReportText, e.IsActive == 1, e.CreatedAt))
             .ToListAsync();
 
-    public async Task<ImagingExamDto> AddImagingExamAsync(int userId, CreateImagingExamRequest req, int? doctorId = null)
+    public async Task<ImagingExamDto> AddImagingExamAsync(string userId, CreateImagingExamRequest req, string? doctorId = null)
     {
         var exam = new ImagingExam
         {
@@ -88,7 +88,7 @@ public class ExamService(MediVaultDbContext db, UserService userService)
         return new ImagingExamDto(exam.Id, exam.ExamType, exam.BodyArea, exam.ExamDate, exam.Institution, exam.ReportText, true, exam.CreatedAt);
     }
 
-    public async Task<bool> SoftDeleteImagingExamAsync(int id, int userId)
+    public async Task<bool> SoftDeleteImagingExamAsync(int id, string userId)
     {
         var exam = await db.ImagingExams.FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
         if (exam is null) return false;
@@ -99,7 +99,7 @@ public class ExamService(MediVaultDbContext db, UserService userService)
 
     // --- Optometry Exams ---
 
-    public async Task<List<OptometryExamDto>> GetOptometryExamsAsync(int userId) =>
+    public async Task<List<OptometryExamDto>> GetOptometryExamsAsync(string userId) =>
         await db.OptometryExams
             .Where(e => e.UserId == userId && e.IsActive == 1)
             .OrderByDescending(e => e.ExamDate)
@@ -107,7 +107,7 @@ public class ExamService(MediVaultDbContext db, UserService userService)
                 e.LeftSphere, e.LeftCylinder, e.LeftAxis, e.DiseaseReport, e.IsActive == 1, e.CreatedAt))
             .ToListAsync();
 
-    public async Task<OptometryExamDto> AddOptometryExamAsync(int userId, CreateOptometryExamRequest req, int? doctorId = null)
+    public async Task<OptometryExamDto> AddOptometryExamAsync(string userId, CreateOptometryExamRequest req, string? doctorId = null)
     {
         var exam = new OptometryExam
         {

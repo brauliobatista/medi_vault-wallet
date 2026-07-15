@@ -7,7 +7,7 @@ namespace MediVault.Api.Services;
 
 public class VaccinationService(MediVaultDbContext db, UserService userService)
 {
-    public async Task<List<VaccinationDto>> GetVaccinationsAsync(int userId) =>
+    public async Task<List<VaccinationDto>> GetVaccinationsAsync(string userId) =>
         await db.UserVaccinations
             .Where(v => v.UserId == userId)
             .Include(v => v.Vaccine)
@@ -16,7 +16,7 @@ public class VaccinationService(MediVaultDbContext db, UserService userService)
                 v.NextDueDate, v.BatchNumber, v.Institution, v.Notes))
             .ToListAsync();
 
-    public async Task<VaccinationDto> AddVaccinationAsync(int userId, CreateVaccinationRequest req, int? doctorId = null)
+    public async Task<VaccinationDto> AddVaccinationAsync(string userId, CreateVaccinationRequest req, string? doctorId = null)
     {
         var vaccine = await db.Vaccines.FindAsync(req.VaccineId)
             ?? throw new InvalidOperationException("Vaccine not found");
@@ -40,7 +40,7 @@ public class VaccinationService(MediVaultDbContext db, UserService userService)
             entry.NextDueDate, entry.BatchNumber, entry.Institution, entry.Notes);
     }
 
-    public async Task<bool> DeleteVaccinationAsync(int id, int userId)
+    public async Task<bool> DeleteVaccinationAsync(int id, string userId)
     {
         var entry = await db.UserVaccinations.FirstOrDefaultAsync(v => v.Id == id && v.UserId == userId);
         if (entry is null) return false;

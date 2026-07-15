@@ -6,7 +6,7 @@ namespace MediVault.Api.Entities;
 [Table("users")]
 public class User
 {
-    [Key] [Column("id")] public int Id { get; set; }
+    [Key] [Column("id")] public string Id { get; set; } = null!;
     [Column("utent_number")] public string UtentNumber { get; set; } = null!;
     [Column("fiscal_number")] public string FiscalNumber { get; set; } = null!;
     [Column("citizen_number")] public string CitizenNumber { get; set; } = null!;
@@ -25,7 +25,6 @@ public class User
     [Column("is_dependent")] public int IsDependent { get; set; } = 0;
     [Column("profession")] public string? Profession { get; set; }
     [Column("phone")] public string? Phone { get; set; }
-    [Column("public_id")] public string PublicId { get; set; } = string.Empty;
     [Column("share_code")] public string ShareCode { get; set; } = string.Empty;
     [Column("is_active")] public int IsActive { get; set; } = 1;
     [Column("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");

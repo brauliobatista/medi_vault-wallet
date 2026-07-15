@@ -7,14 +7,14 @@ namespace MediVault.Api.Services;
 
 public class UserService(MediVaultDbContext db)
 {
-    public async Task<UserProfileDto?> GetProfileAsync(int userId)
+    public async Task<UserProfileDto?> GetProfileAsync(string userId)
     {
         var u = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
         if (u is null) return null;
         return Map(u);
     }
 
-    public async Task<bool> UpdateProfileAsync(int userId, UpdateUserRequest req)
+    public async Task<bool> UpdateProfileAsync(string userId, UpdateUserRequest req)
     {
         var u = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
         if (u is null) return false;
@@ -33,7 +33,7 @@ public class UserService(MediVaultDbContext db)
         return true;
     }
 
-    public async Task<bool> ChangePasswordAsync(int userId, ChangePasswordRequest req)
+    public async Task<bool> ChangePasswordAsync(string userId, ChangePasswordRequest req)
     {
         var u = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
         if (u is null || !BCrypt.Net.BCrypt.Verify(req.CurrentPassword, u.PasswordHash))
@@ -45,17 +45,17 @@ public class UserService(MediVaultDbContext db)
         return true;
     }
 
-    public async Task<(string Name, string PublicId)?> GetPublicInfoAsync(int userId)
+    public async Task<(string Name, string Id)?> GetPublicInfoAsync(string userId)
     {
         var u = await db.Users
             .Where(x => x.Id == userId && x.IsActive == 1)
-            .Select(x => new { x.FirstName, x.LastName, x.PublicId })
+            .Select(x => new { x.FirstName, x.LastName, x.Id })
             .FirstOrDefaultAsync();
         if (u is null) return null;
-        return ($"{u.FirstName} {u.LastName}", u.PublicId);
+        return ($"{u.FirstName} {u.LastName}", u.Id);
     }
 
-    public async Task<string?> GetQrPayloadAsync(int userId)
+    public async Task<string?> GetQrPayloadAsync(string userId)
     {
         var u = await db.Users
             .Where(x => x.Id == userId && x.IsActive == 1)
@@ -74,7 +74,7 @@ public class UserService(MediVaultDbContext db)
         return $"MV:{u.Id}:{u.ShareCode}";
     }
 
-    public async Task CreateFlagAsync(int userId, string section)
+    public async Task CreateFlagAsync(string userId, string section)
     {
         db.PendingReviewFlags.Add(new PendingReviewFlag
         {

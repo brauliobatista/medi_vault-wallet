@@ -7,7 +7,7 @@ namespace MediVault.Api.Entities;
 public class InstitutionLicense
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("institution_id")] public int InstitutionId { get; set; }
+    [Column("institution_id")] public string InstitutionId { get; set; } = null!;
     [Column("billing_type")] public string BillingType { get; set; } = null!;
     [Column("start_date")] public string StartDate { get; set; } = null!;
     [Column("end_date")] public string? EndDate { get; set; }

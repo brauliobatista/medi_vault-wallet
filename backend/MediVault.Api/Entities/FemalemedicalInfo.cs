@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MediVault.Api.Entities;
@@ -7,7 +7,7 @@ namespace MediVault.Api.Entities;
 public class FemalemedicalInfo
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("user_id")] public int UserId { get; set; }
+    [Column("user_id")] public string UserId { get; set; }
     [Column("menarche_age")] public int? MenarcheAge { get; set; }
     [Column("pregnancies")] public int Pregnancies { get; set; } = 0;
     [Column("births")] public int Births { get; set; } = 0;
@@ -20,3 +20,4 @@ public class FemalemedicalInfo
 
     [ForeignKey("UserId")] public User User { get; set; } = null!;
 }
+

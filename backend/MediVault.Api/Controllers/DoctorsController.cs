@@ -11,8 +11,7 @@ namespace MediVault.Api.Controllers;
 [Authorize(Roles = "Doctor")]
 public class DoctorsController(DoctorService doctorService) : ControllerBase
 {
-    private int DoctorId => int.Parse(
-        User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+    private string DoctorId => (User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"))!;
 
     [HttpGet("me")]
     public async Task<IActionResult> GetProfile()

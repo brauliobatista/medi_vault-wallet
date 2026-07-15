@@ -7,7 +7,7 @@ namespace MediVault.Api.Entities;
 public class DrugAllergy
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("user_id")] public int UserId { get; set; }
+    [Column("user_id")] public string UserId { get; set; }
     [Column("active_substance")] public string ActiveSubstance { get; set; } = null!;
     [Column("allergic_reaction")] public string? AllergicReaction { get; set; }
     [Column("severity")] public string? Severity { get; set; }

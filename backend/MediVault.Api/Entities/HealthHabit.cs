@@ -7,7 +7,7 @@ namespace MediVault.Api.Entities;
 public class HealthHabit
 {
     [Key] [Column("id")] public int Id { get; set; }
-    [Column("user_id")] public int UserId { get; set; }
+    [Column("user_id")] public string UserId { get; set; }
     [Column("type")] public string Type { get; set; } = null!;
     [Column("name")] public string? Name { get; set; }
     [Column("consumes")] public int? Consumes { get; set; }

@@ -8,7 +8,7 @@ namespace MediVault.Api.Services;
 
 public class DoctorNoteService(MediVaultDbContext db, EncryptionService encryption)
 {
-    public async Task<List<DoctorNoteDto>> GetNotesForDoctorAsync(int doctorId, int userId) =>
+    public async Task<List<DoctorNoteDto>> GetNotesForDoctorAsync(string doctorId, string userId) =>
         (await db.DoctorNotes
             .Where(n => n.DoctorId == doctorId && n.UserId == userId)
             .Include(n => n.Doctor)
@@ -20,7 +20,7 @@ public class DoctorNoteService(MediVaultDbContext db, EncryptionService encrypti
             n.CreatedAt, n.UpdatedAt))
         .ToList();
 
-    public async Task<DoctorNoteDto> CreateNoteAsync(int doctorId, CreateDoctorNoteRequest req)
+    public async Task<DoctorNoteDto> CreateNoteAsync(string doctorId, CreateDoctorNoteRequest req)
     {
         var doctor = await db.Doctors.FindAsync(doctorId) ?? throw new InvalidOperationException("Doctor not found");
         var note = new DoctorNote
@@ -38,7 +38,7 @@ public class DoctorNoteService(MediVaultDbContext db, EncryptionService encrypti
             note.Section, req.NoteText, note.CreatedAt, note.UpdatedAt);
     }
 
-    public async Task<bool> UpdateNoteAsync(int noteId, int doctorId, string newText)
+    public async Task<bool> UpdateNoteAsync(int noteId, string doctorId, string newText)
     {
         var note = await db.DoctorNotes.FirstOrDefaultAsync(n => n.Id == noteId && n.DoctorId == doctorId);
         if (note is null) return false;
@@ -48,7 +48,7 @@ public class DoctorNoteService(MediVaultDbContext db, EncryptionService encrypti
         return true;
     }
 
-    public async Task<bool> DeleteNoteAsync(int noteId, int doctorId)
+    public async Task<bool> DeleteNoteAsync(int noteId, string doctorId)
     {
         var note = await db.DoctorNotes.FirstOrDefaultAsync(n => n.Id == noteId && n.DoctorId == doctorId);
         if (note is null) return false;
@@ -57,14 +57,14 @@ public class DoctorNoteService(MediVaultDbContext db, EncryptionService encrypti
         return true;
     }
 
-    public async Task<List<PendingReviewFlagDto>> GetFlagsAsync(int userId) =>
+    public async Task<List<PendingReviewFlagDto>> GetFlagsAsync(string userId) =>
         await db.PendingReviewFlags
             .Where(f => f.UserId == userId && f.ReviewedAt == null)
             .OrderByDescending(f => f.CreatedAt)
             .Select(f => new PendingReviewFlagDto(f.Id, f.UserId, f.Section, f.CreatedAt, f.ReviewedAt))
             .ToListAsync();
 
-    public async Task<bool> MarkFlagReviewedAsync(int flagId, int doctorId)
+    public async Task<bool> MarkFlagReviewedAsync(int flagId, string doctorId)
     {
         var flag = await db.PendingReviewFlags.FindAsync(flagId);
         if (flag is null) return false;

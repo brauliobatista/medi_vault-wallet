@@ -19,14 +19,14 @@ public class JwtService
         _expiryHours = int.TryParse(config["Jwt:ExpiryHours"], out var h) ? h : 8;
     }
 
-    public string GenerateToken(int id, string role, string identifier)
+    public string GenerateToken(string id, string role, string identifier)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Sub, id),
             new Claim(ClaimTypes.Role, role),
             new Claim("identifier", identifier),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

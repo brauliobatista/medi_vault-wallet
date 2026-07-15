@@ -6,7 +6,7 @@ namespace MediVault.Api.Services;
 
 public class DoctorService(MediVaultDbContext db)
 {
-    public async Task<DoctorProfileDto?> GetProfileAsync(int doctorId)
+    public async Task<DoctorProfileDto?> GetProfileAsync(string doctorId)
     {
         var d = await db.Doctors
             .Include(x => x.Institution)
@@ -16,7 +16,7 @@ public class DoctorService(MediVaultDbContext db)
             d.Speciality, d.InstitutionId, d.Institution?.Name ?? string.Empty);
     }
 
-    public async Task<bool> UpdateProfileAsync(int doctorId, UpdateDoctorRequest req)
+    public async Task<bool> UpdateProfileAsync(string doctorId, UpdateDoctorRequest req)
     {
         var d = await db.Doctors.FirstOrDefaultAsync(x => x.Id == doctorId && x.IsActive == 1);
         if (d is null) return false;
@@ -26,7 +26,7 @@ public class DoctorService(MediVaultDbContext db)
         return true;
     }
 
-    public async Task<bool> ChangePasswordAsync(int doctorId, ChangePasswordRequest req)
+    public async Task<bool> ChangePasswordAsync(string doctorId, ChangePasswordRequest req)
     {
         var d = await db.Doctors.FirstOrDefaultAsync(x => x.Id == doctorId && x.IsActive == 1);
         if (d is null || !BCrypt.Net.BCrypt.Verify(req.CurrentPassword, d.PasswordHash))

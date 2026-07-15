@@ -11,10 +11,10 @@ namespace MediVault.Api.Controllers;
 [Authorize]
 public class ExamsController(ExamService examService, AccessControlService accessControl) : ControllerBase
 {
-    private int CurrentId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private string CurrentId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private string CurrentRole => User.FindFirstValue(ClaimTypes.Role)!;
 
-    private async Task<bool> CanAccessPatientAsync(int userId)
+    private async Task<bool> CanAccessPatientAsync(string userId)
     {
         if (CurrentRole == "Patient") return CurrentId == userId;
         return await accessControl.DoctorHasAccessAsync(CurrentId, userId);
@@ -23,23 +23,23 @@ public class ExamsController(ExamService examService, AccessControlService acces
     // --- Analytical ---
 
     [HttpGet("analytical")]
-    public async Task<IActionResult> GetAnalytical(int userId)
+    public async Task<IActionResult> GetAnalytical(string userId)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
         return Ok(await examService.GetAnalyticalExamsAsync(userId));
     }
 
     [HttpPost("analytical")]
-    public async Task<IActionResult> AddAnalytical(int userId, CreateAnalyticalExamRequest req)
+    public async Task<IActionResult> AddAnalytical(string userId, CreateAnalyticalExamRequest req)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
-        var doctorId = CurrentRole == "Doctor" ? CurrentId : (int?)null;
+        var doctorId = CurrentRole == "Doctor" ? CurrentId : (string?)null;
         var result = await examService.AddAnalyticalExamAsync(userId, req, doctorId);
         return CreatedAtAction(nameof(GetAnalytical), new { userId }, result);
     }
 
     [HttpDelete("analytical/{id}")]
-    public async Task<IActionResult> DeleteAnalytical(int userId, int id)
+    public async Task<IActionResult> DeleteAnalytical(string userId, int id)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
         var success = await examService.SoftDeleteAnalyticalExamAsync(id, userId);
@@ -50,23 +50,23 @@ public class ExamsController(ExamService examService, AccessControlService acces
     // --- Imaging ---
 
     [HttpGet("imaging")]
-    public async Task<IActionResult> GetImaging(int userId)
+    public async Task<IActionResult> GetImaging(string userId)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
         return Ok(await examService.GetImagingExamsAsync(userId));
     }
 
     [HttpPost("imaging")]
-    public async Task<IActionResult> AddImaging(int userId, CreateImagingExamRequest req)
+    public async Task<IActionResult> AddImaging(string userId, CreateImagingExamRequest req)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
-        var doctorId = CurrentRole == "Doctor" ? CurrentId : (int?)null;
+        var doctorId = CurrentRole == "Doctor" ? CurrentId : (string?)null;
         var result = await examService.AddImagingExamAsync(userId, req, doctorId);
         return CreatedAtAction(nameof(GetImaging), new { userId }, result);
     }
 
     [HttpDelete("imaging/{id}")]
-    public async Task<IActionResult> DeleteImaging(int userId, int id)
+    public async Task<IActionResult> DeleteImaging(string userId, int id)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
         var success = await examService.SoftDeleteImagingExamAsync(id, userId);
@@ -77,17 +77,17 @@ public class ExamsController(ExamService examService, AccessControlService acces
     // --- Optometry ---
 
     [HttpGet("optometry")]
-    public async Task<IActionResult> GetOptometry(int userId)
+    public async Task<IActionResult> GetOptometry(string userId)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
         return Ok(await examService.GetOptometryExamsAsync(userId));
     }
 
     [HttpPost("optometry")]
-    public async Task<IActionResult> AddOptometry(int userId, CreateOptometryExamRequest req)
+    public async Task<IActionResult> AddOptometry(string userId, CreateOptometryExamRequest req)
     {
         if (!await CanAccessPatientAsync(userId)) return Forbid();
-        var doctorId = CurrentRole == "Doctor" ? CurrentId : (int?)null;
+        var doctorId = CurrentRole == "Doctor" ? CurrentId : (string?)null;
         var result = await examService.AddOptometryExamAsync(userId, req, doctorId);
         return CreatedAtAction(nameof(GetOptometry), new { userId }, result);
     }

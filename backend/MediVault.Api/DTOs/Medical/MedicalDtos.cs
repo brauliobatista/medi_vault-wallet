@@ -77,7 +77,7 @@ public record CreateVaccinationRequest(
     string? NextDueDate, string? BatchNumber, string? Institution, string? Notes);
 
 public record AccessRequestDto(
-    int Id, int UserId, string PatientName, string PatientPublicId, int DoctorId, string DoctorName,
+    int Id, string UserId, string PatientName, string PatientPublicId, string DoctorId, string DoctorName,
     string Status, bool IsEmergency, string RequestedAt, string? ApprovedAt, string? ExpiresAt);
 
 public record RespondAccessRequest(string Action);
@@ -85,10 +85,10 @@ public record RespondAccessRequest(string Action);
 public record ScanQrRequest(string QrCode);
 
 public record DoctorNoteDto(
-    int Id, int DoctorId, string DoctorName, string Section,
+    int Id, string DoctorId, string DoctorName, string Section,
     string NoteText, string CreatedAt, string UpdatedAt);
 
-public record CreateDoctorNoteRequest(int UserId, string Section, string NoteText);
+public record CreateDoctorNoteRequest(string UserId, string Section, string NoteText);
 
 public record PendingReviewFlagDto(
-    int Id, int UserId, string Section, string CreatedAt, string? ReviewedAt);
+    int Id, string UserId, string Section, string CreatedAt, string? ReviewedAt);

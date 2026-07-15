@@ -11,10 +11,10 @@ namespace MediVault.Api.Controllers;
 [Authorize(Roles = "Doctor")]
 public class DoctorNotesController(DoctorNoteService noteService, AccessControlService accessControl) : ControllerBase
 {
-    private int DoctorId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private string DoctorId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet("{userId}")]
-    public async Task<IActionResult> GetNotes(int userId)
+    public async Task<IActionResult> GetNotes(string userId)
     {
         if (!await accessControl.DoctorHasAccessAsync(DoctorId, userId)) return Forbid();
         return Ok(await noteService.GetNotesForDoctorAsync(DoctorId, userId));
@@ -45,7 +45,7 @@ public class DoctorNotesController(DoctorNoteService noteService, AccessControlS
     }
 
     [HttpGet("flags/{userId}")]
-    public async Task<IActionResult> GetFlags(int userId)
+    public async Task<IActionResult> GetFlags(string userId)
     {
         if (!await accessControl.DoctorHasAccessAsync(DoctorId, userId)) return Forbid();
         return Ok(await noteService.GetFlagsAsync(userId));

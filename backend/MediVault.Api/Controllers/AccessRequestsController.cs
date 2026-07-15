@@ -11,8 +11,7 @@ namespace MediVault.Api.Controllers;
 [Authorize]
 public class AccessRequestsController(AccessControlService accessControl) : ControllerBase
 {
-    private int CurrentId => int.Parse(
-        User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub")!);
+    private string CurrentId => (User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"))!;
     private string CurrentRole => User.FindFirstValue(ClaimTypes.Role)!;
 
     [HttpGet]
@@ -34,7 +33,7 @@ public class AccessRequestsController(AccessControlService accessControl) : Cont
 
     [HttpPost("{userId}")]
     [Authorize(Roles = "Doctor")]
-    public async Task<IActionResult> RequestAccess(int userId)
+    public async Task<IActionResult> RequestAccess(string userId)
     {
         var request = await accessControl.RequestAccessAsync(CurrentId, userId);
         return Ok(new { request.Id, request.Status, request.AccessCode });
