@@ -16,7 +16,7 @@ erDiagram
     }
 
     INSTITUTIONS {
-        int id PK
+        guid id PK
         string name
         string type
         string address
@@ -47,7 +47,7 @@ erDiagram
     %% -------------------------------------------------------
 
     USERS {
-        int id PK
+        guid id PK
         string utent_number UK
         string fiscal_number UK
         string citizen_number UK
@@ -72,14 +72,14 @@ erDiagram
     }
 
     DOCTORS {
-        int id PK
+        guid id PK
         string ordem_medicos_id UK
         string first_name
         string last_name
         string email UK
         string password_hash
         string speciality
-        int institution_id FK
+        guid institution_id FK
         bool is_active
         datetime created_at
     }
@@ -90,7 +90,7 @@ erDiagram
 
     USER_ADDRESSES {
         int id PK
-        int user_id FK
+        guid user_id FK
         string street
         string city
         string postal_code
@@ -100,7 +100,7 @@ erDiagram
 
     EMERGENCY_CONTACTS {
         int id PK
-        int user_id FK
+        guid user_id FK
         string type
         string name
         string phone
@@ -109,7 +109,7 @@ erDiagram
 
     FEMALE_MEDICAL_INFO {
         int id PK
-        int user_id FK
+        guid user_id FK
         int menarche_age
         int pregnancies
         int births
@@ -127,7 +127,7 @@ erDiagram
 
     USER_SUBSCRIPTIONS {
         int id PK
-        int user_id FK
+        guid user_id FK
         int plan_id FK
         string card_type
         date start_date
@@ -137,7 +137,7 @@ erDiagram
 
     INSTITUTION_LICENSES {
         int id PK
-        int institution_id FK
+        guid institution_id FK
         string billing_type
         date start_date
         date end_date
@@ -150,8 +150,8 @@ erDiagram
 
     ACCESS_REQUESTS {
         int id PK
-        int user_id FK
-        int doctor_id FK
+        guid user_id FK
+        guid doctor_id FK
         datetime requested_at
         datetime approved_at
         datetime expires_at
@@ -166,11 +166,11 @@ erDiagram
 
     MEDICAL_FILES {
         int id PK
-        int user_id FK
+        guid user_id FK
         string file_name
         string file_type
         string file_path
-        int uploaded_by FK
+        guid uploaded_by FK
         datetime uploaded_at
     }
 
@@ -180,33 +180,33 @@ erDiagram
 
     SURGICAL_HISTORY {
         int id PK
-        int user_id FK
+        guid user_id FK
         string surgery_name
         date surgery_date
         string location
         text notes
         int report_file_id FK
-        int added_by FK
+        guid added_by FK
         bool is_active
         datetime created_at
     }
 
     CHRONIC_MEDICATIONS {
         int id PK
-        int user_id FK
+        guid user_id FK
         string active_substance
         string dose
         string posology
         date start_date
         date end_date
-        int prescribed_by FK
+        guid prescribed_by FK
         bool is_active
         datetime created_at
     }
 
     DRUG_ALLERGIES {
         int id PK
-        int user_id FK
+        guid user_id FK
         string active_substance
         string allergic_reaction
         string severity
@@ -215,7 +215,7 @@ erDiagram
 
     FAMILY_HISTORY {
         int id PK
-        int user_id FK
+        guid user_id FK
         string condition
         bool has_condition
         string kinship_degree
@@ -224,17 +224,17 @@ erDiagram
 
     USER_PATHOLOGIES {
         int id PK
-        int user_id FK
+        guid user_id FK
         int icpc2_id FK
         string type
         date diagnosed_at
         text notes
-        int added_by FK
+        guid added_by FK
     }
 
     USER_SPECIALTY_FOLLOWUPS {
         int id PK
-        int user_id FK
+        guid user_id FK
         int specialty_id FK
         string institution
         date start_date
@@ -247,12 +247,12 @@ erDiagram
 
     ANALYTICAL_EXAMS {
         int id PK
-        int user_id FK
+        guid user_id FK
         date exam_date
         string laboratory
         int file_id FK
         text notes
-        int added_by FK
+        guid added_by FK
         bool is_active
         datetime created_at
     }
@@ -270,21 +270,21 @@ erDiagram
 
     IMAGING_EXAMS {
         int id PK
-        int user_id FK
+        guid user_id FK
         string exam_type
         string body_area
         date exam_date
         string institution
         int file_id FK
         text report_text
-        int added_by FK
+        guid added_by FK
         bool is_active
         datetime created_at
     }
 
     OPTOMETRY_EXAMS {
         int id PK
-        int user_id FK
+        guid user_id FK
         date exam_date
         decimal right_sphere
         decimal right_cylinder
@@ -293,7 +293,7 @@ erDiagram
         decimal left_cylinder
         int left_axis
         text disease_report
-        int added_by FK
+        guid added_by FK
         bool is_active
         datetime created_at
     }
@@ -304,7 +304,7 @@ erDiagram
 
     USER_VACCINATIONS {
         int id PK
-        int user_id FK
+        guid user_id FK
         int vaccine_id FK
         string dose_number
         date administered_at
@@ -312,7 +312,7 @@ erDiagram
         string batch_number
         string institution
         text notes
-        int added_by FK
+        guid added_by FK
     }
 
     %% -------------------------------------------------------
@@ -322,7 +322,7 @@ erDiagram
 
     HEALTH_HABITS {
         int id PK
-        int user_id FK
+        guid user_id FK
         string type
         string name
         bool consumes
@@ -339,8 +339,8 @@ erDiagram
 
     DOCTOR_NOTES {
         int id PK
-        int user_id FK
-        int doctor_id FK
+        guid user_id FK
+        guid doctor_id FK
         string section
         binary note_text
         datetime created_at
@@ -349,11 +349,11 @@ erDiagram
 
     PENDING_REVIEW_FLAGS {
         int id PK
-        int user_id FK
+        guid user_id FK
         string section
         datetime created_at
         datetime reviewed_at
-        int reviewed_by FK
+        guid reviewed_by FK
     }
 
     %% -------------------------------------------------------
