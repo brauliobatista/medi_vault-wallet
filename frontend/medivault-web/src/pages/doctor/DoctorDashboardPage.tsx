@@ -1,20 +1,20 @@
 import { useRef, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
-import Navbar from '../../components/Navbar'
+import Layout from '../../components/Layout'
 import api from '../../api/client'
 import { scanQrCode } from '../../api/medical'
 
 export default function DoctorDashboardPage() {
   const [utentNumber, setUtentNumber] = useState('')
-  const [found, setFound] = useState<{ userId: number; name: string; publicId: string } | null>(null)
+  const [found, setFound] = useState<{ userId: string; name: string; publicId: string } | null>(null)
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
   // QR scan state
   const [scanning, setScanning] = useState(false)
   const [manualCode, setManualCode] = useState('')
-  const [scanResult, setScanResult] = useState<{ patientName: string; userId: number; publicId: string; expiresAt: string } | null>(null)
+  const [scanResult, setScanResult] = useState<{ patientName: string; userId: string; publicId: string; expiresAt: string } | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -112,38 +112,11 @@ export default function DoctorDashboardPage() {
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="container mt-4" style={{ maxWidth: 680 }}>
-        <h5 className="mb-4"><i className="bi bi-hospital me-2 text-primary" />Área do Médico</h5>
-
-        {/* Quick links */}
-        <div className="row g-3 mb-4">
-          <div className="col-6">
-            <Link to="/doctor/profile" className="text-decoration-none">
-              <div className="card h-100 border-primary border-2">
-                <div className="card-body d-flex align-items-center gap-3">
-                  <i className="bi bi-person-badge text-primary" style={{ fontSize: 28 }} />
-                  <span className="fw-semibold">O meu perfil</span>
-                </div>
-              </div>
-            </Link>
-          </div>
-          <div className="col-6">
-            <Link to="/doctor/access" className="text-decoration-none">
-              <div className="card h-100 border-secondary border-2">
-                <div className="card-body d-flex align-items-center gap-3">
-                  <i className="bi bi-key text-secondary" style={{ fontSize: 28 }} />
-                  <span className="fw-semibold">Pedidos de acesso</span>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-
+    <Layout>
+      <div style={{ maxWidth: 720 }}>
         {/* QR Code scanner */}
-        <div className="card mb-4 border-success">
-          <div className="card-header fw-semibold">
+        <div className="card border-0 shadow-sm mb-4">
+          <div className="card-header bg-white fw-semibold border-bottom">
             <i className="bi bi-qr-code-scan me-2 text-success" />
             Ler QR Code do Utente
           </div>
@@ -169,7 +142,6 @@ export default function DoctorDashboardPage() {
             ) : (
               <>
                 {scanError && <div className="alert alert-danger py-2 mb-3">{scanError}</div>}
-
                 {scanning ? (
                   <div className="text-center">
                     <video ref={videoRef} className="w-100 rounded mb-2" style={{ maxHeight: 260 }} muted playsInline />
@@ -189,7 +161,7 @@ export default function DoctorDashboardPage() {
                     <div className="input-group">
                       <input
                         className="form-control font-monospace"
-                        placeholder="MV:1:ABCDEF123456"
+                        placeholder="MV:uuid:ABCDEF123456"
                         value={manualCode}
                         onChange={(e) => setManualCode(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
@@ -206,15 +178,15 @@ export default function DoctorDashboardPage() {
         </div>
 
         {/* Search by utent number */}
-        <div className="card">
-          <div className="card-header fw-semibold">
+        <div className="card border-0 shadow-sm">
+          <div className="card-header bg-white fw-semibold border-bottom">
             <i className="bi bi-search me-2" />Pesquisar utente por número
           </div>
           <div className="card-body">
             <div className="input-group mb-3">
               <input
                 className="form-control"
-                placeholder="Número de utente (ex: 123456789)"
+                placeholder="Número de utente (ex: 100000001)"
                 value={utentNumber}
                 onChange={(e) => { setUtentNumber(e.target.value); setFound(null); setStatus(null) }}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -252,6 +224,6 @@ export default function DoctorDashboardPage() {
           </div>
         </div>
       </div>
-    </>
+    </Layout>
   )
 }

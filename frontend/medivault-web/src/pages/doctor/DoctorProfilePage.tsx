@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import Navbar from '../../components/Navbar'
+import Layout from '../../components/Layout'
 import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword } from '../../api/medical'
 
 export default function DoctorProfilePage() {
@@ -32,14 +32,8 @@ export default function DoctorProfilePage() {
   const handlePassword = async () => {
     setPwError('')
     setPwOk(false)
-    if (pwForm.next !== pwForm.confirm) {
-      setPwError('As passwords não coincidem.')
-      return
-    }
-    if (pwForm.next.length < 6) {
-      setPwError('A nova password deve ter pelo menos 6 caracteres.')
-      return
-    }
+    if (pwForm.next !== pwForm.confirm) { setPwError('As passwords não coincidem.'); return }
+    if (pwForm.next.length < 6) { setPwError('A nova password deve ter pelo menos 6 caracteres.'); return }
     try {
       await changeDoctorPassword({ currentPassword: pwForm.current, newPassword: pwForm.next })
       setPwOk(true)
@@ -51,21 +45,18 @@ export default function DoctorProfilePage() {
   }
 
   if (!profile) return (
-    <>
-      <Navbar />
-      <div className="container mt-4"><div className="spinner-border text-primary" /></div>
-    </>
+    <Layout>
+      <div className="d-flex justify-content-center py-5">
+        <div className="spinner-border text-primary" />
+      </div>
+    </Layout>
   )
 
   return (
-    <>
-      <Navbar />
-      <div className="container mt-4" style={{ maxWidth: 680 }}>
+    <Layout>
+      <div style={{ maxWidth: 680 }}>
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5 className="mb-0">
-            <i className="bi bi-person-badge me-2 text-primary" />
-            Perfil do Médico
-          </h5>
+          <h5 className="mb-0 fw-semibold">Informações profissionais</h5>
           <button className="btn btn-outline-primary btn-sm" onClick={() => setEditing(!editing)}>
             <i className={`bi ${editing ? 'bi-x' : 'bi-pencil'} me-1`} />
             {editing ? 'Cancelar' : 'Editar'}
@@ -75,7 +66,7 @@ export default function DoctorProfilePage() {
         {saved && <div className="alert alert-success py-2">Guardado com sucesso.</div>}
         {pwOk && <div className="alert alert-success py-2">Password alterada com sucesso.</div>}
 
-        <div className="card mb-3">
+        <div className="card border-0 shadow-sm mb-3">
           <div className="card-body">
             <div className="row g-3">
               <div className="col-sm-6">
@@ -93,36 +84,23 @@ export default function DoctorProfilePage() {
                   {String(profile.institutionName)}
                 </div>
               </div>
-
-              {/* Email — editável */}
               <div className="col-sm-6">
                 <div className="text-muted small">Email</div>
                 {editing ? (
-                  <input
-                    className="form-control form-control-sm"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  />
+                  <input className="form-control form-control-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 ) : (
                   <div className="fw-semibold">{String(profile.email)}</div>
                 )}
               </div>
-
-              {/* Especialidade — editável */}
               <div className="col-sm-6">
                 <div className="text-muted small">Especialidade</div>
                 {editing ? (
-                  <input
-                    className="form-control form-control-sm"
-                    value={form.speciality}
-                    onChange={(e) => setForm({ ...form, speciality: e.target.value })}
-                  />
+                  <input className="form-control form-control-sm" value={form.speciality} onChange={(e) => setForm({ ...form, speciality: e.target.value })} />
                 ) : (
                   <div className="fw-semibold">{String(profile.speciality ?? '-')}</div>
                 )}
               </div>
             </div>
-
             {editing && (
               <div className="mt-3">
                 <button className="btn btn-primary btn-sm" onClick={handleSave}>Guardar</button>
@@ -132,9 +110,9 @@ export default function DoctorProfilePage() {
         </div>
 
         {/* Change password */}
-        <div className="card">
+        <div className="card border-0 shadow-sm">
           <div
-            className="card-header d-flex justify-content-between align-items-center"
+            className="card-header bg-white d-flex justify-content-between align-items-center"
             style={{ cursor: 'pointer' }}
             onClick={() => setShowPw(!showPw)}
           >
@@ -147,41 +125,24 @@ export default function DoctorProfilePage() {
               <div className="row g-2">
                 <div className="col-12">
                   <label className="form-label small">Password atual</label>
-                  <input
-                    type="password"
-                    className="form-control form-control-sm"
-                    value={pwForm.current}
-                    onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })}
-                  />
+                  <input type="password" className="form-control form-control-sm" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} />
                 </div>
                 <div className="col-sm-6">
                   <label className="form-label small">Nova password</label>
-                  <input
-                    type="password"
-                    className="form-control form-control-sm"
-                    value={pwForm.next}
-                    onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
-                  />
+                  <input type="password" className="form-control form-control-sm" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} />
                 </div>
                 <div className="col-sm-6">
                   <label className="form-label small">Confirmar password</label>
-                  <input
-                    type="password"
-                    className="form-control form-control-sm"
-                    value={pwForm.confirm}
-                    onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-                  />
+                  <input type="password" className="form-control form-control-sm" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} />
                 </div>
                 <div className="col-12 mt-1">
-                  <button className="btn btn-primary btn-sm" onClick={handlePassword}>
-                    Alterar password
-                  </button>
+                  <button className="btn btn-primary btn-sm" onClick={handlePassword}>Alterar password</button>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-    </>
+    </Layout>
   )
 }

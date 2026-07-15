@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
-import Navbar from '../../components/Navbar'
+import Layout from '../../components/Layout'
 import api from '../../api/client'
 import {
   getSurgeries, addSurgery, deleteSurgery,
@@ -24,7 +24,7 @@ const habitTypes = [
 
 export default function PatientViewPage() {
   const { patientId } = useParams<{ patientId: string }>()
-  const uid = parseInt(patientId!)
+  const uid = patientId!
   const location = useLocation()
   const navState = location.state as { publicId?: string; patientName?: string } | null
 
@@ -103,242 +103,235 @@ export default function PatientViewPage() {
   const canDelete = ['history', 'medications', 'allergies', 'vaccinations'].includes(tab)
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: 'history', label: 'Cirurgias' },
-    { key: 'medications', label: 'Medicação' },
-    { key: 'allergies', label: 'Alergias' },
-    { key: 'exams', label: 'Análises' },
+    { key: 'history',      label: 'Cirurgias' },
+    { key: 'medications',  label: 'Medicação' },
+    { key: 'allergies',    label: 'Alergias' },
+    { key: 'exams',        label: 'Análises' },
     { key: 'vaccinations', label: 'Vacinação' },
-    { key: 'habits', label: 'Hábitos' },
-    { key: 'notes', label: 'Notas' },
+    { key: 'habits',       label: 'Hábitos' },
+    { key: 'notes',        label: 'Notas' },
   ]
 
   return (
-    <>
-      <Navbar />
-      <div className="container mt-4">
-        <div className="d-flex align-items-center gap-3 mb-3">
-          <Link to="/doctor" className="btn btn-outline-secondary btn-sm">
-            <i className="bi bi-arrow-left me-1" />Voltar
-          </Link>
-          <div>
-            <h5 className="mb-0"><i className="bi bi-person-vcard me-2 text-primary" />{patientName || 'Paciente'}</h5>
-            <small className="text-muted font-monospace">{publicId || patientId}</small>
-          </div>
-          {flags.length > 0 && (
-            <span className="badge bg-warning text-dark">
-              <i className="bi bi-flag me-1" />{flags.length} pendente(s)
-            </span>
-          )}
+    <Layout>
+      {/* Patient header */}
+      <div className="d-flex align-items-center gap-3 mb-4">
+        <Link to="/doctor" className="btn btn-outline-secondary btn-sm">
+          <i className="bi bi-arrow-left me-1" />Voltar
+        </Link>
+        <div>
+          <h5 className="mb-0 fw-semibold">
+            <i className="bi bi-person-vcard me-2 text-primary" />{patientName || 'Paciente'}
+          </h5>
+          <small className="text-muted font-monospace">{publicId || uid}</small>
         </div>
-
-        <ul className="nav nav-tabs mb-3 flex-wrap">
-          {tabs.map((t) => (
-            <li className="nav-item" key={t.key}>
-              <button className={`nav-link ${tab === t.key ? 'active' : ''}`} onClick={() => loadTab(t.key)}>
-                {t.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-
-        {accessDenied ? (
-          <div className="alert alert-warning">
-            <i className="bi bi-lock me-2" />
-            <strong>Sem acesso.</strong> Este utente ainda não aprovou o seu pedido de acesso.{' '}
-            <Link to="/doctor">Ir para o dashboard</Link>.
-          </div>
-
-        ) : tab === 'notes' ? (
-          <>
-            {flags.length > 0 && (
-              <div className="alert alert-warning">
-                <strong>Alterações por rever:</strong>
-                {flags.map((fl) => (
-                  <div key={String(fl.id)} className="d-flex justify-content-between align-items-center mt-1">
-                    <span><i className="bi bi-flag me-1" />{String(fl.section)} · {String(fl.createdAt).slice(0, 10)}</span>
-                    <button className="btn btn-sm btn-outline-success" onClick={async () => { await markFlagReviewed(Number(fl.id)); getFlags(uid).then(setFlags) }}>
-                      Marcar como revisto
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="card mb-3">
-              <div className="card-header">Adicionar nota</div>
-              <div className="card-body">
-                <div className="row g-2">
-                  <div className="col-sm-4">
-                    <select className="form-select form-select-sm" value={noteSection} onChange={(e) => setNoteSection(e.target.value)}>
-                      <option value="identification">Identificação</option>
-                      <option value="medical_info">Info Médica</option>
-                      <option value="mcdts">MCDTS</option>
-                      <option value="habits">Hábitos</option>
-                      <option value="history">Histórico</option>
-                      <option value="other">Outro</option>
-                    </select>
-                  </div>
-                  <div className="col-12">
-                    <textarea className="form-control form-control-sm" rows={3} placeholder="Nota confidencial..." value={noteText} onChange={(e) => setNoteText(e.target.value)} />
-                  </div>
-                  <div className="col-12">
-                    <button className="btn btn-primary btn-sm" onClick={async () => { if (!noteText.trim()) return; await createDoctorNote({ userId: uid, section: noteSection, noteText }); setNoteText(''); getDoctorNotes(uid).then(setNotes) }}>
-                      Guardar nota
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="list-group">
-              {notes.map((n) => (
-                <div key={String(n.id)} className="list-group-item">
-                  <div className="d-flex justify-content-between">
-                    <span className="badge bg-secondary">{String(n.section)}</span>
-                    <small className="text-muted">{String(n.updatedAt).slice(0, 10)}</small>
-                  </div>
-                  <p className="mb-0 mt-1">{String(n.noteText)}</p>
-                </div>
-              ))}
-              {notes.length === 0 && <p className="text-muted">Sem notas.</p>}
-            </div>
-          </>
-
-        ) : (
-          <>
-            <div className="d-flex justify-content-end mb-2">
-              <button className="btn btn-primary btn-sm" onClick={() => { setShowForm(!showForm); setForm({}) }}>
-                <i className={`bi ${showForm ? 'bi-x' : 'bi-plus'} me-1`} />{showForm ? 'Cancelar' : 'Adicionar'}
-              </button>
-            </div>
-
-            {showForm && (
-              <div className="card mb-3 border-primary">
-                <div className="card-body">
-                  <div className="row g-2">
-
-                    {tab === 'history' && <>
-                      <div className="col-sm-6"><label className="form-label small">Nome da cirurgia *</label>
-                        <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
-                      <div className="col-sm-3"><label className="form-label small">Data</label>
-                        <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
-                      <div className="col-sm-3"><label className="form-label small">Local</label>
-                        <input className="form-control form-control-sm" value={f('location')} onChange={sf('location')} /></div>
-                      <div className="col-12"><label className="form-label small">Notas</label>
-                        <textarea className="form-control form-control-sm" rows={2} value={f('notes')} onChange={sf('notes')} /></div>
-                    </>}
-
-                    {tab === 'medications' && <>
-                      <div className="col-sm-6"><label className="form-label small">Substância ativa *</label>
-                        <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
-                      <div className="col-sm-3"><label className="form-label small">Dose</label>
-                        <input className="form-control form-control-sm" placeholder="ex: 500mg" value={f('dose')} onChange={sf('dose')} /></div>
-                      <div className="col-sm-3"><label className="form-label small">Início</label>
-                        <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
-                      <div className="col-sm-6"><label className="form-label small">Posologia</label>
-                        <input className="form-control form-control-sm" placeholder="ex: 2x/dia" value={f('posology')} onChange={sf('posology')} /></div>
-                    </>}
-
-                    {tab === 'allergies' && <>
-                      <div className="col-sm-5"><label className="form-label small">Substância *</label>
-                        <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
-                      <div className="col-sm-4"><label className="form-label small">Reação</label>
-                        <input className="form-control form-control-sm" value={f('reaction')} onChange={sf('reaction')} /></div>
-                      <div className="col-sm-3"><label className="form-label small">Severidade</label>
-                        <select className="form-select form-select-sm" value={f('severity')} onChange={sf('severity')}>
-                          <option value="">—</option>
-                          <option value="mild">Leve</option>
-                          <option value="moderate">Moderada</option>
-                          <option value="severe">Grave</option>
-                        </select></div>
-                    </>}
-
-                    {tab === 'exams' && <>
-                      <div className="col-sm-4"><label className="form-label small">Data</label>
-                        <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
-                      <div className="col-sm-4"><label className="form-label small">Laboratório</label>
-                        <input className="form-control form-control-sm" value={f('lab')} onChange={sf('lab')} /></div>
-                      <div className="col-12"><label className="form-label small">Notas</label>
-                        <textarea className="form-control form-control-sm" rows={2} value={f('notes')} onChange={sf('notes')} /></div>
-                    </>}
-
-                    {tab === 'vaccinations' && <>
-                      <div className="col-sm-6"><label className="form-label small">Vacina *</label>
-                        <select className="form-select form-select-sm" value={f('vaccineId')} onChange={sf('vaccineId')}>
-                          <option value="">Selecionar...</option>
-                          {vaccines.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
-                        </select></div>
-                      <div className="col-sm-3"><label className="form-label small">Dose</label>
-                        <input className="form-control form-control-sm" placeholder="ex: 1ª" value={f('dose')} onChange={sf('dose')} /></div>
-                      <div className="col-sm-3"><label className="form-label small">Data</label>
-                        <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
-                      <div className="col-sm-6"><label className="form-label small">Próxima dose</label>
-                        <input type="date" className="form-control form-control-sm" value={f('nextDate')} onChange={sf('nextDate')} /></div>
-                      <div className="col-sm-6"><label className="form-label small">Instituição</label>
-                        <input className="form-control form-control-sm" value={f('institution')} onChange={sf('institution')} /></div>
-                    </>}
-
-                    {tab === 'habits' && <>
-                      <div className="col-sm-4"><label className="form-label small">Tipo *</label>
-                        <select className="form-select form-select-sm" value={f('type')} onChange={sf('type')}>
-                          <option value="">Selecionar...</option>
-                          {habitTypes.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
-                        </select></div>
-                      <div className="col-sm-4"><label className="form-label small">Nome/Detalhe</label>
-                        <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
-                      <div className="col-sm-4"><label className="form-label small">Frequência</label>
-                        <input className="form-control form-control-sm" placeholder="ex: diário" value={f('frequency')} onChange={sf('frequency')} /></div>
-                      <div className="col-sm-4"><label className="form-label small">Quantidade</label>
-                        <input className="form-control form-control-sm" value={f('quantity')} onChange={sf('quantity')} /></div>
-                      <div className="col-sm-4"><label className="form-label small">Desde</label>
-                        <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
-                    </>}
-
-                  </div>
-                  <div className="mt-3">
-                    <button className="btn btn-primary btn-sm me-2" onClick={handleAdd}>
-                      <i className="bi bi-check me-1" />Guardar
-                    </button>
-                    <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {data.length === 0 ? (
-              <p className="text-muted">Sem registos.</p>
-            ) : (
-              <div className="list-group">
-                {data.map((item) => (
-                  <div key={String(item.id)} className="list-group-item d-flex justify-content-between align-items-start gap-2">
-                    <div className="flex-grow-1">
-                      <div className="fw-semibold">
-                        {tab === 'history' && String(item.surgeryName ?? '-')}
-                        {tab === 'medications' && String(item.activeSubstance ?? '-')}
-                        {tab === 'allergies' && String(item.activeSubstance ?? '-')}
-                        {tab === 'exams' && `${String(item.examDate ?? '-')}${item.laboratory ? ' · ' + item.laboratory : ''}`}
-                        {tab === 'vaccinations' && String(item.vaccineName ?? '-')}
-                        {tab === 'habits' && `${String(item.type ?? '-')}${item.name ? ' · ' + item.name : ''}`}
-                      </div>
-                      <small className="text-muted">
-                        {tab === 'history' && [item.surgeryDate, item.location ? '· ' + item.location : ''].filter(Boolean).join(' ')}
-                        {tab === 'medications' && [item.dose, item.posology ? '· ' + item.posology : '', item.startDate ? '· desde ' + item.startDate : ''].filter(Boolean).join(' ')}
-                        {tab === 'allergies' && [item.allergicReaction, item.severity ? '· ' + item.severity : ''].filter(Boolean).join(' ')}
-                        {tab === 'exams' && String(item.notes ?? '')}
-                        {tab === 'vaccinations' && [item.doseNumber, item.administeredAt ? '· ' + item.administeredAt : '', item.institution ? '· ' + item.institution : ''].filter(Boolean).join(' ')}
-                        {tab === 'habits' && [item.frequency, item.quantity ? '· ' + item.quantity : ''].filter(Boolean).join(' ')}
-                      </small>
-                    </div>
-                    {canDelete && (
-                      <button className="btn btn-outline-danger btn-sm flex-shrink-0" onClick={() => handleDelete(Number(item.id))}>
-                        <i className="bi bi-trash" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
+        {flags.length > 0 && (
+          <span className="badge bg-warning text-dark">
+            <i className="bi bi-flag me-1" />{flags.length} pendente(s)
+          </span>
         )}
       </div>
-    </>
+
+      <ul className="nav nav-tabs mb-3 flex-wrap">
+        {tabs.map((t) => (
+          <li className="nav-item" key={t.key}>
+            <button className={`nav-link ${tab === t.key ? 'active' : ''}`} onClick={() => loadTab(t.key)}>
+              {t.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {accessDenied ? (
+        <div className="alert alert-warning">
+          <i className="bi bi-lock me-2" />
+          <strong>Sem acesso.</strong> Este utente ainda não aprovou o seu pedido de acesso.{' '}
+          <Link to="/doctor">Ir para o dashboard</Link>.
+        </div>
+
+      ) : tab === 'notes' ? (
+        <>
+          {flags.length > 0 && (
+            <div className="alert alert-warning">
+              <strong>Alterações por rever:</strong>
+              {flags.map((fl) => (
+                <div key={String(fl.id)} className="d-flex justify-content-between align-items-center mt-1">
+                  <span><i className="bi bi-flag me-1" />{String(fl.section)} · {String(fl.createdAt).slice(0, 10)}</span>
+                  <button className="btn btn-sm btn-outline-success" onClick={async () => { await markFlagReviewed(Number(fl.id)); getFlags(uid).then(setFlags) }}>
+                    Marcar como revisto
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="card border-0 shadow-sm mb-3">
+            <div className="card-header bg-white border-bottom">Adicionar nota</div>
+            <div className="card-body">
+              <div className="row g-2">
+                <div className="col-sm-4">
+                  <select className="form-select form-select-sm" value={noteSection} onChange={(e) => setNoteSection(e.target.value)}>
+                    <option value="identification">Identificação</option>
+                    <option value="medical_info">Info Médica</option>
+                    <option value="mcdts">MCDTS</option>
+                    <option value="habits">Hábitos</option>
+                    <option value="history">Histórico</option>
+                    <option value="other">Outro</option>
+                  </select>
+                </div>
+                <div className="col-12">
+                  <textarea className="form-control form-control-sm" rows={3} placeholder="Nota confidencial..." value={noteText} onChange={(e) => setNoteText(e.target.value)} />
+                </div>
+                <div className="col-12">
+                  <button className="btn btn-primary btn-sm" onClick={async () => { if (!noteText.trim()) return; await createDoctorNote({ userId: uid, section: noteSection, noteText }); setNoteText(''); getDoctorNotes(uid).then(setNotes) }}>
+                    Guardar nota
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="list-group shadow-sm">
+            {notes.map((n) => (
+              <div key={String(n.id)} className="list-group-item">
+                <div className="d-flex justify-content-between">
+                  <span className="badge bg-secondary">{String(n.section)}</span>
+                  <small className="text-muted">{String(n.updatedAt).slice(0, 10)}</small>
+                </div>
+                <p className="mb-0 mt-1">{String(n.noteText)}</p>
+              </div>
+            ))}
+            {notes.length === 0 && <p className="text-muted p-3 mb-0">Sem notas.</p>}
+          </div>
+        </>
+
+      ) : (
+        <>
+          <div className="d-flex justify-content-end mb-2">
+            <button className="btn btn-primary btn-sm" onClick={() => { setShowForm(!showForm); setForm({}) }}>
+              <i className={`bi ${showForm ? 'bi-x' : 'bi-plus'} me-1`} />{showForm ? 'Cancelar' : 'Adicionar'}
+            </button>
+          </div>
+
+          {showForm && (
+            <div className="card border-0 shadow-sm mb-3">
+              <div className="card-body">
+                <div className="row g-2">
+                  {tab === 'history' && <>
+                    <div className="col-sm-6"><label className="form-label small">Nome da cirurgia *</label>
+                      <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
+                    <div className="col-sm-3"><label className="form-label small">Data</label>
+                      <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
+                    <div className="col-sm-3"><label className="form-label small">Local</label>
+                      <input className="form-control form-control-sm" value={f('location')} onChange={sf('location')} /></div>
+                    <div className="col-12"><label className="form-label small">Notas</label>
+                      <textarea className="form-control form-control-sm" rows={2} value={f('notes')} onChange={sf('notes')} /></div>
+                  </>}
+                  {tab === 'medications' && <>
+                    <div className="col-sm-6"><label className="form-label small">Substância ativa *</label>
+                      <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
+                    <div className="col-sm-3"><label className="form-label small">Dose</label>
+                      <input className="form-control form-control-sm" placeholder="ex: 500mg" value={f('dose')} onChange={sf('dose')} /></div>
+                    <div className="col-sm-3"><label className="form-label small">Início</label>
+                      <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
+                    <div className="col-sm-6"><label className="form-label small">Posologia</label>
+                      <input className="form-control form-control-sm" placeholder="ex: 2x/dia" value={f('posology')} onChange={sf('posology')} /></div>
+                  </>}
+                  {tab === 'allergies' && <>
+                    <div className="col-sm-5"><label className="form-label small">Substância *</label>
+                      <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
+                    <div className="col-sm-4"><label className="form-label small">Reação</label>
+                      <input className="form-control form-control-sm" value={f('reaction')} onChange={sf('reaction')} /></div>
+                    <div className="col-sm-3"><label className="form-label small">Severidade</label>
+                      <select className="form-select form-select-sm" value={f('severity')} onChange={sf('severity')}>
+                        <option value="">—</option>
+                        <option value="mild">Leve</option>
+                        <option value="moderate">Moderada</option>
+                        <option value="severe">Grave</option>
+                      </select></div>
+                  </>}
+                  {tab === 'exams' && <>
+                    <div className="col-sm-4"><label className="form-label small">Data</label>
+                      <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
+                    <div className="col-sm-4"><label className="form-label small">Laboratório</label>
+                      <input className="form-control form-control-sm" value={f('lab')} onChange={sf('lab')} /></div>
+                    <div className="col-12"><label className="form-label small">Notas</label>
+                      <textarea className="form-control form-control-sm" rows={2} value={f('notes')} onChange={sf('notes')} /></div>
+                  </>}
+                  {tab === 'vaccinations' && <>
+                    <div className="col-sm-6"><label className="form-label small">Vacina *</label>
+                      <select className="form-select form-select-sm" value={f('vaccineId')} onChange={sf('vaccineId')}>
+                        <option value="">Selecionar...</option>
+                        {vaccines.map((v) => <option key={v.id} value={String(v.id)}>{v.name}</option>)}
+                      </select></div>
+                    <div className="col-sm-3"><label className="form-label small">Dose</label>
+                      <input className="form-control form-control-sm" placeholder="ex: 1ª" value={f('dose')} onChange={sf('dose')} /></div>
+                    <div className="col-sm-3"><label className="form-label small">Data</label>
+                      <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
+                    <div className="col-sm-6"><label className="form-label small">Próxima dose</label>
+                      <input type="date" className="form-control form-control-sm" value={f('nextDate')} onChange={sf('nextDate')} /></div>
+                    <div className="col-sm-6"><label className="form-label small">Instituição</label>
+                      <input className="form-control form-control-sm" value={f('institution')} onChange={sf('institution')} /></div>
+                  </>}
+                  {tab === 'habits' && <>
+                    <div className="col-sm-4"><label className="form-label small">Tipo *</label>
+                      <select className="form-select form-select-sm" value={f('type')} onChange={sf('type')}>
+                        <option value="">Selecionar...</option>
+                        {habitTypes.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
+                      </select></div>
+                    <div className="col-sm-4"><label className="form-label small">Nome/Detalhe</label>
+                      <input className="form-control form-control-sm" value={f('name')} onChange={sf('name')} /></div>
+                    <div className="col-sm-4"><label className="form-label small">Frequência</label>
+                      <input className="form-control form-control-sm" placeholder="ex: diário" value={f('frequency')} onChange={sf('frequency')} /></div>
+                    <div className="col-sm-4"><label className="form-label small">Quantidade</label>
+                      <input className="form-control form-control-sm" value={f('quantity')} onChange={sf('quantity')} /></div>
+                    <div className="col-sm-4"><label className="form-label small">Desde</label>
+                      <input type="date" className="form-control form-control-sm" value={f('date')} onChange={sf('date')} /></div>
+                  </>}
+                </div>
+                <div className="mt-3">
+                  <button className="btn btn-primary btn-sm me-2" onClick={handleAdd}>
+                    <i className="bi bi-check me-1" />Guardar
+                  </button>
+                  <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {data.length === 0 ? (
+            <p className="text-muted">Sem registos.</p>
+          ) : (
+            <div className="list-group shadow-sm">
+              {data.map((item) => (
+                <div key={String(item.id)} className="list-group-item d-flex justify-content-between align-items-start gap-2">
+                  <div className="flex-grow-1">
+                    <div className="fw-semibold">
+                      {tab === 'history'      && String(item.surgeryName ?? '-')}
+                      {tab === 'medications'  && String(item.activeSubstance ?? '-')}
+                      {tab === 'allergies'    && String(item.activeSubstance ?? '-')}
+                      {tab === 'exams'        && `${String(item.examDate ?? '-')}${item.laboratory ? ' · ' + item.laboratory : ''}`}
+                      {tab === 'vaccinations' && String(item.vaccineName ?? '-')}
+                      {tab === 'habits'       && `${String(item.type ?? '-')}${item.name ? ' · ' + item.name : ''}`}
+                    </div>
+                    <small className="text-muted">
+                      {tab === 'history'      && [item.surgeryDate, item.location ? '· ' + item.location : ''].filter(Boolean).join(' ')}
+                      {tab === 'medications'  && [item.dose, item.posology ? '· ' + item.posology : '', item.startDate ? '· desde ' + item.startDate : ''].filter(Boolean).join(' ')}
+                      {tab === 'allergies'    && [item.allergicReaction, item.severity ? '· ' + item.severity : ''].filter(Boolean).join(' ')}
+                      {tab === 'exams'        && String(item.notes ?? '')}
+                      {tab === 'vaccinations' && [item.doseNumber, item.administeredAt ? '· ' + item.administeredAt : '', item.institution ? '· ' + item.institution : ''].filter(Boolean).join(' ')}
+                      {tab === 'habits'       && [item.frequency, item.quantity ? '· ' + item.quantity : ''].filter(Boolean).join(' ')}
+                    </small>
+                  </div>
+                  {canDelete && (
+                    <button className="btn btn-outline-danger btn-sm flex-shrink-0" onClick={() => handleDelete(Number(item.id))}>
+                      <i className="bi bi-trash" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </Layout>
   )
 }

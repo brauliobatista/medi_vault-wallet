@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import Navbar from '../../components/Navbar'
+import Layout from '../../components/Layout'
 import { getAccessRequests, respondToRequest, getQrCode } from '../../api/medical'
 
 export default function AccessPage() {
@@ -23,19 +23,17 @@ export default function AccessPage() {
   }
 
   const badgeClass: Record<string, string> = {
-    pending: 'warning',
+    pending: 'warning text-dark',
     approved: 'success',
     revoked: 'secondary',
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="container mt-4" style={{ maxWidth: 700 }}>
-
+    <Layout>
+      <div style={{ maxWidth: 700 }}>
         {/* QR Code card */}
-        <div className="card mb-4 border-primary">
-          <div className="card-header fw-semibold">
+        <div className="card border-0 shadow-sm mb-4">
+          <div className="card-header bg-white fw-semibold border-bottom">
             <i className="bi bi-qr-code me-2 text-primary" />
             O meu QR Code de Acesso
           </div>
@@ -63,12 +61,12 @@ export default function AccessPage() {
         </div>
 
         {/* Pending requests */}
-        <h5 className="mb-3"><i className="bi bi-key me-2 text-secondary" />Pedidos de Acesso de Médicos</h5>
-        <p className="text-muted small">Os médicos que pediram acesso via formulário aparecem aqui.</p>
+        <h6 className="fw-semibold mb-1">Pedidos de Acesso de Médicos</h6>
+        <p className="text-muted small mb-3">Os médicos que pediram acesso via formulário aparecem aqui.</p>
         {requests.length === 0 ? (
           <p className="text-muted">Sem pedidos de acesso.</p>
         ) : (
-          <div className="list-group">
+          <div className="list-group shadow-sm">
             {requests.map((r) => (
               <div key={String(r.id)} className="list-group-item">
                 <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -99,6 +97,6 @@ export default function AccessPage() {
           </div>
         )}
       </div>
-    </>
+    </Layout>
   )
 }

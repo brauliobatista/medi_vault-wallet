@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import Navbar from '../../components/Navbar'
+import Layout from '../../components/Layout'
 import { getProfile, updateProfile } from '../../api/medical'
 
 export default function ProfilePage() {
@@ -32,21 +32,26 @@ export default function ProfilePage() {
     setProfile(p)
   }
 
-  if (!profile) return <><Navbar /><div className="container mt-4"><div className="spinner-border" /></div></>
+  if (!profile) return (
+    <Layout>
+      <div className="d-flex justify-content-center py-5">
+        <div className="spinner-border text-primary" />
+      </div>
+    </Layout>
+  )
 
   return (
-    <>
-      <Navbar />
-      <div className="container mt-4" style={{ maxWidth: 700 }}>
+    <Layout>
+      <div style={{ maxWidth: 700 }}>
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5 className="mb-0"><i className="bi bi-person-fill me-2 text-primary" />Perfil</h5>
+          <h5 className="mb-0 fw-semibold">Informações pessoais</h5>
           <button className="btn btn-outline-primary btn-sm" onClick={() => setEditing(!editing)}>
             <i className={`bi ${editing ? 'bi-x' : 'bi-pencil'} me-1`} />
             {editing ? 'Cancelar' : 'Editar'}
           </button>
         </div>
         {saved && <div className="alert alert-success py-2">Guardado com sucesso.</div>}
-        <div className="card">
+        <div className="card border-0 shadow-sm">
           <div className="card-body">
             <div className="row g-3">
               <Field label="Nº Utente" value={String(profile.utentNumber)} />
@@ -72,7 +77,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </>
+    </Layout>
   )
 }
 

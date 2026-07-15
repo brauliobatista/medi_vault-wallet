@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import Navbar from '../../components/Navbar'
+import Layout from '../../components/Layout'
 import { getUser } from '../../hooks/useAuth'
 import { getAnalyticalExams, getImagingExams, getOptometryExams } from '../../api/medical'
 
@@ -17,48 +17,46 @@ export default function ExamsPage() {
   }, [tab, user.id])
 
   return (
-    <>
-      <Navbar />
-      <div className="container mt-4">
-        <h5 className="mb-3"><i className="bi bi-activity me-2 text-warning" />Exames (MCDTS)</h5>
-        <p className="text-muted small"><i className="bi bi-info-circle me-1" />Esta informação é gerida pelo seu médico.</p>
-        <ul className="nav nav-tabs mb-3">
-          {(['analytical', 'imaging', 'optometry'] as Tab[]).map((t) => (
-            <li className="nav-item" key={t}>
-              <button className={`nav-link ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-                {t === 'analytical' ? 'Análises' : t === 'imaging' ? 'Imagiologia' : 'Optometria'}
-              </button>
-            </li>
-          ))}
-        </ul>
-        {(data as Record<string, unknown>[]).length === 0 ? (
-          <p className="text-muted">Sem registos.</p>
-        ) : (
-          <div className="list-group">
-            {(data as Record<string, unknown>[]).map((item) => (
-              <div key={String(item.id)} className="list-group-item">
-                <div className="fw-semibold">
-                  {String(item.examDate ?? '-')}
-                  {item.examType ? ` · ${item.examType}` : ''}
-                  {item.laboratory ? ` · ${item.laboratory}` : ''}
-                  {item.bodyArea ? ` · ${item.bodyArea}` : ''}
-                </div>
-                {item.notes && <small className="text-muted d-block">{String(item.notes)}</small>}
-                {item.reportText && <small className="text-muted d-block">{String(item.reportText)}</small>}
-                {(item as { parameters?: unknown[] }).parameters?.length ? (
-                  <div className="mt-1">
-                    {((item as { parameters: Record<string, unknown>[] }).parameters).map((p) => (
-                      <span key={String(p.id)} className={`badge me-1 ${p.isAbnormal ? 'bg-danger' : 'bg-secondary'}`}>
-                        {String(p.parameterName)}: {String(p.value)} {String(p.unit ?? '')}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+    <Layout>
+      <p className="text-muted small mb-3">
+        <i className="bi bi-info-circle me-1" />Esta informação é gerida pelo seu médico.
+      </p>
+      <ul className="nav nav-tabs mb-3">
+        {(['analytical', 'imaging', 'optometry'] as Tab[]).map((t) => (
+          <li className="nav-item" key={t}>
+            <button className={`nav-link ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+              {t === 'analytical' ? 'Análises' : t === 'imaging' ? 'Imagiologia' : 'Optometria'}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {(data as Record<string, unknown>[]).length === 0 ? (
+        <p className="text-muted">Sem registos.</p>
+      ) : (
+        <div className="list-group shadow-sm">
+          {(data as Record<string, unknown>[]).map((item) => (
+            <div key={String(item.id)} className="list-group-item">
+              <div className="fw-semibold">
+                {String(item.examDate ?? '-')}
+                {item.examType ? ` · ${item.examType}` : ''}
+                {item.laboratory ? ` · ${item.laboratory}` : ''}
+                {item.bodyArea ? ` · ${item.bodyArea}` : ''}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </>
+              {item.notes && <small className="text-muted d-block">{String(item.notes)}</small>}
+              {item.reportText && <small className="text-muted d-block">{String(item.reportText)}</small>}
+              {(item as { parameters?: unknown[] }).parameters?.length ? (
+                <div className="mt-1">
+                  {((item as { parameters: Record<string, unknown>[] }).parameters).map((p) => (
+                    <span key={String(p.id)} className={`badge me-1 ${p.isAbnormal ? 'bg-danger' : 'bg-secondary'}`}>
+                      {String(p.parameterName)}: {String(p.value)} {String(p.unit ?? '')}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </Layout>
   )
 }
