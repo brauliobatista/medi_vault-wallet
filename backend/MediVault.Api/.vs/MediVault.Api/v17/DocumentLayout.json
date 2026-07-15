@@ -1,0 +1,94 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|c:\\git\\medi_vault-wallet\\backend\\medivault.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|c:\\git\\medi_vault-wallet\\backend\\medivault.api\\controllers\\medicalhistorycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|solutionrelative:controllers\\medicalhistorycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|c:\\git\\medi_vault-wallet\\backend\\medivault.api\\entities\\familyhistory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|solutionrelative:entities\\familyhistory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|c:\\git\\medi_vault-wallet\\backend\\medivault.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{10D9CC22-A59A-59D4-565F-AC6EEBB26BAF}|MediVault.Api.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{5da8d69b-058a-4294-a87a-f4f7ae2983b3}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
+              "ToolTip": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Controllers\\AuthController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-10T20:55:47.616Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MedicalHistoryController.cs",
+              "DocumentMoniker": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\Controllers\\MedicalHistoryController.cs",
+              "RelativeDocumentMoniker": "Controllers\\MedicalHistoryController.cs",
+              "ToolTip": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\Controllers\\MedicalHistoryController.cs",
+              "RelativeToolTip": "Controllers\\MedicalHistoryController.cs",
+              "ViewState": "AgIAAD0AAAAAAAAAAAA/wAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-03T21:07:29.25Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "FamilyHistory.cs",
+              "DocumentMoniker": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\Entities\\FamilyHistory.cs",
+              "RelativeDocumentMoniker": "Entities\\FamilyHistory.cs",
+              "ToolTip": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\Entities\\FamilyHistory.cs",
+              "RelativeToolTip": "Entities\\FamilyHistory.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-03T21:07:17.004Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\git\\medi_vault-wallet\\backend\\MediVault.Api\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAA7AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-06-21T08:29:41.535Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
