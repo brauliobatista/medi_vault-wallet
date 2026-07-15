@@ -1,0 +1,32 @@
+# ── .NET ─────────────────────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.db
+*.db-shm
+*.db-wal
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# ── Node / Vite ───────────────────────────────────────────────────────────────
+node_modules/
+dist/
+.env.local
+.env.*.local
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+*.swp
+
+# ── Logs / caches ─────────────────────────────────────────────────────────────
+*.log
+.vite/

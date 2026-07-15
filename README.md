@@ -6,6 +6,7 @@
 
 ## Table of Contents
 
+- [Development Setup](#development-setup)
 - [Concept](#concept)
 - [How It Works](#how-it-works)
   - [User Perspective](#user-perspective)
@@ -16,6 +17,92 @@
   - [Software Components](#2-software-components)
 - [Database](#database)
 - [Documentation](#documentation)
+
+---
+
+## Development Setup
+
+### Pré-requisitos
+
+| Ferramenta | Versão |
+|---|---|
+| .NET SDK | 9.0+ |
+| Node.js | 18+ |
+
+### Estrutura
+
+```
+medi_vault-wallet/
+├── backend/MediVault.Api/   # ASP.NET Core 9 Web API + SQLite
+├── frontend/medivault-web/  # React 18 + TypeScript + Vite + Bootstrap 5
+└── database/                # Schemas SQL de referência
+```
+
+### 1 — Iniciar o Backend
+
+```bash
+cd backend/MediVault.Api
+dotnet run
+```
+
+- HTTP → `http://localhost:50970`
+- HTTPS → `https://localhost:50969`
+- Swagger → `https://localhost:50969/swagger`
+
+A base de dados SQLite (`medivault.db`) é criada automaticamente. Na primeira execução são inseridos utilizadores de teste.
+
+**Reiniciar a base de dados** (repõe o seed):
+```bash
+# parar o servidor primeiro
+del backend\MediVault.Api\medivault.db
+dotnet run --project backend/MediVault.Api
+```
+
+### 2 — Iniciar o Frontend
+
+```bash
+cd frontend/medivault-web
+npm install --legacy-peer-deps
+npm run dev
+```
+
+A app arranca em `https://localhost:5173`. O HTTPS é obrigatório para a câmara funcionar no telemóvel.
+
+O Vite faz proxy de `/api` → `http://localhost:50970` automaticamente — o backend tem de estar a correr.
+
+### Acesso em telemóvel (rede local)
+
+1. Descobrir o IP do PC: `ipconfig` → ex. `192.168.1.77`
+2. Abrir `https://192.168.1.77:5173` no telemóvel
+3. Aceitar o aviso do certificado auto-assinado
+4. A câmara funciona porque a ligação é HTTPS
+
+### Utilizadores de teste
+
+**Pacientes** (autenticação: número de utente + password):
+
+| Nome | Utente | Password |
+|---|---|---|
+| Braulio Batista | `100000001` | `password123` |
+| Cesar Oliveira | `100000002` | `password123` |
+| Joka Ferreira | `100000003` | `password123` |
+| Tiago Costa | `100000004` | `password123` |
+
+**Médicos** (autenticação: número da Ordem + password):
+
+| Nome | Ordem | Password |
+|---|---|---|
+| Monica Sousa | `OM10001` | `password123` |
+| Diana Pereira | `OM10002` | `password123` |
+| Maria Gomes | `OM10003` | `password123` |
+
+### Stack
+
+| Camada | Tecnologias |
+|---|---|
+| API | ASP.NET Core 9, EF Core 9, SQLite, JWT HS256, BCrypt |
+| Frontend | React 18, TypeScript, Vite 5, Bootstrap 5.3, Axios |
+| QR | `qrcode.react` (gerar), `jsqr` (ler câmara) |
 
 ---
 
