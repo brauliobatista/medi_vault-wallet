@@ -28,6 +28,7 @@ Load this skill at the start of every session on this project, or whenever you n
   - Chronic medications, allergies, vaccinations
 - All data is saved in **historical mode** (never deleted, just archived)
 - **The patient has full control** over who accesses their data — a doctor must request access and the patient must approve, except in pre-authorised emergency situations
+- **Family guardianship** (KAN-33): a patient (guardian) can be linked to another patient (dependent) — e.g. parent/child, legal guardian/incapacitated adult. The guardian gets full access to the dependent's data directly in the app, no `ACCESS_REQUESTS` needed (`family_guardianships` table, self-referencing on `users`)
 
 ### Doctors (Médicos)
 - Access via the **Doctor Web Interface**

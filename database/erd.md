@@ -54,6 +54,12 @@ erDiagram
         string description
     }
 
+    RELATIONSHIP_TYPES {
+        int id PK
+        string code UK
+        string description
+    }
+
     COUNTRIES {
         int id PK
         string code UK
@@ -125,6 +131,17 @@ erDiagram
         string name
         string phone
         string address
+    }
+
+    %% Guardian/dependent link between two users (KAN-33)
+    %% Guardian has full access to the dependent's data (application layer)
+    FAMILY_GUARDIANSHIPS {
+        int id PK
+        guid guardian_user_id FK
+        guid dependent_user_id FK
+        int relationship_type_id FK
+        bool is_active
+        datetime created_at
     }
 
     FEMALE_MEDICAL_INFO {
@@ -392,6 +409,9 @@ erDiagram
     COUNTRIES                   ||--o{ USERS                      : "nationality"
     USERS                       ||--o{ USER_ADDRESSES             : "has"
     USERS                       ||--o{ EMERGENCY_CONTACTS         : "has"
+    USERS                       ||--o{ FAMILY_GUARDIANSHIPS       : "is guardian in"
+    USERS                       ||--o{ FAMILY_GUARDIANSHIPS       : "is dependent in"
+    RELATIONSHIP_TYPES          ||--o{ FAMILY_GUARDIANSHIPS       : "classifies"
     USERS                       ||--o| FEMALE_MEDICAL_INFO        : "has"
 
     %% Users — subscriptions & access

@@ -60,6 +60,12 @@ CREATE TABLE habit_types (
     description VARCHAR(255)
 );
 
+CREATE TABLE relationship_types (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(30)  NOT NULL UNIQUE,
+    description VARCHAR(255)
+);
+
 CREATE TABLE countries (
     id   INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(3)   NOT NULL UNIQUE,
@@ -141,6 +147,22 @@ CREATE TABLE emergency_contacts (
     phone   VARCHAR(50),
     address VARCHAR(500),
     CONSTRAINT fk_emergency_contacts_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Guardian/dependent relationship between two registered users (KAN-33)
+-- e.g. parent/child, legal guardian/incapacitated patient.
+-- A guardian has full access to the dependent's data (enforced at application layer).
+CREATE TABLE family_guardianships (
+    id                 INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    guardian_user_id     CHAR(36) NOT NULL,
+    dependent_user_id    CHAR(36) NOT NULL,
+    relationship_type_id INT      NOT NULL,
+    is_active            BOOLEAN  NOT NULL DEFAULT TRUE,
+    created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_family_guardianships_guardian     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
+    CONSTRAINT fk_family_guardianships_dependent    FOREIGN KEY (dependent_user_id)    REFERENCES users(id),
+    CONSTRAINT fk_family_guardianships_relationship FOREIGN KEY (relationship_type_id) REFERENCES relationship_types(id),
+    CONSTRAINT chk_family_guardianships_not_self    CHECK (guardian_user_id <> dependent_user_id)
 );
 
 CREATE TABLE female_medical_info (

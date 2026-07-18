@@ -59,6 +59,12 @@ CREATE TABLE habit_types (
     description TEXT
 );
 
+CREATE TABLE relationship_types (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    code        TEXT    NOT NULL UNIQUE,
+    description TEXT
+);
+
 CREATE TABLE countries (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT    NOT NULL UNIQUE,
@@ -140,6 +146,22 @@ CREATE TABLE emergency_contacts (
     phone   TEXT,
     address TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Guardian/dependent relationship between two registered users (KAN-33)
+-- e.g. parent/child, legal guardian/incapacitated patient.
+-- A guardian has full access to the dependent's data (enforced at application layer).
+CREATE TABLE family_guardianships (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    guardian_user_id     TEXT    NOT NULL,
+    dependent_user_id    TEXT    NOT NULL,
+    relationship_type_id INTEGER NOT NULL,
+    is_active            INTEGER NOT NULL DEFAULT 1,
+    created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
+    FOREIGN KEY (dependent_user_id)    REFERENCES users(id),
+    FOREIGN KEY (relationship_type_id) REFERENCES relationship_types(id),
+    CHECK (guardian_user_id <> dependent_user_id)
 );
 
 CREATE TABLE female_medical_info (

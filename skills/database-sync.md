@@ -49,7 +49,9 @@ Two patterns exist for a column with a bounded set of values — pick based on w
 | Pattern | When to use | Example |
 |---|---|---|
 | Inline `ENUM`/`CHECK` | The set of values is small and stable — changing it is a deliberate schema decision | `institution_licenses.billing_type`, `access_requests.status`, `family_history.condition` |
-| Config table (reference table + FK) | The set of values is expected to grow over time without a schema migration, or is externally standardized | `genders`, `habit_types`, `countries` |
+| Config table (reference table + FK) | The set of values is expected to grow over time without a schema migration, or is externally standardized | `genders`, `habit_types`, `countries`, `relationship_types` |
+
+Rule of thumb from PR review history (KAN-11, reviewer Ccampinho): columns that **classify a person or entity** (gender, habit type, relationship type) tend to need new values as the product covers more real-world cases — lean config table even if the initial list looks small and closed. Columns that represent a **process/workflow state** (`status`, `billing_type`) stay inline `CHECK`/`ENUM` — those only got "add more options" comments, never "make this a table".
 
 Config tables follow a consistent shape: `id` (auto PK, plain `INT`/`SERIAL`/`AUTOINCREMENT` — **not** GUID), `code` (`NOT NULL UNIQUE`, matches the value previously used in the `CHECK`/`ENUM`), `description`/`name` (human-readable label). The referencing column is renamed from the bare concept (`sex`, `type`) to `<concept>_id` (`sex_id`, `type_id`, `nationality_id`) and gets an FK constraint. Config tables are seeded in `seed.sql` alongside the other independent reference tables, before anything that references them.
 
@@ -74,6 +76,8 @@ CONSTRAINT fk_table_column FOREIGN KEY (column) REFERENCES other_table(id)
 FOREIGN KEY (column) REFERENCES other_table(id)
 -- also requires: PRAGMA foreign_keys = ON;
 ```
+
+**Self-referencing / two role-based FKs to the same table:** when a table links two rows of the same other table in different roles (e.g. `family_guardianships.guardian_user_id` and `dependent_user_id`, both FK → `users.id`), name each column and constraint after its role, not the target table, and add a `CHECK`/`FOREIGN KEY ... CHECK` guarding against a row pointing to itself (`CHECK (guardian_user_id <> dependent_user_id)`).
 
 ---
 

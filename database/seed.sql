@@ -92,6 +92,16 @@ INSERT INTO habit_types (code, description) VALUES
 ('physical_activity', 'Atividade física');
 
 -- -------------------------------------------------------
+-- RELATIONSHIP_TYPES (config table — code matches the former CHECK constraint)
+-- id 1=parent, 2=legal_guardian, 3=tutor, 4=other
+-- -------------------------------------------------------
+INSERT INTO relationship_types (code, description) VALUES
+('parent',         'Pai / mãe'),
+('legal_guardian', 'Tutor legal nomeado por tribunal (pessoa incapacitada)'),
+('tutor',          'Tutor de menor sem tutela parental'),
+('other',          'Outro tipo de responsável');
+
+-- -------------------------------------------------------
 -- COUNTRIES (config table)
 -- Full ISO 3166-1 list (alpha-3 code), sorted alphabetically
 -- by the Portuguese name.
@@ -392,6 +402,14 @@ INSERT INTO emergency_contacts (user_id, type, name, phone, address) VALUES
 ('30000000-0000-0000-0000-000000000003', 'emergency', 'Luísa Ferreira', '919 333 444', 'R. de Santa Catarina, 78, Porto'),
 ('30000000-0000-0000-0000-000000000004', 'emergency', 'José Pereira',   '920 444 555', 'Largo do Chiado, 5 1º, Lisboa'),
 ('30000000-0000-0000-0000-000000000005', 'tutor',     'Beatriz Costa',  '921 555 666', 'R. Direita, 12, Braga');
+
+-- -------------------------------------------------------
+-- FAMILY_GUARDIANSHIPS (Pedro Costa is_dependent=1; parents divorced, both keep guardianship)
+-- -------------------------------------------------------
+-- relationship_type_id: 1=parent (see RELATIONSHIP_TYPES above)
+INSERT INTO family_guardianships (guardian_user_id, dependent_user_id, relationship_type_id, is_active) VALUES
+('30000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000005', 1, 1),
+('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000005', 1, 1);
 
 -- -------------------------------------------------------
 -- FEMALE_MEDICAL_INFO (users 2 and 4 are female)
