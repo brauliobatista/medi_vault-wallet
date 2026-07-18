@@ -68,6 +68,22 @@ When adding a brand-new table to the page, add both the description
 Same `PUT /wiki/rest/api/content/22740994` call as `database-sync.md`,
 incrementing `version.number` by 1.
 
+## Gotchas
+
+- **Duplicate column names across tables.** A plain string replace on a row
+  like `<tr><td><code>institution_id</code></td>...` can match the *wrong*
+  table if the same column name is FK'd from more than one place (e.g.
+  `institution_id` appears in both `DOCTORS` and `INSTITUTION_LICENSES`).
+  Always locate the target `<h3>TABLE_NAME</h3>` first, then search for the
+  row starting from that offset (`body.indexOf(row, headerIdx)`), not a
+  global replace.
+- **Do the fetch, transform, and PUT in one `javascript_exec` call.**
+  Splitting them across multiple calls risks losing `window.__*` state if
+  the tab navigates in between (observed in practice — a stray navigation
+  reset the page context and silently dropped an in-progress edit). Fetch
+  the current body, apply every transformation, and PUT — all inside a
+  single script.
+
 ## Checklist before finishing
 - [ ] Every added/changed/removed table has its field table added/updated/removed
 - [ ] Column order in the table matches the schema files / `erd.md`
