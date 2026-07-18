@@ -87,7 +87,7 @@ CREATE TABLE users (
     blood_type            ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
     accepts_transfusion   BOOLEAN      NOT NULL DEFAULT TRUE,
     accepts_resuscitation BOOLEAN      NOT NULL DEFAULT TRUE,
-    emergency_access_code BOOLEAN      NOT NULL DEFAULT FALSE,
+    emergency_access_code BOOLEAN      NOT NULL DEFAULT TRUE,
     is_dependent          BOOLEAN      NOT NULL DEFAULT FALSE,
     profession            VARCHAR(255),
     phone                 VARCHAR(50),
@@ -201,6 +201,36 @@ CREATE TABLE access_requests (
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
     CONSTRAINT fk_access_requests_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+
+-- Rule: an access request can only be flagged is_emergency = true if the
+-- patient has pre-authorised emergency access (users.emergency_access_code = true)
+DELIMITER $$
+
+CREATE TRIGGER trg_access_requests_emergency_consent_insert
+BEFORE INSERT ON access_requests
+FOR EACH ROW
+BEGIN
+    IF NEW.is_emergency = TRUE AND NOT EXISTS (
+        SELECT 1 FROM users WHERE id = NEW.user_id AND emergency_access_code = TRUE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'access_requests.is_emergency = true requires users.emergency_access_code = true';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_access_requests_emergency_consent_update
+BEFORE UPDATE ON access_requests
+FOR EACH ROW
+BEGIN
+    IF NEW.is_emergency = TRUE AND NOT EXISTS (
+        SELECT 1 FROM users WHERE id = NEW.user_id AND emergency_access_code = TRUE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'access_requests.is_emergency = true requires users.emergency_access_code = true';
+    END IF;
+END$$
+
+DELIMITER ;
 
 -- -------------------------------------------------------
 -- FILES

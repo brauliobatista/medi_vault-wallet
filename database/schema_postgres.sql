@@ -84,7 +84,7 @@ CREATE TABLE users (
     blood_type            TEXT      CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   BOOLEAN   NOT NULL DEFAULT TRUE,
     accepts_resuscitation BOOLEAN   NOT NULL DEFAULT TRUE,
-    emergency_access_code BOOLEAN   NOT NULL DEFAULT FALSE,
+    emergency_access_code BOOLEAN   NOT NULL DEFAULT TRUE,
     is_dependent          BOOLEAN   NOT NULL DEFAULT FALSE,
     profession            TEXT,
     phone                 TEXT,
@@ -198,6 +198,25 @@ CREATE TABLE access_requests (
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
     CONSTRAINT fk_access_requests_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+
+-- Rule: an access request can only be flagged is_emergency = true if the
+-- patient has pre-authorised emergency access (users.emergency_access_code = true)
+CREATE OR REPLACE FUNCTION check_access_requests_emergency_consent()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_emergency = TRUE AND NOT EXISTS (
+        SELECT 1 FROM users WHERE id = NEW.user_id AND emergency_access_code = TRUE
+    ) THEN
+        RAISE EXCEPTION 'access_requests.is_emergency = true requires users.emergency_access_code = true';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_access_requests_emergency_consent
+BEFORE INSERT OR UPDATE ON access_requests
+FOR EACH ROW
+EXECUTE FUNCTION check_access_requests_emergency_consent();
 
 -- -------------------------------------------------------
 -- FILES

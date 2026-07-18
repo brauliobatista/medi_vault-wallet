@@ -77,6 +77,25 @@ FOREIGN KEY (column) REFERENCES other_table(id)
 
 ---
 
+## Trigger pattern for cross-table business rules
+
+A `CHECK` constraint can only see columns in the same row — it cannot validate against another table. When a business rule depends on a column in a *different* table (e.g. `access_requests.is_emergency` depending on `users.emergency_access_code`), implement it as a trigger, added to **all 4 dialect files**, right after the `CREATE TABLE` block it protects.
+
+Naming: `trg_<table>_<rule>` (e.g. `trg_access_requests_emergency_consent`). Precede the trigger with a one-line comment stating the rule in plain English.
+
+| Dialect | Mechanism |
+|---|---|
+| SQL Server | Single `AFTER INSERT, UPDATE` trigger on the table, reads the `inserted` pseudo-table, `RAISERROR` + `ROLLBACK TRANSACTION` on violation. Wrap in `GO` batch separators. |
+| PostgreSQL | `CREATE OR REPLACE FUNCTION` (`RAISE EXCEPTION` on violation) + `CREATE TRIGGER ... BEFORE INSERT OR UPDATE ... FOR EACH ROW EXECUTE FUNCTION ...` |
+| MySQL / MariaDB | **Two** separate triggers (`BEFORE INSERT` and `BEFORE UPDATE` — one trigger cannot cover both events), each using `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '...'` on violation. Wrap in `DELIMITER $$ ... DELIMITER ;`. |
+| SQLite | **Two** separate triggers (`BEFORE INSERT` / `BEFORE UPDATE`), condition in a `WHEN` clause, `SELECT RAISE(ABORT, '...')` in the body. |
+
+Example precedent: `trg_access_requests_emergency_consent` (KAN-23) blocks `access_requests.is_emergency = true` unless the referenced `users.emergency_access_code = true`.
+
+Reminder: if the rule involves a column default rather than (or in addition to) a trigger, update `seed.sql` too — existing rows with explicit values that would now violate the rule must be fixed so the seed script still runs cleanly.
+
+---
+
 ## ERD update rules (database/erd.md)
 
 - New table → add block with all columns inside `erDiagram`, add all relationship lines
@@ -191,4 +210,5 @@ The seed file contains Portuguese test data and must be kept in sync with the sc
 - [ ] Confluence page description text updated (via REST API)
 - [ ] Confluence field table updated per [`confluence-field-tables.md`](confluence-field-tables.md)
 - [ ] Syntax verified for each dialect (types, defaults, FK syntax)
+- [ ] Cross-table business rule → trigger added to all 4 dialects (see [Trigger pattern](#trigger-pattern-for-cross-table-business-rules)), not a same-table `CHECK`
 - [ ] Table creation order respects FK dependencies (referenced tables first)

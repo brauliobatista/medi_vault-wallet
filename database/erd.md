@@ -166,6 +166,8 @@ erDiagram
 
     %% -------------------------------------------------------
     %% ACCESS CONTROL
+    %% Rule: is_emergency = true only allowed when USERS.emergency_access_code = true
+    %% (enforced by DB trigger, see schema_*.sql)
     %% -------------------------------------------------------
 
     ACCESS_REQUESTS {

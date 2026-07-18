@@ -84,7 +84,7 @@ CREATE TABLE users (
     blood_type            NVARCHAR(5)   CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   BIT           NOT NULL DEFAULT 1,
     accepts_resuscitation BIT           NOT NULL DEFAULT 1,
-    emergency_access_code BIT           NOT NULL DEFAULT 0,
+    emergency_access_code BIT           NOT NULL DEFAULT 1,
     is_dependent          BIT           NOT NULL DEFAULT 0,
     profession            NVARCHAR(255),
     phone                 NVARCHAR(50),
@@ -198,6 +198,28 @@ CREATE TABLE access_requests (
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
     CONSTRAINT fk_access_requests_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+GO
+
+-- Rule: an access request can only be flagged is_emergency = 1 if the
+-- patient has pre-authorised emergency access (users.emergency_access_code = 1)
+CREATE TRIGGER trg_access_requests_emergency_consent
+ON access_requests
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN users u ON u.id = i.user_id
+        WHERE i.is_emergency = 1 AND u.emergency_access_code = 0
+    )
+    BEGIN
+        RAISERROR ('access_requests.is_emergency = 1 requires users.emergency_access_code = 1', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+GO
 
 -- -------------------------------------------------------
 -- FILES

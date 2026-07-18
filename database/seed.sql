@@ -356,10 +356,10 @@ INSERT INTO countries (code, name) VALUES
 -- -------------------------------------------------------
 INSERT INTO users (id, utent_number, fiscal_number, citizen_number, email, password_hash, first_name, last_name, birthday, biological_gender, sex_id, nationality_id, marital_status, blood_type, accepts_transfusion, accepts_resuscitation, emergency_access_code, is_dependent, profession, phone, is_active) VALUES
 ('30000000-0000-0000-0000-000000000001', '123456789', '123456789', '12345678', 'joao.silva@email.pt',      '$2b$12$hash1', 'João',   'Silva',     '1985-03-12', 'M', 1, 184, 'Casado',    'A+',  1, 1, 0, 0, 'Engenheiro', '912 345 678', 1),
-('30000000-0000-0000-0000-000000000002', '234567890', '234567890', '23456789', 'ana.santos@email.pt',      '$2b$12$hash2', 'Ana',    'Santos',    '1990-07-24', 'F', 2, 184, 'Solteira',  'O+',  1, 1, 0, 0, 'Médica',     '913 456 789', 1),
-('30000000-0000-0000-0000-000000000003', '345678901', '345678901', '34567890', 'miguel.ferreira@email.pt', '$2b$12$hash3', 'Miguel', 'Ferreira',  '1978-11-05', 'M', 1, 30,  'Divorciado','B-',  0, 1, 0, 0, 'Professor',  '914 567 890', 1),
+('30000000-0000-0000-0000-000000000002', '234567890', '234567890', '23456789', 'ana.santos@email.pt',      '$2b$12$hash2', 'Ana',    'Santos',    '1990-07-24', 'F', 2, 184, 'Solteira',  'O+',  1, 1, 1, 0, 'Médica',     '913 456 789', 1),
+('30000000-0000-0000-0000-000000000003', '345678901', '345678901', '34567890', 'miguel.ferreira@email.pt', '$2b$12$hash3', 'Miguel', 'Ferreira',  '1978-11-05', 'M', 1, 30,  'Divorciado','B-',  0, 1, 1, 0, 'Professor',  '914 567 890', 1),
 ('30000000-0000-0000-0000-000000000004', '456789012', '456789012', '45678901', 'maria.pereira@email.pt',   '$2b$12$hash4', 'Maria',  'Pereira',   '1965-02-18', 'F', 2, 184, 'Viúva',     'AB+', 1, 0, 1, 0, 'Reformada',  '915 678 901', 1),
-('30000000-0000-0000-0000-000000000005', '567890123', '567890123', '56789012', 'pedro.costa@email.pt',     '$2b$12$hash5', 'Pedro',  'Costa',     '2005-09-30', 'M', 1, 184, 'Solteiro',  'O-',  1, 1, 0, 1, 'Estudante',  '916 789 012', 1);
+('30000000-0000-0000-0000-000000000005', '567890123', '567890123', '56789012', 'pedro.costa@email.pt',     '$2b$12$hash5', 'Pedro',  'Costa',     '2005-09-30', 'M', 1, 184, 'Solteiro',  'O-',  1, 1, 1, 1, 'Estudante',  '916 789 012', 1);
 
 -- -------------------------------------------------------
 -- DOCTORS

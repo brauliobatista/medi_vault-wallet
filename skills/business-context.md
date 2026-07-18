@@ -117,7 +117,7 @@ Three revenue segments:
 ## Key design principles
 
 - Patient owns their data — explicit consent required for each doctor access
-- Emergency exception — hospitals can access all data without consent if patient is incapacitated (opt-in when subscribing)
+- Emergency exception — hospitals can access all data without consent if patient is incapacitated. Consent is `users.emergency_access_code`, defaulted to `true` at signup (opt-out, not opt-in) — the patient implicitly accepts emergency access when subscribing and can disable it afterwards. Enforced at the DB level: `access_requests.is_emergency = true` is only accepted if `users.emergency_access_code = true` (KAN-23, see [`database-sync.md`](database-sync.md#trigger-pattern-for-cross-table-business-rules))
 - Offline-first — Security Card works without internet; storage limited to card capacity
 - Historical mode — data is never permanently deleted, only archived (`is_active` flag)
 - Doctor notes are encrypted at rest (`note_text` stored as binary, encrypted at application layer)
