@@ -44,6 +44,19 @@ CREATE TABLE medical_specialties (
     name TEXT NOT NULL
 );
 
+-- config tables: allow adding values without a schema migration
+CREATE TABLE genders (
+    id          SERIAL PRIMARY KEY,
+    code        TEXT   NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE habit_types (
+    id          SERIAL PRIMARY KEY,
+    code        TEXT   NOT NULL UNIQUE,
+    description TEXT
+);
+
 -- -------------------------------------------------------
 -- USERS
 -- -------------------------------------------------------
@@ -59,7 +72,7 @@ CREATE TABLE users (
     last_name             TEXT      NOT NULL,
     birthday              DATE      NOT NULL,
     biological_gender     TEXT      NOT NULL CHECK (biological_gender IN ('M', 'F')),
-    sex                   TEXT      NOT NULL CHECK (sex IN ('M', 'F', 'Other')),
+    sex_id                INT       NOT NULL,
     marital_status        TEXT,
     blood_type            TEXT      CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   BOOLEAN   NOT NULL DEFAULT TRUE,
@@ -70,7 +83,8 @@ CREATE TABLE users (
     phone                 TEXT,
     is_active             BOOLEAN   NOT NULL DEFAULT TRUE,
     created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at            TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at            TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_users_gender FOREIGN KEY (sex_id) REFERENCES genders(id)
 );
 
 -- -------------------------------------------------------
@@ -150,7 +164,7 @@ CREATE TABLE user_subscriptions (
 CREATE TABLE institution_licenses (
     id             SERIAL  PRIMARY KEY,
     institution_id UUID    NOT NULL,
-    billing_type   TEXT    NOT NULL CHECK (billing_type IN ('annual', 'monthly')),
+    billing_type   TEXT    NOT NULL CHECK (billing_type IN ('monthly', 'quarterly', 'semiannual', 'annual')),
     start_date     DATE    NOT NULL,
     end_date       DATE,
     is_active      BOOLEAN NOT NULL DEFAULT TRUE,
@@ -369,7 +383,7 @@ CREATE TABLE user_vaccinations (
 CREATE TABLE health_habits (
     id         SERIAL    PRIMARY KEY,
     user_id    UUID      NOT NULL,
-    type       TEXT      NOT NULL CHECK (type IN ('alcohol', 'tobacco', 'drugs', 'gambling', 'physical_activity')),
+    type_id    INT       NOT NULL,
     name       TEXT,
     consumes   BOOLEAN,
     frequency  TEXT,
@@ -377,7 +391,8 @@ CREATE TABLE health_habits (
     start_date DATE,
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     details    JSONB,
-    CONSTRAINT fk_health_habits_user FOREIGN KEY (user_id) REFERENCES users(id)
+    CONSTRAINT fk_health_habits_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_health_habits_type FOREIGN KEY (type_id) REFERENCES habit_types(id)
 );
 
 -- -------------------------------------------------------

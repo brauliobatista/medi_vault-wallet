@@ -16,7 +16,7 @@ Use this skill whenever a database schema change is requested — adding a table
 | `database/schema_postgres.sql` | PostgreSQL 14+ |
 | `database/erd.md` | Mermaid ERD |
 | `database/seed.sql` | Dados de teste em Português |
-| Confluence page (ID `22740994`) | Documentation |
+| Confluence page (ID `22740994`) | Documentation — description text, see [`confluence-field-tables.md`](confluence-field-tables.md) for the per-table field table |
 
 ---
 
@@ -174,6 +174,7 @@ The seed file contains Portuguese test data and must be kept in sync with the sc
 - [ ] `schema_postgres.sql` updated
 - [ ] `database/erd.md` updated
 - [ ] `database/seed.sql` updated with Portuguese test data
-- [ ] Confluence page updated (via REST API)
+- [ ] Confluence page description text updated (via REST API)
+- [ ] Confluence field table updated per [`confluence-field-tables.md`](confluence-field-tables.md)
 - [ ] Syntax verified for each dialect (types, defaults, FK syntax)
 - [ ] Table creation order respects FK dependencies (referenced tables first)

@@ -131,3 +131,4 @@ Three revenue segments:
 |---|---|
 | Database Schema | https://monicacccerquido.atlassian.net/wiki/spaces/~71202052b1aa8dba4c4a99b5f01900bb31f1ed/pages/22740994/Esquema+de+Base+de+Dados+-+MediVault |
 | Database skill | `skills/database-sync.md` |
+| Confluence field tables skill | `skills/confluence-field-tables.md` |

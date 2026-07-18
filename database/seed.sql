@@ -72,15 +72,36 @@ INSERT INTO medical_specialties (name) VALUES
 ('Medicina Interna');
 
 -- -------------------------------------------------------
+-- GENDERS (config table — código igual ao antigo CHECK constraint)
+-- id 1=M, 2=F, 3=Other
+-- -------------------------------------------------------
+INSERT INTO genders (code, description) VALUES
+('M',     'Masculino'),
+('F',     'Feminino'),
+('Other', 'Outro');
+
+-- -------------------------------------------------------
+-- HABIT_TYPES (config table — código igual ao antigo CHECK constraint)
+-- id 1=alcohol, 2=tobacco, 3=drugs, 4=gambling, 5=physical_activity
+-- -------------------------------------------------------
+INSERT INTO habit_types (code, description) VALUES
+('alcohol',           'Consumo de álcool'),
+('tobacco',           'Consumo de tabaco'),
+('drugs',             'Consumo de drogas ilícitas'),
+('gambling',          'Jogo / apostas'),
+('physical_activity', 'Atividade física');
+
+-- -------------------------------------------------------
 -- USERS (utentes portugueses)
 -- id: GUID fixo (30000000-0000-0000-0000-00000000000X)
+-- sex_id referencia GENDERS.id
 -- -------------------------------------------------------
-INSERT INTO users (id, utent_number, fiscal_number, citizen_number, email, password_hash, first_name, last_name, birthday, biological_gender, sex, marital_status, blood_type, accepts_transfusion, accepts_resuscitation, emergency_access_code, is_dependent, profession, phone, is_active) VALUES
-('30000000-0000-0000-0000-000000000001', '123456789', '123456789', '12345678', 'joao.silva@email.pt',      '$2b$12$hash1', 'João',   'Silva',     '1985-03-12', 'M', 'M', 'Casado',    'A+',  1, 1, 0, 0, 'Engenheiro', '912 345 678', 1),
-('30000000-0000-0000-0000-000000000002', '234567890', '234567890', '23456789', 'ana.santos@email.pt',      '$2b$12$hash2', 'Ana',    'Santos',    '1990-07-24', 'F', 'F', 'Solteira',  'O+',  1, 1, 0, 0, 'Médica',     '913 456 789', 1),
-('30000000-0000-0000-0000-000000000003', '345678901', '345678901', '34567890', 'miguel.ferreira@email.pt', '$2b$12$hash3', 'Miguel', 'Ferreira',  '1978-11-05', 'M', 'M', 'Divorciado','B-',  0, 1, 0, 0, 'Professor',  '914 567 890', 1),
-('30000000-0000-0000-0000-000000000004', '456789012', '456789012', '45678901', 'maria.pereira@email.pt',   '$2b$12$hash4', 'Maria',  'Pereira',   '1965-02-18', 'F', 'F', 'Viúva',     'AB+', 1, 0, 1, 0, 'Reformada',  '915 678 901', 1),
-('30000000-0000-0000-0000-000000000005', '567890123', '567890123', '56789012', 'pedro.costa@email.pt',     '$2b$12$hash5', 'Pedro',  'Costa',     '2005-09-30', 'M', 'M', 'Solteiro',  'O-',  1, 1, 0, 1, 'Estudante',  '916 789 012', 1);
+INSERT INTO users (id, utent_number, fiscal_number, citizen_number, email, password_hash, first_name, last_name, birthday, biological_gender, sex_id, marital_status, blood_type, accepts_transfusion, accepts_resuscitation, emergency_access_code, is_dependent, profession, phone, is_active) VALUES
+('30000000-0000-0000-0000-000000000001', '123456789', '123456789', '12345678', 'joao.silva@email.pt',      '$2b$12$hash1', 'João',   'Silva',     '1985-03-12', 'M', 1, 'Casado',    'A+',  1, 1, 0, 0, 'Engenheiro', '912 345 678', 1),
+('30000000-0000-0000-0000-000000000002', '234567890', '234567890', '23456789', 'ana.santos@email.pt',      '$2b$12$hash2', 'Ana',    'Santos',    '1990-07-24', 'F', 2, 'Solteira',  'O+',  1, 1, 0, 0, 'Médica',     '913 456 789', 1),
+('30000000-0000-0000-0000-000000000003', '345678901', '345678901', '34567890', 'miguel.ferreira@email.pt', '$2b$12$hash3', 'Miguel', 'Ferreira',  '1978-11-05', 'M', 1, 'Divorciado','B-',  0, 1, 0, 0, 'Professor',  '914 567 890', 1),
+('30000000-0000-0000-0000-000000000004', '456789012', '456789012', '45678901', 'maria.pereira@email.pt',   '$2b$12$hash4', 'Maria',  'Pereira',   '1965-02-18', 'F', 2, 'Viúva',     'AB+', 1, 0, 1, 0, 'Reformada',  '915 678 901', 1),
+('30000000-0000-0000-0000-000000000005', '567890123', '567890123', '56789012', 'pedro.costa@email.pt',     '$2b$12$hash5', 'Pedro',  'Costa',     '2005-09-30', 'M', 1, 'Solteiro',  'O-',  1, 1, 0, 1, 'Estudante',  '916 789 012', 1);
 
 -- -------------------------------------------------------
 -- DOCTORS
@@ -268,14 +289,15 @@ INSERT INTO user_vaccinations (user_id, vaccine_id, dose_number, administered_at
 -- -------------------------------------------------------
 -- HEALTH_HABITS
 -- details: JSON com campos específicos por tipo
+-- type_id referencia HABIT_TYPES.id
 -- -------------------------------------------------------
-INSERT INTO health_habits (user_id, type, name, consumes, frequency, quantity, start_date, details) VALUES
-('30000000-0000-0000-0000-000000000001', 'alcohol',           NULL,       1,    'Fins de semana', '2-3 bebidas', '2010-01-01', '{"alcohol_type":"Vinho tinto","in_detox":false,"audit_c_score":3,"audit_score":5}'),
-('30000000-0000-0000-0000-000000000001', 'physical_activity', 'Corrida',  NULL, '3x por semana',  '5-8 km',     '2018-06-01', '{"activity":"Corrida"}'),
-('30000000-0000-0000-0000-000000000002', 'physical_activity', 'Natação',  NULL, '2x por semana',  '1 hora',     '2020-01-01', '{"activity":"Natação"}'),
-('30000000-0000-0000-0000-000000000003', 'tobacco',           NULL,       0,    NULL,              NULL,         '2015-03-01', '{"consumes":false,"cigarettes_per_day":0,"years_consumption":8,"pack_years":4.0,"fagerstrom_score":0,"richmond_score":9}'),
-('30000000-0000-0000-0000-000000000004', 'alcohol',           NULL,       0,    NULL,              NULL,         NULL,          '{"alcohol_type":null,"in_detox":false,"audit_c_score":0,"audit_score":0}'),
-('30000000-0000-0000-0000-000000000005', 'physical_activity', 'Futebol',  NULL, '2x por semana',  '90 min',     '2023-09-01', '{"activity":"Futebol"}');
+INSERT INTO health_habits (user_id, type_id, name, consumes, frequency, quantity, start_date, details) VALUES
+('30000000-0000-0000-0000-000000000001', 1, NULL,       1,    'Fins de semana', '2-3 bebidas', '2010-01-01', '{"alcohol_type":"Vinho tinto","in_detox":false,"audit_c_score":3,"audit_score":5}'),
+('30000000-0000-0000-0000-000000000001', 5, 'Corrida',  NULL, '3x por semana',  '5-8 km',     '2018-06-01', '{"activity":"Corrida"}'),
+('30000000-0000-0000-0000-000000000002', 5, 'Natação',  NULL, '2x por semana',  '1 hora',     '2020-01-01', '{"activity":"Natação"}'),
+('30000000-0000-0000-0000-000000000003', 2, NULL,       0,    NULL,              NULL,         '2015-03-01', '{"consumes":false,"cigarettes_per_day":0,"years_consumption":8,"pack_years":4.0,"fagerstrom_score":0,"richmond_score":9}'),
+('30000000-0000-0000-0000-000000000004', 1, NULL,       0,    NULL,              NULL,         NULL,          '{"alcohol_type":null,"in_detox":false,"audit_c_score":0,"audit_score":0}'),
+('30000000-0000-0000-0000-000000000005', 5, 'Futebol',  NULL, '2x por semana',  '90 min',     '2023-09-01', '{"activity":"Futebol"}');
 
 -- -------------------------------------------------------
 -- DOCTOR_NOTES
@@ -302,7 +324,8 @@ INSERT INTO schema_versions (version, description, script, applied_by, checksum,
 ('002', 'Adicionar is_active a USERS, DOCTORS e exames',       'schema_v002_is_active.sql',     'system', 'b4e9d2f3a5c6b7e8', 1),
 ('003', 'Consolidar HEALTH_HABIT_* em HEALTH_HABITS',          'schema_v003_health_habits.sql', 'system', 'c5f0e3a4b6d7c8f9', 1),
 ('004', 'Adicionar SCHEMA_VERSIONS e APP_VERSIONS',            'schema_v004_versioning.sql',    'system', 'd6a1f4b5c7e8d9a0', 1),
-('005', 'users.id, doctors.id e institutions.id passam a GUID','schema_v005_guid_ids.sql',      'system', 'e7b2a5c6d8f9e0b1', 1);
+('005', 'users.id, doctors.id e institutions.id passam a GUID','schema_v005_guid_ids.sql',      'system', 'e7b2a5c6d8f9e0b1', 1),
+('006', 'GENDERS e HABIT_TYPES como config tables; billing_type com mais opções', 'schema_v006_config_tables.sql', 'system', 'f8c3b6d7e9f0a1c2', 1);
 
 -- -------------------------------------------------------
 -- APP_VERSIONS

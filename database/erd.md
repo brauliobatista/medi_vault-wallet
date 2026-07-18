@@ -42,6 +42,18 @@ erDiagram
         string name
     }
 
+    GENDERS {
+        int id PK
+        string code UK
+        string description
+    }
+
+    HABIT_TYPES {
+        int id PK
+        string code UK
+        string description
+    }
+
     %% -------------------------------------------------------
     %% CORE
     %% -------------------------------------------------------
@@ -57,7 +69,7 @@ erDiagram
         string last_name
         date birthday
         string biological_gender
-        string sex
+        int sex_id FK
         string marital_status
         string blood_type
         bool accepts_transfusion
@@ -323,7 +335,7 @@ erDiagram
     HEALTH_HABITS {
         int id PK
         guid user_id FK
-        string type
+        int type_id FK
         string name
         bool consumes
         string frequency
@@ -365,6 +377,7 @@ erDiagram
     INSTITUTIONS                ||--o{ INSTITUTION_LICENSES       : "has"
 
     %% Users — profile
+    GENDERS                     ||--o{ USERS                      : "classifies"
     USERS                       ||--o{ USER_ADDRESSES             : "has"
     USERS                       ||--o{ EMERGENCY_CONTACTS         : "has"
     USERS                       ||--o| FEMALE_MEDICAL_INFO        : "has"
@@ -417,6 +430,7 @@ erDiagram
 
     %% Users — habits
     USERS                       ||--o{ HEALTH_HABITS              : "has"
+    HABIT_TYPES                 ||--o{ HEALTH_HABITS              : "classifies"
 
     %% Doctor notes & flags
     USERS                       ||--o{ DOCTOR_NOTES               : "subject of"
