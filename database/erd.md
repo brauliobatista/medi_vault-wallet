@@ -42,6 +42,24 @@ erDiagram
         string name
     }
 
+    GENDERS {
+        int id PK
+        string code UK
+        string description
+    }
+
+    HABIT_TYPES {
+        int id PK
+        string code UK
+        string description
+    }
+
+    COUNTRIES {
+        int id PK
+        string code UK
+        string name
+    }
+
     %% -------------------------------------------------------
     %% CORE
     %% -------------------------------------------------------
@@ -57,7 +75,8 @@ erDiagram
         string last_name
         date birthday
         string biological_gender
-        string sex
+        int sex_id FK
+        int nationality_id FK
         string marital_status
         string blood_type
         bool accepts_transfusion
@@ -80,6 +99,7 @@ erDiagram
         string password_hash
         string speciality
         guid institution_id FK
+        int nationality_id FK
         bool is_active
         datetime created_at
     }
@@ -317,13 +337,13 @@ erDiagram
 
     %% -------------------------------------------------------
     %% HEALTH HABITS (consolidated)
-    %% details JSON: campos especificos por tipo
+    %% details JSON: type-specific fields
     %% -------------------------------------------------------
 
     HEALTH_HABITS {
         int id PK
         guid user_id FK
-        string type
+        int type_id FK
         string name
         bool consumes
         string frequency
@@ -363,8 +383,11 @@ erDiagram
     %% Institutions & Doctors
     INSTITUTIONS                ||--|{ DOCTORS                    : "employs"
     INSTITUTIONS                ||--o{ INSTITUTION_LICENSES       : "has"
+    COUNTRIES                   ||--o{ DOCTORS                    : "nationality"
 
     %% Users — profile
+    GENDERS                     ||--o{ USERS                      : "classifies"
+    COUNTRIES                   ||--o{ USERS                      : "nationality"
     USERS                       ||--o{ USER_ADDRESSES             : "has"
     USERS                       ||--o{ EMERGENCY_CONTACTS         : "has"
     USERS                       ||--o| FEMALE_MEDICAL_INFO        : "has"
@@ -417,6 +440,7 @@ erDiagram
 
     %% Users — habits
     USERS                       ||--o{ HEALTH_HABITS              : "has"
+    HABIT_TYPES                 ||--o{ HEALTH_HABITS              : "classifies"
 
     %% Doctor notes & flags
     USERS                       ||--o{ DOCTOR_NOTES               : "subject of"

@@ -46,6 +46,25 @@ CREATE TABLE medical_specialties (
     name TEXT NOT NULL
 );
 
+-- config tables: allow adding values without a schema migration
+CREATE TABLE genders (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    code        TEXT    NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE habit_types (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    code        TEXT    NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE countries (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT    NOT NULL UNIQUE,
+    name TEXT    NOT NULL
+);
+
 -- -------------------------------------------------------
 -- USERS
 -- -------------------------------------------------------
@@ -61,7 +80,8 @@ CREATE TABLE users (
     last_name             TEXT    NOT NULL,
     birthday              TEXT    NOT NULL,
     biological_gender     TEXT    NOT NULL CHECK (biological_gender IN ('M', 'F')),
-    sex                   TEXT    NOT NULL CHECK (sex IN ('M', 'F', 'Other')),
+    sex_id                INTEGER NOT NULL,
+    nationality_id        INTEGER NOT NULL,
     marital_status        TEXT,
     blood_type            TEXT    CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   INTEGER NOT NULL DEFAULT 1,
@@ -72,7 +92,9 @@ CREATE TABLE users (
     phone                 TEXT,
     is_active             INTEGER NOT NULL DEFAULT 1,
     created_at            TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at            TEXT    NOT NULL DEFAULT (datetime('now'))
+    updated_at            TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (sex_id) REFERENCES genders(id),
+    FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
@@ -88,9 +110,11 @@ CREATE TABLE doctors (
     password_hash    TEXT    NOT NULL,
     speciality       TEXT,
     institution_id   TEXT    NOT NULL,
+    nationality_id   INTEGER NOT NULL,
     is_active        INTEGER NOT NULL DEFAULT 1,
     created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (institution_id) REFERENCES institutions(id)
+    FOREIGN KEY (institution_id) REFERENCES institutions(id),
+    FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
@@ -152,7 +176,7 @@ CREATE TABLE user_subscriptions (
 CREATE TABLE institution_licenses (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     institution_id TEXT    NOT NULL,
-    billing_type   TEXT    NOT NULL CHECK (billing_type IN ('annual', 'monthly')),
+    billing_type   TEXT    NOT NULL CHECK (billing_type IN ('monthly', 'quarterly', 'semiannual', 'annual')),
     start_date     TEXT    NOT NULL,
     end_date       TEXT,
     is_active      INTEGER NOT NULL DEFAULT 1,
@@ -371,7 +395,7 @@ CREATE TABLE user_vaccinations (
 CREATE TABLE health_habits (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id    TEXT    NOT NULL,
-    type       TEXT    NOT NULL CHECK (type IN ('alcohol', 'tobacco', 'drugs', 'gambling', 'physical_activity')),
+    type_id    INTEGER NOT NULL,
     name       TEXT,
     consumes   INTEGER,
     frequency  TEXT,
@@ -379,7 +403,8 @@ CREATE TABLE health_habits (
     start_date TEXT,
     updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
     details    TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (type_id) REFERENCES habit_types(id)
 );
 
 -- -------------------------------------------------------

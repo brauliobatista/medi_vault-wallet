@@ -47,6 +47,25 @@ CREATE TABLE medical_specialties (
     name VARCHAR(255) NOT NULL
 );
 
+-- config tables: allow adding values without a schema migration
+CREATE TABLE genders (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(20)  NOT NULL UNIQUE,
+    description VARCHAR(255)
+);
+
+CREATE TABLE habit_types (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(30)  NOT NULL UNIQUE,
+    description VARCHAR(255)
+);
+
+CREATE TABLE countries (
+    id   INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(3)   NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL
+);
+
 -- -------------------------------------------------------
 -- USERS
 -- -------------------------------------------------------
@@ -62,7 +81,8 @@ CREATE TABLE users (
     last_name             VARCHAR(100) NOT NULL,
     birthday              DATE         NOT NULL,
     biological_gender     ENUM('M', 'F') NOT NULL,
-    sex                   ENUM('M', 'F', 'Other') NOT NULL,
+    sex_id                INT          NOT NULL,
+    nationality_id        INT          NOT NULL,
     marital_status        VARCHAR(50),
     blood_type            ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'),
     accepts_transfusion   BOOLEAN      NOT NULL DEFAULT TRUE,
@@ -73,7 +93,9 @@ CREATE TABLE users (
     phone                 VARCHAR(50),
     is_active             BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),
+    CONSTRAINT fk_users_nationality FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
@@ -89,9 +111,11 @@ CREATE TABLE doctors (
     password_hash    VARCHAR(255) NOT NULL,
     speciality       VARCHAR(255),
     institution_id   CHAR(36)     NOT NULL,
+    nationality_id   INT          NOT NULL,
     is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_doctors_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+    CONSTRAINT fk_doctors_institution FOREIGN KEY (institution_id) REFERENCES institutions(id),
+    CONSTRAINT fk_doctors_nationality FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
@@ -153,7 +177,7 @@ CREATE TABLE user_subscriptions (
 CREATE TABLE institution_licenses (
     id             INT     NOT NULL AUTO_INCREMENT PRIMARY KEY,
     institution_id CHAR(36) NOT NULL,
-    billing_type   ENUM('annual', 'monthly') NOT NULL,
+    billing_type   ENUM('monthly', 'quarterly', 'semiannual', 'annual') NOT NULL,
     start_date     DATE    NOT NULL,
     end_date       DATE,
     is_active      BOOLEAN NOT NULL DEFAULT TRUE,
@@ -372,7 +396,7 @@ CREATE TABLE user_vaccinations (
 CREATE TABLE health_habits (
     id         INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
     user_id    CHAR(36) NOT NULL,
-    type       ENUM('alcohol', 'tobacco', 'drugs', 'gambling', 'physical_activity') NOT NULL,
+    type_id    INT      NOT NULL,
     name       VARCHAR(255),
     consumes   BOOLEAN,
     frequency  VARCHAR(100),
@@ -380,7 +404,8 @@ CREATE TABLE health_habits (
     start_date DATE,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     details    JSON,
-    CONSTRAINT fk_health_habits_user FOREIGN KEY (user_id) REFERENCES users(id)
+    CONSTRAINT fk_health_habits_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_health_habits_type FOREIGN KEY (type_id) REFERENCES habit_types(id)
 );
 
 -- -------------------------------------------------------

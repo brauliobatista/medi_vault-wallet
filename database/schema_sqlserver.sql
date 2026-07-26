@@ -44,6 +44,25 @@ CREATE TABLE medical_specialties (
     name NVARCHAR(255) NOT NULL
 );
 
+-- config tables: allow adding values without a schema migration
+CREATE TABLE genders (
+    id          INT           IDENTITY(1,1) PRIMARY KEY,
+    code        NVARCHAR(20)  NOT NULL UNIQUE,
+    description NVARCHAR(255)
+);
+
+CREATE TABLE habit_types (
+    id          INT           IDENTITY(1,1) PRIMARY KEY,
+    code        NVARCHAR(30)  NOT NULL UNIQUE,
+    description NVARCHAR(255)
+);
+
+CREATE TABLE countries (
+    id   INT          IDENTITY(1,1) PRIMARY KEY,
+    code NVARCHAR(3)  NOT NULL UNIQUE,
+    name NVARCHAR(100) NOT NULL
+);
+
 -- -------------------------------------------------------
 -- USERS
 -- -------------------------------------------------------
@@ -59,7 +78,8 @@ CREATE TABLE users (
     last_name             NVARCHAR(100) NOT NULL,
     birthday              DATE          NOT NULL,
     biological_gender     NVARCHAR(1)   NOT NULL CHECK (biological_gender IN ('M', 'F')),
-    sex                   NVARCHAR(10)  NOT NULL CHECK (sex IN ('M', 'F', 'Other')),
+    sex_id                INT           NOT NULL,
+    nationality_id        INT           NOT NULL,
     marital_status        NVARCHAR(50),
     blood_type            NVARCHAR(5)   CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   BIT           NOT NULL DEFAULT 1,
@@ -70,7 +90,9 @@ CREATE TABLE users (
     phone                 NVARCHAR(50),
     is_active             BIT           NOT NULL DEFAULT 1,
     created_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
-    updated_at            DATETIME2     NOT NULL DEFAULT GETDATE()
+    updated_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),
+    CONSTRAINT fk_users_nationality FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
@@ -86,9 +108,11 @@ CREATE TABLE doctors (
     password_hash    NVARCHAR(255) NOT NULL,
     speciality       NVARCHAR(255),
     institution_id   UNIQUEIDENTIFIER NOT NULL,
+    nationality_id   INT           NOT NULL,
     is_active        BIT           NOT NULL DEFAULT 1,
     created_at       DATETIME2     NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT fk_doctors_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+    CONSTRAINT fk_doctors_institution  FOREIGN KEY (institution_id) REFERENCES institutions(id),
+    CONSTRAINT fk_doctors_nationality  FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
@@ -150,7 +174,7 @@ CREATE TABLE user_subscriptions (
 CREATE TABLE institution_licenses (
     id             INT          IDENTITY(1,1) PRIMARY KEY,
     institution_id UNIQUEIDENTIFIER NOT NULL,
-    billing_type   NVARCHAR(10) NOT NULL CHECK (billing_type IN ('annual', 'monthly')),
+    billing_type   NVARCHAR(10) NOT NULL CHECK (billing_type IN ('monthly', 'quarterly', 'semiannual', 'annual')),
     start_date     DATE         NOT NULL,
     end_date       DATE,
     is_active      BIT          NOT NULL DEFAULT 1,
@@ -369,7 +393,7 @@ CREATE TABLE user_vaccinations (
 CREATE TABLE health_habits (
     id         INT           IDENTITY(1,1) PRIMARY KEY,
     user_id    UNIQUEIDENTIFIER NOT NULL,
-    type       NVARCHAR(20)  NOT NULL CHECK (type IN ('alcohol', 'tobacco', 'drugs', 'gambling', 'physical_activity')),
+    type_id    INT           NOT NULL,
     name       NVARCHAR(255),
     consumes   BIT,
     frequency  NVARCHAR(100),
@@ -377,7 +401,8 @@ CREATE TABLE health_habits (
     start_date DATE,
     updated_at DATETIME2     NOT NULL DEFAULT GETDATE(),
     details    NVARCHAR(MAX),
-    CONSTRAINT fk_health_habits_user FOREIGN KEY (user_id) REFERENCES users(id)
+    CONSTRAINT fk_health_habits_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_health_habits_type FOREIGN KEY (type_id) REFERENCES habit_types(id)
 );
 
 -- -------------------------------------------------------
