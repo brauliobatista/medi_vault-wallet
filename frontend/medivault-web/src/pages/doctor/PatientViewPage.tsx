@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react'
+
+const habitLabels: Record<number, string> = {
+  1: 'Álcool', 2: 'Tabaco', 3: 'Drogas', 4: 'Jogo', 5: 'Atividade Física',
+}
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
@@ -32,6 +36,10 @@ export default function PatientViewPage() {
 
   const [publicId, setPublicId] = useState<string>(navState?.publicId ?? '')
   const [patientName, setPatientName] = useState<string>(navState?.patientName ?? '')
+  const [patientGender, setPatientGender] = useState<string>('')
+  const [patientBloodType, setPatientBloodType] = useState<string>('')
+  const [patientBirthday, setPatientBirthday] = useState<string>('')
+  const [patientNationality, setPatientNationality] = useState<string>('')
 
   const [tab, setTab] = useState<TabKey>('history')
   const [data, setData] = useState<Record<string, unknown>[]>([])
@@ -46,12 +54,14 @@ export default function PatientViewPage() {
 
   useEffect(() => {
     api.get('/vaccines').then((r) => setVaccines(r.data))
-    if (!navState?.publicId) {
-      api.get(`/users/${uid}/public-info`).then((r) => {
-        setPublicId(r.data.publicId)
-        setPatientName(r.data.name)
-      }).catch(() => {})
-    }
+    api.get(`/users/${uid}/public-info`).then((r) => {
+      setPublicId(r.data.publicId)
+      setPatientName(r.data.name)
+      setPatientGender(r.data.biologicalGender ?? '')
+      setPatientBloodType(r.data.bloodType ?? '')
+      setPatientBirthday(r.data.birthday ?? '')
+      setPatientNationality(r.data.nationalityName ?? '')
+    }).catch(() => {})
   }, [uid])
 
   const loadTab = async (t: TabKey) => {
@@ -158,6 +168,29 @@ export default function PatientViewPage() {
             <i className="bi bi-person-vcard me-2 text-primary" />{patientName || 'Paciente'}
           </h5>
           <small className="text-muted font-monospace">{publicId || uid}</small>
+          <div className="d-flex flex-wrap gap-2 mt-1">
+            {patientGender && (
+              <span className="badge bg-light text-dark border">
+                <i className="bi bi-gender-ambiguous me-1" />
+                {patientGender === 'M' ? 'Masculino' : patientGender === 'F' ? 'Feminino' : patientGender}
+              </span>
+            )}
+            {patientBloodType && (
+              <span className="badge bg-light text-dark border">
+                <i className="bi bi-droplet me-1 text-danger" />{patientBloodType}
+              </span>
+            )}
+            {patientBirthday && (
+              <span className="badge bg-light text-dark border">
+                <i className="bi bi-calendar me-1" />{patientBirthday}
+              </span>
+            )}
+            {patientNationality && (
+              <span className="badge bg-light text-dark border">
+                <i className="bi bi-globe me-1" />{patientNationality}
+              </span>
+            )}
+          </div>
         </div>
         {flags.length > 0 && (
           <span className="badge bg-warning text-dark">
@@ -337,7 +370,7 @@ export default function PatientViewPage() {
                       {tab === 'allergies'    && String(item.activeSubstance ?? '-')}
                       {tab === 'exams'        && `${String(item.examDate ?? '-')}${item.laboratory ? ' · ' + item.laboratory : ''}`}
                       {tab === 'vaccinations' && String(item.vaccineName ?? '-')}
-                      {tab === 'habits'       && `${String(item.type ?? '-')}${item.name ? ' · ' + item.name : ''}`}
+                      {tab === 'habits'       && `${habitLabels[Number(item.typeId)] ?? String(item.typeId ?? '-')}${item.name ? ' · ' + item.name : ''}`}
                     </div>
                     <small className="text-muted">
                       {tab === 'history'      && [item.surgeryDate, item.location ? '· ' + item.location : ''].filter(Boolean).join(' ')}

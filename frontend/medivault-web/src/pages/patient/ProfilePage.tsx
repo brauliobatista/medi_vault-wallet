@@ -58,6 +58,8 @@ export default function ProfilePage() {
               <Field label="Nome" value={`${profile.firstName} ${profile.lastName}`} />
               <Field label="Data de Nascimento" value={String(profile.birthday)} />
               <Field label="Grupo Sanguíneo" value={String(profile.bloodType ?? '-')} />
+              <Field label="Sexo Biológico" value={profile.biologicalGender === 'M' ? 'Masculino' : profile.biologicalGender === 'F' ? 'Feminino' : '-'} />
+              <Field label="Nacionalidade" value={String(profile.nationalityName ?? '-')} />
               <EditableField label="Email" field="email" form={form} setForm={setForm} editing={editing} />
               <EditableField label="Telefone" field="phone" form={form} setForm={setForm} editing={editing} />
               <EditableField label="Profissão" field="profession" form={form} setForm={setForm} editing={editing} />

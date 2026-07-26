@@ -16,7 +16,8 @@ public class User
     [Column("last_name")] public string LastName { get; set; } = null!;
     [Column("birthday")] public string Birthday { get; set; } = null!;
     [Column("biological_gender")] public string BiologicalGender { get; set; } = null!;
-    [Column("sex")] public string Sex { get; set; } = null!;
+    [Column("sex_id")] public int SexId { get; set; }
+    [Column("nationality_id")] public int NationalityId { get; set; }
     [Column("marital_status")] public string? MaritalStatus { get; set; }
     [Column("blood_type")] public string? BloodType { get; set; }
     [Column("accepts_transfusion")] public int AcceptsTransfusion { get; set; } = 1;
@@ -30,6 +31,9 @@ public class User
     [Column("card_active")] public int CardActive { get; set; } = 1;
     [Column("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
     [Column("updated_at")] public string UpdatedAt { get; set; } = DateTime.UtcNow.ToString("o");
+
+    [ForeignKey("SexId")] public Gender? SexGender { get; set; }
+    [ForeignKey("NationalityId")] public Country? Nationality { get; set; }
 
     public ICollection<UserAddress> Addresses { get; set; } = [];
     public ICollection<EmergencyContact> EmergencyContacts { get; set; } = [];

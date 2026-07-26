@@ -10,6 +10,11 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<Vaccine> Vaccines => Set<Vaccine>();
     public DbSet<Icpc2Code> Icpc2Codes => Set<Icpc2Code>();
     public DbSet<MedicalSpecialty> MedicalSpecialties => Set<MedicalSpecialty>();
+    public DbSet<Gender> Genders => Set<Gender>();
+    public DbSet<HabitType> HabitTypes => Set<HabitType>();
+    public DbSet<RelationshipType> RelationshipTypes => Set<RelationshipType>();
+    public DbSet<Country> Countries => Set<Country>();
+    public DbSet<FamilyGuardianship> FamilyGuardianships => Set<FamilyGuardianship>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
@@ -111,5 +116,17 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .WithMany(d => d.ReviewedFlags)
             .HasForeignKey(f => f.ReviewedBy)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(g => g.Guardian)
+            .WithMany()
+            .HasForeignKey(g => g.GuardianUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(g => g.Dependent)
+            .WithMany()
+            .HasForeignKey(g => g.DependentUserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

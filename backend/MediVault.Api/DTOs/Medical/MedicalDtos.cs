@@ -28,11 +28,11 @@ public record UpsertFamilyHistoryRequest(
     string Condition, bool HasCondition, string? KinshipDegree, string? Notes);
 
 public record HealthHabitDto(
-    int Id, string Type, string? Name, bool? Consumes, string? Frequency,
+    int Id, int TypeId, string? Name, bool? Consumes, string? Frequency,
     string? Quantity, string? StartDate, string? Details, string UpdatedAt);
 
 public record UpsertHealthHabitRequest(
-    string Type, string? Name, bool? Consumes, string? Frequency,
+    int TypeId, string? Name, bool? Consumes, string? Frequency,
     string? Quantity, string? StartDate, string? Details);
 
 public record AnalyticalExamDto(

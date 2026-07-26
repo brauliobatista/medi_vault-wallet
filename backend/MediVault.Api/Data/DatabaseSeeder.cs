@@ -8,6 +8,7 @@ public static class DatabaseSeeder
 
     public static void Seed(MediVaultDbContext db)
     {
+        SeedLookups(db);
         if (db.Users.Any()) return;
 
         // --- Subscription plans ---
@@ -46,13 +47,15 @@ public static class DatabaseSeeder
 
         db.SaveChanges();
 
+        var portugal = db.Countries.First(c => c.Code == "PT");
+
         // --- Patients ---
         var braulio = new User
         {
             Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000001", FiscalNumber = "100000001", CitizenNumber = "10000001",
             Email = "braulio@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Braulio", LastName = "Batista", Birthday = "1990-05-10",
-            BiologicalGender = "M", Sex = "M", BloodType = "A+",
+            BiologicalGender = "M", SexId = 1, NationalityId = portugal.Id, BloodType = "A+",
             AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
             Phone = "910 000 001", Profession = "Engenheiro",
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
@@ -63,7 +66,7 @@ public static class DatabaseSeeder
             Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000002", FiscalNumber = "100000002", CitizenNumber = "10000002",
             Email = "cesar@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Cesar", LastName = "Oliveira", Birthday = "1988-11-23",
-            BiologicalGender = "M", Sex = "M", BloodType = "O+",
+            BiologicalGender = "M", SexId = 1, NationalityId = portugal.Id, BloodType = "O+",
             AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
             Phone = "910 000 002", Profession = "Gestor",
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
@@ -74,7 +77,7 @@ public static class DatabaseSeeder
             Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000003", FiscalNumber = "100000003", CitizenNumber = "10000003",
             Email = "joka@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Joka", LastName = "Ferreira", Birthday = "1995-02-14",
-            BiologicalGender = "M", Sex = "M", BloodType = "B+",
+            BiologicalGender = "M", SexId = 1, NationalityId = portugal.Id, BloodType = "B+",
             AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
             Phone = "910 000 003", Profession = "Designer",
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
@@ -85,7 +88,7 @@ public static class DatabaseSeeder
             Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000004", FiscalNumber = "100000004", CitizenNumber = "10000004",
             Email = "tiago@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
             FirstName = "Tiago", LastName = "Costa", Birthday = "1993-08-30",
-            BiologicalGender = "M", Sex = "M", BloodType = "AB+",
+            BiologicalGender = "M", SexId = 1, NationalityId = portugal.Id, BloodType = "AB+",
             AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
             Phone = "910 000 004", Profession = "Programador",
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
@@ -99,7 +102,7 @@ public static class DatabaseSeeder
         {
             Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10001", FirstName = "Monica", LastName = "Sousa",
             Email = "monica.sousa@hsm.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            Speciality = "Medicina Geral e Familiar", InstitutionId = hospital.Id,
+            Speciality = "Medicina Geral e Familiar", InstitutionId = hospital.Id, NationalityId = portugal.Id,
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
         };
 
@@ -107,7 +110,7 @@ public static class DatabaseSeeder
         {
             Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10002", FirstName = "Diana", LastName = "Pereira",
             Email = "diana.pereira@cuf.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            Speciality = "Cardiologia", InstitutionId = clinica.Id,
+            Speciality = "Cardiologia", InstitutionId = clinica.Id, NationalityId = portugal.Id,
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
         };
 
@@ -115,7 +118,7 @@ public static class DatabaseSeeder
         {
             Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10003", FirstName = "Maria", LastName = "Gomes",
             Email = "maria.gomes@hsm.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            Speciality = "Endocrinologia", InstitutionId = hospital.Id,
+            Speciality = "Endocrinologia", InstitutionId = hospital.Id, NationalityId = portugal.Id,
             IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
         };
 
@@ -154,7 +157,7 @@ public static class DatabaseSeeder
 
         db.HealthHabits.Add(new HealthHabit
         {
-            UserId = braulio.Id, Type = "tobacco", Name = "Cigarro",
+            UserId = braulio.Id, TypeId = 2, Name = "Cigarro",
             Consumes = 0, Frequency = "Ex-fumador",
             StartDate = "2010-01-01", UpdatedAt = DateTime.UtcNow.ToString("o"),
             Details = "{\"fagerstrom_score\":3,\"pack_years\":5,\"years_consumption\":4}"
@@ -172,5 +175,48 @@ public static class DatabaseSeeder
         });
 
         db.SaveChanges();
+    }
+
+    private static void SeedLookups(MediVaultDbContext db)
+    {
+        if (!db.Countries.Any())
+        {
+            db.Countries.AddRange(
+                new Country { Code = "PT", Name = "Portugal" },
+                new Country { Code = "ES", Name = "Espanha" },
+                new Country { Code = "FR", Name = "França" },
+                new Country { Code = "BR", Name = "Brasil" },
+                new Country { Code = "GB", Name = "Reino Unido" },
+                new Country { Code = "DE", Name = "Alemanha" },
+                new Country { Code = "US", Name = "Estados Unidos" },
+                new Country { Code = "AO", Name = "Angola" },
+                new Country { Code = "MZ", Name = "Moçambique" },
+                new Country { Code = "CV", Name = "Cabo Verde" }
+            );
+            db.SaveChanges();
+        }
+
+        if (!db.Genders.Any())
+        {
+            db.Genders.AddRange(
+                new Gender { Code = "M", Description = "Masculino" },
+                new Gender { Code = "F", Description = "Feminino" },
+                new Gender { Code = "NB", Description = "Não-binário" },
+                new Gender { Code = "O", Description = "Outro" }
+            );
+            db.SaveChanges();
+        }
+
+        if (!db.HabitTypes.Any())
+        {
+            db.HabitTypes.AddRange(
+                new HabitType { Code = "alcohol",           Description = "Álcool" },
+                new HabitType { Code = "tobacco",           Description = "Tabaco" },
+                new HabitType { Code = "drugs",             Description = "Drogas" },
+                new HabitType { Code = "gambling",          Description = "Jogo" },
+                new HabitType { Code = "physical_activity", Description = "Atividade Física" }
+            );
+            db.SaveChanges();
+        }
     }
 }

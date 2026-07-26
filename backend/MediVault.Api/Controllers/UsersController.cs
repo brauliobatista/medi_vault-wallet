@@ -19,7 +19,15 @@ public class UsersController(UserService userService) : ControllerBase
     {
         var info = await userService.GetPublicInfoAsync(userId);
         if (info is null) return NotFound();
-        return Ok(new { name = info.Value.Name, publicId = info.Value.Id });
+        return Ok(new
+        {
+            name = info.Value.Name,
+            publicId = info.Value.Id,
+            biologicalGender = info.Value.BiologicalGender,
+            bloodType = info.Value.BloodType,
+            birthday = info.Value.Birthday,
+            nationalityName = info.Value.NationalityName
+        });
     }
 
     [HttpGet("me")]
