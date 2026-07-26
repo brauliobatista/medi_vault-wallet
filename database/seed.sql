@@ -92,6 +92,16 @@ INSERT INTO habit_types (code, description) VALUES
 ('physical_activity', 'Atividade física');
 
 -- -------------------------------------------------------
+-- RELATIONSHIP_TYPES (config table — code matches the former CHECK constraint)
+-- id 1=parent, 2=legal_guardian, 3=tutor, 4=other
+-- -------------------------------------------------------
+INSERT INTO relationship_types (code, description) VALUES
+('parent',         'Pai / mãe'),
+('legal_guardian', 'Tutor legal nomeado por tribunal (pessoa incapacitada)'),
+('tutor',          'Tutor de menor sem tutela parental'),
+('other',          'Outro tipo de responsável');
+
+-- -------------------------------------------------------
 -- COUNTRIES (config table)
 -- Full ISO 3166-1 list (alpha-3 code), sorted alphabetically
 -- by the Portuguese name.
@@ -356,10 +366,19 @@ INSERT INTO countries (code, name) VALUES
 -- -------------------------------------------------------
 INSERT INTO users (id, utent_number, fiscal_number, citizen_number, email, password_hash, first_name, last_name, birthday, biological_gender, sex_id, nationality_id, marital_status, blood_type, accepts_transfusion, accepts_resuscitation, emergency_access_code, is_dependent, profession, phone, is_active) VALUES
 ('30000000-0000-0000-0000-000000000001', '123456789', '123456789', '12345678', 'joao.silva@email.pt',      '$2b$12$hash1', 'João',   'Silva',     '1985-03-12', 'M', 1, 184, 'Casado',    'A+',  1, 1, 0, 0, 'Engenheiro', '912 345 678', 1),
-('30000000-0000-0000-0000-000000000002', '234567890', '234567890', '23456789', 'ana.santos@email.pt',      '$2b$12$hash2', 'Ana',    'Santos',    '1990-07-24', 'F', 2, 184, 'Solteira',  'O+',  1, 1, 0, 0, 'Médica',     '913 456 789', 1),
-('30000000-0000-0000-0000-000000000003', '345678901', '345678901', '34567890', 'miguel.ferreira@email.pt', '$2b$12$hash3', 'Miguel', 'Ferreira',  '1978-11-05', 'M', 1, 30,  'Divorciado','B-',  0, 1, 0, 0, 'Professor',  '914 567 890', 1),
+('30000000-0000-0000-0000-000000000002', '234567890', '234567890', '23456789', 'ana.santos@email.pt',      '$2b$12$hash2', 'Ana',    'Santos',    '1990-07-24', 'F', 2, 184, 'Solteira',  'O+',  1, 1, 1, 0, 'Médica',     '913 456 789', 1),
+('30000000-0000-0000-0000-000000000003', '345678901', '345678901', '34567890', 'miguel.ferreira@email.pt', '$2b$12$hash3', 'Miguel', 'Ferreira',  '1978-11-05', 'M', 1, 30,  'Divorciado','B-',  0, 1, 1, 0, 'Professor',  '914 567 890', 1),
 ('30000000-0000-0000-0000-000000000004', '456789012', '456789012', '45678901', 'maria.pereira@email.pt',   '$2b$12$hash4', 'Maria',  'Pereira',   '1965-02-18', 'F', 2, 184, 'Viúva',     'AB+', 1, 0, 1, 0, 'Reformada',  '915 678 901', 1),
-('30000000-0000-0000-0000-000000000005', '567890123', '567890123', '56789012', 'pedro.costa@email.pt',     '$2b$12$hash5', 'Pedro',  'Costa',     '2005-09-30', 'M', 1, 184, 'Solteiro',  'O-',  1, 1, 0, 1, 'Estudante',  '916 789 012', 1);
+('30000000-0000-0000-0000-000000000005', '567890123', '567890123', '56789012', 'pedro.costa@email.pt',     '$2b$12$hash5', 'Pedro',  'Costa',     '2005-09-30', 'M', 1, 184, 'Solteiro',  'O-',  1, 1, 1, 1, 'Estudante',  '916 789 012', 1),
+-- test accounts (team members — patient side; see DOCTORS below for their doctor-side accounts)
+-- all 14 test accounts (patient + doctor) share the password "password123" for QA convenience
+('30000000-0000-0000-0000-000000000006', '678901234', '678901234', '67890123', 'braulio.batista@email.pt',   '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Braulio', 'Batista',  '1990-01-15', 'M', 1, 184, 'Solteiro', 'A+',  1, 1, 1, 0, 'Engenheiro de Software', '917 000 001', 1),
+('30000000-0000-0000-0000-000000000007', '789012345', '789012345', '78901234', 'monica.cerquido@email.pt',   '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Mónica',  'Cerquido', '1988-05-22', 'F', 2, 184, 'Casada',   'B+',  1, 1, 1, 0, 'Product Owner',          '917 000 002', 1),
+('30000000-0000-0000-0000-000000000008', '890123456', '890123456', '89012345', 'cesar.campinho@email.pt',    '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'César',   'Campinho', '1992-09-10', 'M', 1, 184, 'Solteiro', 'O+',  1, 1, 1, 0, 'Engenheiro de Software', '917 000 003', 1),
+('30000000-0000-0000-0000-000000000009', '901234567', '901234567', '90123456', 'tiago.faria@email.pt',       '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Tiago',   'Faria',    '1995-03-03', 'M', 1, 184, 'Solteiro', 'AB+', 1, 1, 1, 0, 'Designer',               '917 000 004', 1),
+('30000000-0000-0000-0000-000000000010', '112233445', '112233445', '11223344', 'joaquim.oliveira@email.pt',  '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Joaquim', 'Oliveira', '1970-12-01', 'M', 1, 184, 'Casado',   'A-',  1, 1, 1, 0, 'Consultor',              '917 000 005', 1),
+('30000000-0000-0000-0000-000000000011', '223344556', '223344556', '22334455', 'maria.costa@email.pt',       '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Maria',   'Costa',    '1983-06-18', 'F', 2, 184, 'Casada',   'O-',  1, 1, 1, 0, 'Enfermeira',             '917 000 006', 1),
+('30000000-0000-0000-0000-000000000012', '334455667', '334455667', '33445566', 'diana.almeida@email.pt',     '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Diana',   'Almeida',  '1998-11-27', 'F', 2, 184, 'Solteira', 'B-',  1, 1, 1, 0, 'Estudante',              '917 000 007', 1);
 
 -- -------------------------------------------------------
 -- DOCTORS
@@ -371,7 +390,15 @@ INSERT INTO doctors (id, ordem_medicos_id, first_name, last_name, email, passwor
 ('20000000-0000-0000-0000-000000000001', 'OM-12345', 'Carlos',  'Rodrigues', 'carlos.rodrigues@hsm.pt', '$2b$12$dhash1', 'Cardiologia',    '10000000-0000-0000-0000-000000000001', 184, 1),
 ('20000000-0000-0000-0000-000000000002', 'OM-23456', 'Sofia',   'Martins',   'sofia.martins@cuf.pt',    '$2b$12$dhash2', 'Medicina Geral', '10000000-0000-0000-0000-000000000002', 184, 1),
 ('20000000-0000-0000-0000-000000000003', 'OM-34567', 'António', 'Carvalho',  'antonio.carvalho@chp.pt', '$2b$12$dhash3', 'Neurologia',     '10000000-0000-0000-0000-000000000004', 184, 1),
-('20000000-0000-0000-0000-000000000004', 'OM-45678', 'Filipa',  'Alves',     'filipa.alves@hsm.pt',     '$2b$12$dhash4', 'Endocrinologia', '10000000-0000-0000-0000-000000000001', 66,  1);
+('20000000-0000-0000-0000-000000000004', 'OM-45678', 'Filipa',  'Alves',     'filipa.alves@hsm.pt',     '$2b$12$dhash4', 'Endocrinologia', '10000000-0000-0000-0000-000000000001', 66,  1),
+-- test accounts (team members — doctor side; same people as USERS above, different login/password)
+('20000000-0000-0000-0000-000000000005', 'OM-56789', 'Braulio', 'Batista',  'braulio.batista@hsm.pt',  '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Pediatria',      '10000000-0000-0000-0000-000000000001', 184, 1),
+('20000000-0000-0000-0000-000000000006', 'OM-67890', 'Mónica',  'Cerquido', 'monica.cerquido@cuf.pt',  '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Ginecologia',    '10000000-0000-0000-0000-000000000002', 184, 1),
+('20000000-0000-0000-0000-000000000007', 'OM-78901', 'César',   'Campinho', 'cesar.campinho@chp.pt',   '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Ortopedia',      '10000000-0000-0000-0000-000000000004', 184, 1),
+('20000000-0000-0000-0000-000000000008', 'OM-89012', 'Tiago',   'Faria',    'tiago.faria@hsm.pt',      '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Dermatologia',   '10000000-0000-0000-0000-000000000001', 184, 1),
+('20000000-0000-0000-0000-000000000009', 'OM-90123', 'Joaquim', 'Oliveira', 'joaquim.oliveira@cuf.pt', '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Psiquiatria',    '10000000-0000-0000-0000-000000000002', 184, 1),
+('20000000-0000-0000-0000-000000000010', 'OM-10234', 'Maria',   'Costa',    'maria.costa@chp.pt',      '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Oftalmologia',   '10000000-0000-0000-0000-000000000004', 184, 1),
+('20000000-0000-0000-0000-000000000011', 'OM-11234', 'Diana',   'Almeida',  'diana.almeida@hsm.pt',    '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Clínica Geral',  '10000000-0000-0000-0000-000000000001', 184, 1);
 
 -- -------------------------------------------------------
 -- USER_ADDRESSES
@@ -392,6 +419,14 @@ INSERT INTO emergency_contacts (user_id, type, name, phone, address) VALUES
 ('30000000-0000-0000-0000-000000000003', 'emergency', 'Luísa Ferreira', '919 333 444', 'R. de Santa Catarina, 78, Porto'),
 ('30000000-0000-0000-0000-000000000004', 'emergency', 'José Pereira',   '920 444 555', 'Largo do Chiado, 5 1º, Lisboa'),
 ('30000000-0000-0000-0000-000000000005', 'tutor',     'Beatriz Costa',  '921 555 666', 'R. Direita, 12, Braga');
+
+-- -------------------------------------------------------
+-- FAMILY_GUARDIANSHIPS (Pedro Costa is_dependent=1; parents divorced, both keep guardianship)
+-- -------------------------------------------------------
+-- relationship_type_id: 1=parent (see RELATIONSHIP_TYPES above)
+INSERT INTO family_guardianships (guardian_user_id, dependent_user_id, relationship_type_id, is_active) VALUES
+('30000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000005', 1, 1),
+('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000005', 1, 1);
 
 -- -------------------------------------------------------
 -- FEMALE_MEDICAL_INFO (users 2 and 4 are female)

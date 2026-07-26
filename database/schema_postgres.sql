@@ -57,6 +57,12 @@ CREATE TABLE habit_types (
     description TEXT
 );
 
+CREATE TABLE relationship_types (
+    id          SERIAL PRIMARY KEY,
+    code        TEXT   NOT NULL UNIQUE,
+    description TEXT
+);
+
 CREATE TABLE countries (
     id   SERIAL PRIMARY KEY,
     code TEXT   NOT NULL UNIQUE,
@@ -84,7 +90,7 @@ CREATE TABLE users (
     blood_type            TEXT      CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   BOOLEAN   NOT NULL DEFAULT TRUE,
     accepts_resuscitation BOOLEAN   NOT NULL DEFAULT TRUE,
-    emergency_access_code BOOLEAN   NOT NULL DEFAULT FALSE,
+    emergency_access_code BOOLEAN   NOT NULL DEFAULT TRUE,
     is_dependent          BOOLEAN   NOT NULL DEFAULT FALSE,
     profession            TEXT,
     phone                 TEXT,
@@ -138,6 +144,22 @@ CREATE TABLE emergency_contacts (
     phone   TEXT,
     address TEXT,
     CONSTRAINT fk_emergency_contacts_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Guardian/dependent relationship between two registered users (KAN-33)
+-- e.g. parent/child, legal guardian/incapacitated patient.
+-- A guardian has full access to the dependent's data (enforced at application layer).
+CREATE TABLE family_guardianships (
+    id                SERIAL    PRIMARY KEY,
+    guardian_user_id     UUID      NOT NULL,
+    dependent_user_id    UUID      NOT NULL,
+    relationship_type_id INT       NOT NULL,
+    is_active            BOOLEAN   NOT NULL DEFAULT TRUE,
+    created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_family_guardianships_guardian     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
+    CONSTRAINT fk_family_guardianships_dependent    FOREIGN KEY (dependent_user_id)    REFERENCES users(id),
+    CONSTRAINT fk_family_guardianships_relationship FOREIGN KEY (relationship_type_id) REFERENCES relationship_types(id),
+    CONSTRAINT chk_family_guardianships_not_self    CHECK (guardian_user_id <> dependent_user_id)
 );
 
 CREATE TABLE female_medical_info (
@@ -198,6 +220,25 @@ CREATE TABLE access_requests (
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
     CONSTRAINT fk_access_requests_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+
+-- Rule: an access request can only be flagged is_emergency = true if the
+-- patient has pre-authorised emergency access (users.emergency_access_code = true)
+CREATE OR REPLACE FUNCTION check_access_requests_emergency_consent()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_emergency = TRUE AND NOT EXISTS (
+        SELECT 1 FROM users WHERE id = NEW.user_id AND emergency_access_code = TRUE
+    ) THEN
+        RAISE EXCEPTION 'access_requests.is_emergency = true requires users.emergency_access_code = true';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_access_requests_emergency_consent
+BEFORE INSERT OR UPDATE ON access_requests
+FOR EACH ROW
+EXECUTE FUNCTION check_access_requests_emergency_consent();
 
 -- -------------------------------------------------------
 -- FILES

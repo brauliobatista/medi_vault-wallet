@@ -57,6 +57,12 @@ CREATE TABLE habit_types (
     description NVARCHAR(255)
 );
 
+CREATE TABLE relationship_types (
+    id          INT           IDENTITY(1,1) PRIMARY KEY,
+    code        NVARCHAR(30)  NOT NULL UNIQUE,
+    description NVARCHAR(255)
+);
+
 CREATE TABLE countries (
     id   INT          IDENTITY(1,1) PRIMARY KEY,
     code NVARCHAR(3)  NOT NULL UNIQUE,
@@ -84,7 +90,7 @@ CREATE TABLE users (
     blood_type            NVARCHAR(5)   CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   BIT           NOT NULL DEFAULT 1,
     accepts_resuscitation BIT           NOT NULL DEFAULT 1,
-    emergency_access_code BIT           NOT NULL DEFAULT 0,
+    emergency_access_code BIT           NOT NULL DEFAULT 1,
     is_dependent          BIT           NOT NULL DEFAULT 0,
     profession            NVARCHAR(255),
     phone                 NVARCHAR(50),
@@ -138,6 +144,22 @@ CREATE TABLE emergency_contacts (
     phone   NVARCHAR(50),
     address NVARCHAR(500),
     CONSTRAINT fk_emergency_contacts_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Guardian/dependent relationship between two registered users (KAN-33)
+-- e.g. parent/child, legal guardian/incapacitated patient.
+-- A guardian has full access to the dependent's data (enforced at application layer).
+CREATE TABLE family_guardianships (
+    id                INT           IDENTITY(1,1) PRIMARY KEY,
+    guardian_user_id     UNIQUEIDENTIFIER NOT NULL,
+    dependent_user_id    UNIQUEIDENTIFIER NOT NULL,
+    relationship_type_id INT           NOT NULL,
+    is_active            BIT           NOT NULL DEFAULT 1,
+    created_at           DATETIME2     NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_family_guardianships_guardian     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
+    CONSTRAINT fk_family_guardianships_dependent    FOREIGN KEY (dependent_user_id)    REFERENCES users(id),
+    CONSTRAINT fk_family_guardianships_relationship FOREIGN KEY (relationship_type_id) REFERENCES relationship_types(id),
+    CONSTRAINT chk_family_guardianships_not_self    CHECK (guardian_user_id <> dependent_user_id)
 );
 
 CREATE TABLE female_medical_info (
@@ -198,6 +220,28 @@ CREATE TABLE access_requests (
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
     CONSTRAINT fk_access_requests_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+GO
+
+-- Rule: an access request can only be flagged is_emergency = 1 if the
+-- patient has pre-authorised emergency access (users.emergency_access_code = 1)
+CREATE TRIGGER trg_access_requests_emergency_consent
+ON access_requests
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN users u ON u.id = i.user_id
+        WHERE i.is_emergency = 1 AND u.emergency_access_code = 0
+    )
+    BEGIN
+        RAISERROR ('access_requests.is_emergency = 1 requires users.emergency_access_code = 1', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+GO
 
 -- -------------------------------------------------------
 -- FILES

@@ -28,6 +28,7 @@ Load this skill at the start of every session on this project, or whenever you n
   - Chronic medications, allergies, vaccinations
 - All data is saved in **historical mode** (never deleted, just archived)
 - **The patient has full control** over who accesses their data — a doctor must request access and the patient must approve, except in pre-authorised emergency situations
+- **Family guardianship** (KAN-33): a patient (guardian) can be linked to another patient (dependent) — e.g. parent/child, legal guardian/incapacitated adult. The guardian gets full access to the dependent's data directly in the app, no `ACCESS_REQUESTS` needed (`family_guardianships` table, self-referencing on `users`)
 
 ### Doctors (Médicos)
 - Access via the **Doctor Web Interface**
@@ -117,7 +118,7 @@ Three revenue segments:
 ## Key design principles
 
 - Patient owns their data — explicit consent required for each doctor access
-- Emergency exception — hospitals can access all data without consent if patient is incapacitated (opt-in when subscribing)
+- Emergency exception — hospitals can access all data without consent if patient is incapacitated. Consent is `users.emergency_access_code`, defaulted to `true` at signup (opt-out, not opt-in) — the patient implicitly accepts emergency access when subscribing and can disable it afterwards. Enforced at the DB level: `access_requests.is_emergency = true` is only accepted if `users.emergency_access_code = true` (KAN-23, see [`database-sync.md`](database-sync.md#trigger-pattern-for-cross-table-business-rules))
 - Offline-first — Security Card works without internet; storage limited to card capacity
 - Historical mode — data is never permanently deleted, only archived (`is_active` flag)
 - Doctor notes are encrypted at rest (`note_text` stored as binary, encrypted at application layer)

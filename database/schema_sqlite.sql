@@ -59,6 +59,12 @@ CREATE TABLE habit_types (
     description TEXT
 );
 
+CREATE TABLE relationship_types (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    code        TEXT    NOT NULL UNIQUE,
+    description TEXT
+);
+
 CREATE TABLE countries (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT    NOT NULL UNIQUE,
@@ -86,7 +92,7 @@ CREATE TABLE users (
     blood_type            TEXT    CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   INTEGER NOT NULL DEFAULT 1,
     accepts_resuscitation INTEGER NOT NULL DEFAULT 1,
-    emergency_access_code INTEGER NOT NULL DEFAULT 0,
+    emergency_access_code INTEGER NOT NULL DEFAULT 1,
     is_dependent          INTEGER NOT NULL DEFAULT 0,
     profession            TEXT,
     phone                 TEXT,
@@ -140,6 +146,22 @@ CREATE TABLE emergency_contacts (
     phone   TEXT,
     address TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Guardian/dependent relationship between two registered users (KAN-33)
+-- e.g. parent/child, legal guardian/incapacitated patient.
+-- A guardian has full access to the dependent's data (enforced at application layer).
+CREATE TABLE family_guardianships (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    guardian_user_id     TEXT    NOT NULL,
+    dependent_user_id    TEXT    NOT NULL,
+    relationship_type_id INTEGER NOT NULL,
+    is_active            INTEGER NOT NULL DEFAULT 1,
+    created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
+    FOREIGN KEY (dependent_user_id)    REFERENCES users(id),
+    FOREIGN KEY (relationship_type_id) REFERENCES relationship_types(id),
+    CHECK (guardian_user_id <> dependent_user_id)
 );
 
 CREATE TABLE female_medical_info (
@@ -200,6 +222,28 @@ CREATE TABLE access_requests (
     FOREIGN KEY (user_id)   REFERENCES users(id),
     FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+
+-- Rule: an access request can only be flagged is_emergency = 1 if the
+-- patient has pre-authorised emergency access (users.emergency_access_code = 1)
+CREATE TRIGGER trg_access_requests_emergency_consent_insert
+BEFORE INSERT ON access_requests
+FOR EACH ROW
+WHEN NEW.is_emergency = 1 AND NOT EXISTS (
+    SELECT 1 FROM users WHERE id = NEW.user_id AND emergency_access_code = 1
+)
+BEGIN
+    SELECT RAISE(ABORT, 'access_requests.is_emergency = 1 requires users.emergency_access_code = 1');
+END;
+
+CREATE TRIGGER trg_access_requests_emergency_consent_update
+BEFORE UPDATE ON access_requests
+FOR EACH ROW
+WHEN NEW.is_emergency = 1 AND NOT EXISTS (
+    SELECT 1 FROM users WHERE id = NEW.user_id AND emergency_access_code = 1
+)
+BEGIN
+    SELECT RAISE(ABORT, 'access_requests.is_emergency = 1 requires users.emergency_access_code = 1');
+END;
 
 -- -------------------------------------------------------
 -- FILES

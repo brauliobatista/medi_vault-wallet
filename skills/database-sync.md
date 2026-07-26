@@ -49,7 +49,9 @@ Two patterns exist for a column with a bounded set of values — pick based on w
 | Pattern | When to use | Example |
 |---|---|---|
 | Inline `ENUM`/`CHECK` | The set of values is small and stable — changing it is a deliberate schema decision | `institution_licenses.billing_type`, `access_requests.status`, `family_history.condition` |
-| Config table (reference table + FK) | The set of values is expected to grow over time without a schema migration, or is externally standardized | `genders`, `habit_types`, `countries` |
+| Config table (reference table + FK) | The set of values is expected to grow over time without a schema migration, or is externally standardized | `genders`, `habit_types`, `countries`, `relationship_types` |
+
+Rule of thumb from PR review history (KAN-11, reviewer Ccampinho): columns that **classify a person or entity** (gender, habit type, relationship type) tend to need new values as the product covers more real-world cases — lean config table even if the initial list looks small and closed. Columns that represent a **process/workflow state** (`status`, `billing_type`) stay inline `CHECK`/`ENUM` — those only got "add more options" comments, never "make this a table".
 
 Config tables follow a consistent shape: `id` (auto PK, plain `INT`/`SERIAL`/`AUTOINCREMENT` — **not** GUID), `code` (`NOT NULL UNIQUE`, matches the value previously used in the `CHECK`/`ENUM`), `description`/`name` (human-readable label). The referencing column is renamed from the bare concept (`sex`, `type`) to `<concept>_id` (`sex_id`, `type_id`, `nationality_id`) and gets an FK constraint. Config tables are seeded in `seed.sql` alongside the other independent reference tables, before anything that references them.
 
@@ -74,6 +76,27 @@ CONSTRAINT fk_table_column FOREIGN KEY (column) REFERENCES other_table(id)
 FOREIGN KEY (column) REFERENCES other_table(id)
 -- also requires: PRAGMA foreign_keys = ON;
 ```
+
+**Self-referencing / two role-based FKs to the same table:** when a table links two rows of the same other table in different roles (e.g. `family_guardianships.guardian_user_id` and `dependent_user_id`, both FK → `users.id`), name each column and constraint after its role, not the target table, and add a `CHECK`/`FOREIGN KEY ... CHECK` guarding against a row pointing to itself (`CHECK (guardian_user_id <> dependent_user_id)`).
+
+---
+
+## Trigger pattern for cross-table business rules
+
+A `CHECK` constraint can only see columns in the same row — it cannot validate against another table. When a business rule depends on a column in a *different* table (e.g. `access_requests.is_emergency` depending on `users.emergency_access_code`), implement it as a trigger, added to **all 4 dialect files**, right after the `CREATE TABLE` block it protects.
+
+Naming: `trg_<table>_<rule>` (e.g. `trg_access_requests_emergency_consent`). Precede the trigger with a one-line comment stating the rule in plain English.
+
+| Dialect | Mechanism |
+|---|---|
+| SQL Server | Single `AFTER INSERT, UPDATE` trigger on the table, reads the `inserted` pseudo-table, `RAISERROR` + `ROLLBACK TRANSACTION` on violation. Wrap in `GO` batch separators. |
+| PostgreSQL | `CREATE OR REPLACE FUNCTION` (`RAISE EXCEPTION` on violation) + `CREATE TRIGGER ... BEFORE INSERT OR UPDATE ... FOR EACH ROW EXECUTE FUNCTION ...` |
+| MySQL / MariaDB | **Two** separate triggers (`BEFORE INSERT` and `BEFORE UPDATE` — one trigger cannot cover both events), each using `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '...'` on violation. Wrap in `DELIMITER $$ ... DELIMITER ;`. |
+| SQLite | **Two** separate triggers (`BEFORE INSERT` / `BEFORE UPDATE`), condition in a `WHEN` clause, `SELECT RAISE(ABORT, '...')` in the body. |
+
+Example precedent: `trg_access_requests_emergency_consent` (KAN-23) blocks `access_requests.is_emergency = true` unless the referenced `users.emergency_access_code = true`.
+
+Reminder: if the rule involves a column default rather than (or in addition to) a trigger, update `seed.sql` too — existing rows with explicit values that would now violate the rule must be fixed so the seed script still runs cleanly.
 
 ---
 
@@ -191,4 +214,5 @@ The seed file contains Portuguese test data and must be kept in sync with the sc
 - [ ] Confluence page description text updated (via REST API)
 - [ ] Confluence field table updated per [`confluence-field-tables.md`](confluence-field-tables.md)
 - [ ] Syntax verified for each dialect (types, defaults, FK syntax)
+- [ ] Cross-table business rule → trigger added to all 4 dialects (see [Trigger pattern](#trigger-pattern-for-cross-table-business-rules)), not a same-table `CHECK`
 - [ ] Table creation order respects FK dependencies (referenced tables first)
