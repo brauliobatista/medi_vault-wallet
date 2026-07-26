@@ -16,7 +16,8 @@ public record UserProfileDto(
     bool EmergencyAccess,
     bool IsDependent,
     string? Profession,
-    string? Phone
+    string? Phone,
+    bool CardActive
 );
 
 public record UpdateUserRequest(
@@ -30,3 +31,5 @@ public record UpdateUserRequest(
 );
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+public record ToggleCardRequest(bool Active);

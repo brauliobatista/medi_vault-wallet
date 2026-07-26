@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import { getAccessRequests } from '../../api/medical'
@@ -7,7 +7,13 @@ export default function DoctorAccessPage() {
   const [requests, setRequests] = useState<Record<string, unknown>[]>([])
   const navigate = useNavigate()
 
-  useEffect(() => { getAccessRequests().then(setRequests) }, [])
+  const refresh = useCallback(() => { getAccessRequests().then(setRequests) }, [])
+
+  useEffect(() => {
+    refresh()
+    const id = setInterval(refresh, 30_000)
+    return () => clearInterval(id)
+  }, [refresh])
 
   const badgeClass: Record<string, string> = {
     pending: 'warning text-dark',
@@ -23,6 +29,12 @@ export default function DoctorAccessPage() {
 
   return (
     <Layout>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h6 className="fw-semibold mb-0">Pedidos de Acesso</h6>
+        <button className="btn btn-outline-secondary btn-sm" onClick={refresh}>
+          <i className="bi bi-arrow-clockwise me-1" />Atualizar
+        </button>
+      </div>
       {requests.length === 0 ? (
         <p className="text-muted">Sem pedidos de acesso.</p>
       ) : (

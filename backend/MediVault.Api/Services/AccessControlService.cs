@@ -7,8 +7,41 @@ namespace MediVault.Api.Services;
 
 public class AccessControlService(MediVaultDbContext db)
 {
+    // Returns null = QR invalid, false = card suspended, true = card active
+    public async Task<bool?> IsQrCardActiveAsync(string qrCode)
+    {
+        var parts = qrCode.Trim().Split(':');
+        if (parts.Length != 3 || parts[0] != "MV") return null;
+        var user = await db.Users
+            .Where(u => u.Id == parts[1] && u.IsActive == 1 && u.ShareCode == parts[2])
+            .Select(u => new { u.CardActive })
+            .FirstOrDefaultAsync();
+        if (user is null) return null;
+        return user.CardActive == 1;
+    }
+
+    public async Task<(bool HasAccess, string Reason)> GetAccessStatusAsync(string doctorId, string userId)
+    {
+        var cardActive = await db.Users
+            .AnyAsync(u => u.Id == userId && u.IsActive == 1 && u.CardActive == 1);
+        if (!cardActive) return (false, "card_suspended");
+
+        var now = DateTime.UtcNow.ToString("o");
+        var candidates = await db.AccessRequests
+            .Where(r => r.DoctorId == doctorId && r.UserId == userId &&
+                        (r.Status == "approved" || r.IsEmergency == 1))
+            .ToListAsync();
+
+        bool has = candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
+        return has ? (true, "granted") : (false, "no_access");
+    }
+
     public async Task<bool> DoctorHasAccessAsync(string doctorId, string userId)
     {
+        var cardActive = await db.Users
+            .AnyAsync(u => u.Id == userId && u.IsActive == 1 && u.CardActive == 1);
+        if (!cardActive) return false;
+
         var now = DateTime.UtcNow.ToString("o");
 
         // Fetch candidate rows in memory to avoid SQLite translation issues with string date comparison
@@ -124,7 +157,7 @@ public class AccessControlService(MediVaultDbContext db)
     public async Task<bool> RespondToRequestAsync(int requestId, string userId, string action)
     {
         var request = await db.AccessRequests
-            .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId && r.Status == "pending");
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId && r.Status != "revoked");
         if (request is null) return false;
 
         if (action == "approve")
@@ -135,20 +168,22 @@ public class AccessControlService(MediVaultDbContext db)
         }
         else if (action == "revoke")
         {
-            request.Status = "revoked";
+            db.AccessRequests.Remove(request);
+            await db.SaveChangesAsync();
+            return true;
         }
 
         await db.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> RevokeAccessAsync(int requestId, string userId)
+    public async Task<bool> DeleteRequestAsync(int requestId, string userId)
     {
         var request = await db.AccessRequests
             .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId);
         if (request is null) return false;
 
-        request.Status = "revoked";
+        db.AccessRequests.Remove(request);
         await db.SaveChangesAsync();
         return true;
     }

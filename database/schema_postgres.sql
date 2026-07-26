@@ -95,6 +95,7 @@ CREATE TABLE users (
     profession            TEXT,
     phone                 TEXT,
     is_active             BOOLEAN   NOT NULL DEFAULT TRUE,
+    card_active           BOOLEAN   NOT NULL DEFAULT TRUE,
     created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),

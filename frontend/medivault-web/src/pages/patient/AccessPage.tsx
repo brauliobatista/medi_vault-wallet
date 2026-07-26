@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import Layout from '../../components/Layout'
-import { getAccessRequests, respondToRequest, getQrCode } from '../../api/medical'
+import { getProfile, getAccessRequests, respondToRequest, deleteRequest, getQrCode, toggleCard } from '../../api/medical'
 
 export default function AccessPage() {
   const [requests, setRequests] = useState<Record<string, unknown>[]>([])
   const [qrPayload, setQrPayload] = useState<string | null>(null)
   const [qrLoading, setQrLoading] = useState(true)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [cardActive, setCardActive] = useState<boolean | null>(null)
+  const [confirmSuspend, setConfirmSuspend] = useState(false)
+  const [cardLoading, setCardLoading] = useState(false)
 
   const refresh = () => getAccessRequests().then(setRequests)
 
@@ -15,11 +19,45 @@ export default function AccessPage() {
     getQrCode()
       .then((d) => setQrPayload(d.payload))
       .finally(() => setQrLoading(false))
+    getProfile().then((p) => setCardActive(p.cardActive))
   }, [])
 
-  const handle = async (id: number, action: 'approve' | 'revoke') => {
-    await respondToRequest(id, action)
-    refresh()
+  const handleCard = async (activate: boolean) => {
+    setCardLoading(true)
+    setConfirmSuspend(false)
+    setCardActive(activate)
+    try {
+      await toggleCard(activate)
+      setSuccessMsg(activate ? 'MediCard ativado. Os médicos aprovados voltaram a ter acesso.' : 'MediCard suspenso. Todos os médicos perderam acesso.')
+      setTimeout(() => setSuccessMsg(null), 4000)
+    } catch {
+      setCardActive(!activate)
+    } finally {
+      setCardLoading(false)
+    }
+  }
+
+  const handleApprove = async (id: number) => {
+    setRequests((prev) => prev.map((r) => Number(r.id) === id ? { ...r, status: 'approved' } : r))
+    try {
+      await respondToRequest(id, 'approve')
+      setSuccessMsg('Acesso aprovado com sucesso.')
+      setTimeout(() => setSuccessMsg(null), 3000)
+      refresh()
+    } catch {
+      refresh()
+    }
+  }
+
+  const handleDelete = async (id: number, label: string) => {
+    setRequests((prev) => prev.filter((r) => Number(r.id) !== id))
+    try {
+      await deleteRequest(id)
+      setSuccessMsg(label)
+      setTimeout(() => setSuccessMsg(null), 3000)
+    } catch {
+      refresh()
+    }
   }
 
   const badgeClass: Record<string, string> = {
@@ -31,6 +69,50 @@ export default function AccessPage() {
   return (
     <Layout>
       <div style={{ maxWidth: 700 }}>
+        {successMsg && <div className="alert alert-success py-2 mb-3">{successMsg}</div>}
+
+        {/* MediCard status */}
+        {cardActive !== null && (
+          <div className={`card border-0 shadow-sm mb-4 border-start border-4 ${cardActive ? 'border-success' : 'border-danger'}`}>
+            <div className="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <div className="d-flex align-items-center gap-3">
+                <i className={`bi ${cardActive ? 'bi-shield-check text-success' : 'bi-shield-x text-danger'}`} style={{ fontSize: '2rem' }} />
+                <div>
+                  <div className="fw-semibold">{cardActive ? 'MediCard Ativo' : 'MediCard Suspenso'}</div>
+                  <small className="text-muted">
+                    {cardActive
+                      ? 'Os médicos aprovados podem aceder aos seus dados.'
+                      : 'Nenhum médico tem acesso enquanto o cartão estiver suspenso.'}
+                  </small>
+                </div>
+              </div>
+              <div>
+                {cardActive ? (
+                  confirmSuspend ? (
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      <span className="text-muted small">Confirmar suspensão?</span>
+                      <button className="btn btn-danger btn-sm" disabled={cardLoading} onClick={() => handleCard(false)}>
+                        Sim, suspender
+                      </button>
+                      <button className="btn btn-outline-secondary btn-sm" onClick={() => setConfirmSuspend(false)}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button className="btn btn-outline-danger btn-sm" onClick={() => setConfirmSuspend(true)}>
+                      <i className="bi bi-lock me-1" />Suspender cartão
+                    </button>
+                  )
+                ) : (
+                  <button className="btn btn-success btn-sm" disabled={cardLoading} onClick={() => handleCard(true)}>
+                    <i className="bi bi-lock-open me-1" />Ativar cartão
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* QR Code card */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-header bg-white fw-semibold border-bottom">
@@ -60,7 +142,7 @@ export default function AccessPage() {
           </div>
         </div>
 
-        {/* Pending requests */}
+        {/* Access requests */}
         <h6 className="fw-semibold mb-1">Pedidos de Acesso de Médicos</h6>
         <p className="text-muted small mb-3">Os médicos que pediram acesso via formulário aparecem aqui.</p>
         {requests.length === 0 ? (
@@ -81,12 +163,17 @@ export default function AccessPage() {
                       {String(r.status)}
                     </span>
                     {r.status === 'pending' && (
-                      <button className="btn btn-success btn-sm" onClick={() => handle(Number(r.id), 'approve')}>
-                        <i className="bi bi-check me-1" />Aprovar
-                      </button>
+                      <>
+                        <button className="btn btn-success btn-sm" onClick={() => handleApprove(Number(r.id))}>
+                          <i className="bi bi-check me-1" />Aprovar
+                        </button>
+                        <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(Number(r.id), 'Pedido rejeitado.')}>
+                          <i className="bi bi-x me-1" />Rejeitar
+                        </button>
+                      </>
                     )}
                     {r.status === 'approved' && (
-                      <button className="btn btn-outline-danger btn-sm" onClick={() => handle(Number(r.id), 'revoke')}>
+                      <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(Number(r.id), 'Acesso revogado com sucesso.')}>
                         <i className="bi bi-x me-1" />Revogar
                       </button>
                     )}

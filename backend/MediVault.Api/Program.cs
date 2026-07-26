@@ -78,6 +78,10 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
     db.Database.EnsureCreated();
 
+    // Add card_active column if this DB pre-dates the feature
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
+    catch { /* column already exists */ }
+
     // Backfill missing share codes
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)

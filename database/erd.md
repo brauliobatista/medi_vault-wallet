@@ -92,6 +92,7 @@ erDiagram
         string profession
         string phone
         bool is_active
+        bool card_active
         datetime created_at
         datetime updated_at
     }

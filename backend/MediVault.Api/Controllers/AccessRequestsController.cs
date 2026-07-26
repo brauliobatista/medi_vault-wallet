@@ -53,9 +53,9 @@ public class AccessRequestsController(AccessControlService accessControl) : Cont
 
     [HttpDelete("{requestId}")]
     [Authorize(Roles = "Patient")]
-    public async Task<IActionResult> Revoke(int requestId)
+    public async Task<IActionResult> Delete(int requestId)
     {
-        var success = await accessControl.RevokeAccessAsync(requestId, CurrentId);
+        var success = await accessControl.DeleteRequestAsync(requestId, CurrentId);
         if (!success) return NotFound();
         return NoContent();
     }
@@ -64,6 +64,10 @@ public class AccessRequestsController(AccessControlService accessControl) : Cont
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> ScanQr([FromBody] ScanQrRequest req)
     {
+        var cardActive = await accessControl.IsQrCardActiveAsync(req.QrCode);
+        if (cardActive is null) return BadRequest(new { message = "QR Code inválido ou expirado." });
+        if (!cardActive.Value) return StatusCode(423, new { message = "card_suspended" });
+
         var result = await accessControl.GrantAccessByQrAsync(CurrentId, req.QrCode);
         if (result is null) return BadRequest(new { message = "QR Code inválido ou expirado." });
         return Ok(new

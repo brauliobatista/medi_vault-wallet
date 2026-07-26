@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link, useLocation } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
 import {
@@ -10,6 +10,7 @@ import {
   getVaccinations, addVaccination, deleteVaccination,
   getHabits, upsertHabit,
   getDoctorNotes, createDoctorNote, getFlags, markFlagReviewed,
+  getAccessStatus,
 } from '../../api/medical'
 
 type TabKey = 'history' | 'medications' | 'allergies' | 'exams' | 'vaccinations' | 'habits' | 'notes'
@@ -26,6 +27,7 @@ export default function PatientViewPage() {
   const { patientId } = useParams<{ patientId: string }>()
   const uid = patientId!
   const location = useLocation()
+  const navigate = useNavigate()
   const navState = location.state as { publicId?: string; patientName?: string } | null
 
   const [publicId, setPublicId] = useState<string>(navState?.publicId ?? '')
@@ -37,7 +39,7 @@ export default function PatientViewPage() {
   const [flags, setFlags] = useState<Record<string, unknown>[]>([])
   const [noteText, setNoteText] = useState('')
   const [noteSection, setNoteSection] = useState('medical_info')
-  const [accessDenied, setAccessDenied] = useState(false)
+  const [deniedReason, setDeniedReason] = useState<string | null>(null)
   const [vaccines, setVaccines] = useState<{ id: number; name: string }[]>([])
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<Record<string, string>>({})
@@ -54,7 +56,7 @@ export default function PatientViewPage() {
 
   const loadTab = async (t: TabKey) => {
     setTab(t)
-    setAccessDenied(false)
+    setDeniedReason(null)
     setShowForm(false)
     setForm({})
     try {
@@ -69,11 +71,19 @@ export default function PatientViewPage() {
         setFlags(await getFlags(uid))
       }
     } catch (err: unknown) {
-      if ((err as { response?: { status?: number } })?.response?.status === 403) setAccessDenied(true)
+      if ((err as { response?: { status?: number } })?.response?.status === 403) {
+        const status = await getAccessStatus(uid).catch(() => ({ reason: 'no_access' }))
+        setDeniedReason(status.reason)
+      }
     }
   }
 
-  useEffect(() => { loadTab('history') }, [uid])
+  useEffect(() => {
+    getAccessStatus(uid)
+      .then((s) => { if (!s.hasAccess) setDeniedReason(s.reason) })
+      .catch(() => {})
+    loadTab('history')
+  }, [uid])
 
   const f = (k: string) => form[k] ?? ''
   const sf = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -114,6 +124,30 @@ export default function PatientViewPage() {
 
   return (
     <Layout>
+      {deniedReason && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="card border-0 shadow-lg p-4 text-center mx-3" style={{ maxWidth: 400 }}>
+            {deniedReason === 'card_suspended' ? (
+              <>
+                <i className="bi bi-shield-x text-warning" style={{ fontSize: '2.5rem' }} />
+                <h5 className="fw-bold mt-3 mb-2">MediCard Suspenso</h5>
+                <p className="text-muted mb-4">
+                  Este utente suspendeu o seu MediCard. O acesso aos dados está bloqueado até que o utente reative o cartão.
+                </p>
+              </>
+            ) : (
+              <>
+                <i className="bi bi-lock-fill text-danger" style={{ fontSize: '2.5rem' }} />
+                <h5 className="fw-bold mt-3 mb-2">Sem acesso</h5>
+                <p className="text-muted mb-4">Este utente ainda não aprovou o seu pedido de acesso.</p>
+              </>
+            )}
+            <button className="btn btn-primary" onClick={() => navigate('/doctor')}>
+              Continuar para o dashboard
+            </button>
+          </div>
+        </div>
+      )}
       {/* Patient header */}
       <div className="d-flex align-items-center gap-3 mb-4">
         <Link to="/doctor" className="btn btn-outline-secondary btn-sm">
@@ -142,14 +176,7 @@ export default function PatientViewPage() {
         ))}
       </ul>
 
-      {accessDenied ? (
-        <div className="alert alert-warning">
-          <i className="bi bi-lock me-2" />
-          <strong>Sem acesso.</strong> Este utente ainda não aprovou o seu pedido de acesso.{' '}
-          <Link to="/doctor">Ir para o dashboard</Link>.
-        </div>
-
-      ) : tab === 'notes' ? (
+      {tab === 'notes' ? (
         <>
           {flags.length > 0 && (
             <div className="alert alert-warning">

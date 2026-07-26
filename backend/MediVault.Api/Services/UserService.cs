@@ -85,9 +85,20 @@ public class UserService(MediVaultDbContext db)
         await db.SaveChangesAsync();
     }
 
+    public async Task<bool> ToggleCardAsync(string userId, bool activate)
+    {
+        var u = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
+        if (u is null) return false;
+        u.CardActive = activate ? 1 : 0;
+        u.UpdatedAt = DateTime.UtcNow.ToString("o");
+        await db.SaveChangesAsync();
+        return true;
+    }
+
     private static UserProfileDto Map(Entities.User u) => new(
         u.Id, u.UtentNumber, u.Email, u.FirstName, u.LastName, u.Birthday,
         u.BiologicalGender, u.Sex, u.MaritalStatus, u.BloodType,
         u.AcceptsTransfusion == 1, u.AcceptsResuscitation == 1,
-        u.EmergencyAccessCode == 1, u.IsDependent == 1, u.Profession, u.Phone);
+        u.EmergencyAccessCode == 1, u.IsDependent == 1, u.Profession, u.Phone,
+        u.CardActive == 1);
 }

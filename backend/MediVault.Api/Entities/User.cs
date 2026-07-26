@@ -27,6 +27,7 @@ public class User
     [Column("phone")] public string? Phone { get; set; }
     [Column("share_code")] public string ShareCode { get; set; } = string.Empty;
     [Column("is_active")] public int IsActive { get; set; } = 1;
+    [Column("card_active")] public int CardActive { get; set; } = 1;
     [Column("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
     [Column("updated_at")] public string UpdatedAt { get; set; } = DateTime.UtcNow.ToString("o");
 

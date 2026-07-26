@@ -95,6 +95,7 @@ CREATE TABLE users (
     profession            NVARCHAR(255),
     phone                 NVARCHAR(50),
     is_active             BIT           NOT NULL DEFAULT 1,
+    card_active           BIT           NOT NULL DEFAULT 1,
     created_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
     updated_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),
