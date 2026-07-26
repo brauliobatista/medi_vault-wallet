@@ -54,6 +54,12 @@ erDiagram
         string description
     }
 
+    COUNTRIES {
+        int id PK
+        string code UK
+        string name
+    }
+
     %% -------------------------------------------------------
     %% CORE
     %% -------------------------------------------------------
@@ -70,6 +76,7 @@ erDiagram
         date birthday
         string biological_gender
         int sex_id FK
+        int nationality_id FK
         string marital_status
         string blood_type
         bool accepts_transfusion
@@ -92,6 +99,7 @@ erDiagram
         string password_hash
         string speciality
         guid institution_id FK
+        int nationality_id FK
         bool is_active
         datetime created_at
     }
@@ -329,7 +337,7 @@ erDiagram
 
     %% -------------------------------------------------------
     %% HEALTH HABITS (consolidated)
-    %% details JSON: campos especificos por tipo
+    %% details JSON: type-specific fields
     %% -------------------------------------------------------
 
     HEALTH_HABITS {
@@ -375,9 +383,11 @@ erDiagram
     %% Institutions & Doctors
     INSTITUTIONS                ||--|{ DOCTORS                    : "employs"
     INSTITUTIONS                ||--o{ INSTITUTION_LICENSES       : "has"
+    COUNTRIES                   ||--o{ DOCTORS                    : "nationality"
 
     %% Users — profile
     GENDERS                     ||--o{ USERS                      : "classifies"
+    COUNTRIES                   ||--o{ USERS                      : "nationality"
     USERS                       ||--o{ USER_ADDRESSES             : "has"
     USERS                       ||--o{ EMERGENCY_CONTACTS         : "has"
     USERS                       ||--o| FEMALE_MEDICAL_INFO        : "has"

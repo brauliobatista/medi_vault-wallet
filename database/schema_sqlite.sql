@@ -59,6 +59,12 @@ CREATE TABLE habit_types (
     description TEXT
 );
 
+CREATE TABLE countries (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT    NOT NULL UNIQUE,
+    name TEXT    NOT NULL
+);
+
 -- -------------------------------------------------------
 -- USERS
 -- -------------------------------------------------------
@@ -75,6 +81,7 @@ CREATE TABLE users (
     birthday              TEXT    NOT NULL,
     biological_gender     TEXT    NOT NULL CHECK (biological_gender IN ('M', 'F')),
     sex_id                INTEGER NOT NULL,
+    nationality_id        INTEGER NOT NULL,
     marital_status        TEXT,
     blood_type            TEXT    CHECK (blood_type IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     accepts_transfusion   INTEGER NOT NULL DEFAULT 1,
@@ -86,7 +93,8 @@ CREATE TABLE users (
     is_active             INTEGER NOT NULL DEFAULT 1,
     created_at            TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at            TEXT    NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (sex_id) REFERENCES genders(id)
+    FOREIGN KEY (sex_id) REFERENCES genders(id),
+    FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
@@ -102,9 +110,11 @@ CREATE TABLE doctors (
     password_hash    TEXT    NOT NULL,
     speciality       TEXT,
     institution_id   TEXT    NOT NULL,
+    nationality_id   INTEGER NOT NULL,
     is_active        INTEGER NOT NULL DEFAULT 1,
     created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (institution_id) REFERENCES institutions(id)
+    FOREIGN KEY (institution_id) REFERENCES institutions(id),
+    FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
 -- -------------------------------------------------------
