@@ -7,6 +7,9 @@ export const getDoctorProfile = () => api.get('/doctors/me').then((r) => r.data)
 export const updateDoctorProfile = (data: object) => api.put('/doctors/me', data).then((r) => r.data)
 export const changeDoctorPassword = (data: object) => api.put('/doctors/me/password', data)
 
+export const getAccessStatus = (userId: string) =>
+  api.get(`/patients/${userId}/access-status`).then((r) => r.data as { hasAccess: boolean; reason: string })
+
 export const getSurgeries = (userId: string) =>
   api.get(`/patients/${userId}/surgeries`).then((r) => r.data)
 export const addSurgery = (userId: number, data: object) =>
@@ -60,6 +63,8 @@ export const addVaccination = (userId: number, data: object) =>
 export const deleteVaccination = (userId: number, id: number) =>
   api.delete(`/patients/${userId}/vaccinations/${id}`)
 
+export const toggleCard = (active: boolean) => api.put('/users/me/card', { active })
+
 export const getQrCode = () => api.get('/users/me/qr').then((r) => r.data as { payload: string })
 export const scanQrCode = (qrCode: string) =>
   api.post('/access-requests/qr', { qrCode }).then((r) => r.data)
@@ -69,6 +74,8 @@ export const requestAccess = (userId: string) =>
   api.post(`/access-requests/${userId}`).then((r) => r.data)
 export const respondToRequest = (requestId: number, action: 'approve' | 'revoke') =>
   api.put(`/access-requests/${requestId}/respond`, { action })
+export const deleteRequest = (requestId: number) =>
+  api.delete(`/access-requests/${requestId}`)
 
 export const getDoctorNotes = (userId: string) =>
   api.get(`/doctor-notes/${userId}`).then((r) => r.data)

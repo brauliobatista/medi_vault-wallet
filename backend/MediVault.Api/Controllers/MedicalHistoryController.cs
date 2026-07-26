@@ -22,6 +22,14 @@ public class MedicalHistoryController(
         return await accessControl.DoctorHasAccessAsync(CurrentId, userId);
     }
 
+    [HttpGet("access-status")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> GetAccessStatus(string userId)
+    {
+        var (hasAccess, reason) = await accessControl.GetAccessStatusAsync(CurrentId, userId);
+        return Ok(new { hasAccess, reason });
+    }
+
     // --- Surgical History ---
 
     [HttpGet("surgeries")]

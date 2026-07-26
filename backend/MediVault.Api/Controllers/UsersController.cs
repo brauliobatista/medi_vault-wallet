@@ -49,6 +49,15 @@ public class UsersController(UserService userService) : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("me/card")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> ToggleCard(ToggleCardRequest req)
+    {
+        var success = await userService.ToggleCardAsync(CurrentUserId, req.Active);
+        if (!success) return NotFound();
+        return NoContent();
+    }
+
     [HttpGet("me/qr")]
     [Authorize(Roles = "Patient")]
     public async Task<IActionResult> GetQrCode()

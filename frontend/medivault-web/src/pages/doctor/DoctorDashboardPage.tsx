@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
-import { scanQrCode } from '../../api/medical'
+import { scanQrCode, getAccessStatus } from '../../api/medical'
 
 export default function DoctorDashboardPage() {
   const [utentNumber, setUtentNumber] = useState('')
@@ -16,6 +16,8 @@ export default function DoctorDashboardPage() {
   const [manualCode, setManualCode] = useState('')
   const [scanResult, setScanResult] = useState<{ patientName: string; userId: string; publicId: string; expiresAt: string } | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
+  const [scanCardSuspended, setScanCardSuspended] = useState(false)
+  const [foundCardSuspended, setFoundCardSuspended] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -29,9 +31,12 @@ export default function DoctorDashboardPage() {
     setLoading(true)
     setStatus(null)
     setFound(null)
+    setFoundCardSuspended(false)
     try {
       const r = await api.get(`/access-requests/search?utentNumber=${utentNumber}`)
       setFound(r.data)
+      const s = await getAccessStatus(r.data.userId).catch(() => ({ reason: 'granted' }))
+      setFoundCardSuspended(s.reason === 'card_suspended')
     } catch {
       setStatus({ type: 'error', msg: 'Utente não encontrado. Verifique o número.' })
     } finally {
@@ -98,11 +103,17 @@ export default function DoctorDashboardPage() {
 
   const submitQrCode = async (code: string) => {
     setScanError(null)
+    setScanCardSuspended(false)
     try {
       const r = await scanQrCode(code)
       setScanResult({ patientName: r.patientName, userId: r.userId, publicId: r.publicId ?? '', expiresAt: r.expiresAt })
-    } catch {
-      setScanError('QR Code inválido ou sem correspondência.')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 423) {
+        setScanCardSuspended(true)
+      } else {
+        setScanError('QR Code inválido ou sem correspondência.')
+      }
     }
   }
 
@@ -135,6 +146,18 @@ export default function DoctorDashboardPage() {
                     <i className="bi bi-eye me-1" />Ver dados
                   </button>
                   <button className="btn btn-outline-secondary btn-sm" onClick={() => { setScanResult(null); setManualCode('') }}>
+                    Novo scan
+                  </button>
+                </div>
+              </div>
+            ) : scanCardSuspended ? (
+              <div className="alert alert-warning mb-0">
+                <i className="bi bi-shield-x me-2" />
+                <strong>MediCard suspenso.</strong> O utente suspendeu o seu cartão.
+                <br />
+                <small>Não é possível aceder aos dados enquanto o cartão estiver inativo.</small>
+                <div className="mt-2">
+                  <button className="btn btn-outline-secondary btn-sm" onClick={() => { setScanCardSuspended(false); setManualCode('') }}>
                     Novo scan
                   </button>
                 </div>
@@ -205,21 +228,31 @@ export default function DoctorDashboardPage() {
             )}
 
             {found && (
-              <div className="alert alert-light border d-flex justify-content-between align-items-center">
-                <div>
-                  <i className="bi bi-person-circle me-2 text-primary" />
-                  <strong>{found.name}</strong>
-                  <span className="text-muted ms-2 small font-monospace">{found.publicId}</span>
+              <>
+                {foundCardSuspended && (
+                  <div className="alert alert-warning py-2 mb-2">
+                    <i className="bi bi-shield-x me-2" />
+                    <strong>MediCard suspenso.</strong> O utente suspendeu o seu cartão — não é possível aceder aos dados enquanto estiver inativo.
+                  </div>
+                )}
+                <div className="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <i className="bi bi-person-circle me-2 text-primary" />
+                    <strong>{found.name}</strong>
+                    <span className="text-muted ms-2 small font-monospace">{found.publicId}</span>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button className="btn btn-outline-primary btn-sm" onClick={handleRequestAccess}>
+                      <i className="bi bi-send me-1" />Pedir acesso
+                    </button>
+                    {!foundCardSuspended && (
+                      <button className="btn btn-primary btn-sm" onClick={() => navigate(`/doctor/patient/${found!.userId}`, { state: { publicId: found!.publicId, patientName: found!.name } })}>
+                        <i className="bi bi-eye me-1" />Ver dados
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="d-flex gap-2">
-                  <button className="btn btn-outline-primary btn-sm" onClick={handleRequestAccess}>
-                    <i className="bi bi-send me-1" />Pedir acesso
-                  </button>
-                  <button className="btn btn-primary btn-sm" onClick={() => navigate(`/doctor/patient/${found!.userId}`, { state: { publicId: found!.publicId, patientName: found!.name } })}>
-                    <i className="bi bi-eye me-1" />Ver dados
-                  </button>
-                </div>
-              </div>
+              </>
             )}
           </div>
         </div>
