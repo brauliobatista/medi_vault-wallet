@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "MediVault.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:50969;http://0.0.0.0:50970"
+    }
+  }
+}

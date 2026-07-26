@@ -55,6 +55,7 @@ Rule of thumb from PR review history (KAN-11, reviewer Ccampinho): columns that 
 
 Config tables follow a consistent shape: `id` (auto PK, plain `INT`/`SERIAL`/`AUTOINCREMENT` — **not** GUID), `code` (`NOT NULL UNIQUE`, matches the value previously used in the `CHECK`/`ENUM`), `description`/`name` (human-readable label). The referencing column is renamed from the bare concept (`sex`, `type`) to `<concept>_id` (`sex_id`, `type_id`, `nationality_id`) and gets an FK constraint. Config tables are seeded in `seed.sql` alongside the other independent reference tables, before anything that references them.
 
+
 ## Default value equivalence
 
 | Concept | SQL Server | SQLite | MySQL | PostgreSQL |
