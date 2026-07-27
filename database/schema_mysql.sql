@@ -514,3 +514,52 @@ CREATE TABLE app_versions (
     environment  ENUM('dev', 'staging', 'prod') NOT NULL,
     is_current   BOOLEAN      NOT NULL DEFAULT FALSE
 );
+
+-- CLINICAL CONSULTATION RECORDS
+-- -------------------------------------------------------
+
+CREATE TABLE vital_signs (
+    id                       INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id                  CHAR(36)     NOT NULL,
+    doctor_id                CHAR(36)     NOT NULL,
+    recorded_at              DATETIME     NOT NULL,
+    blood_pressure_systolic  INT,
+    blood_pressure_diastolic INT,
+    heart_rate               INT,
+    respiratory_rate         INT,
+    temperature              DECIMAL(4,1),
+    spo2                     INT,
+    weight                   DECIMAL(5,2),
+    height                   DECIMAL(5,2),
+    notes                    TEXT,
+    created_at               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vital_signs_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_vital_signs_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+CREATE TABLE clinical_assessments (
+    id         INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id    CHAR(36)     NOT NULL,
+    doctor_id  CHAR(36)     NOT NULL,
+    hypothesis TEXT         NOT NULL,
+    plan       TEXT         NOT NULL,
+    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_clinical_assessments_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_clinical_assessments_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- Anamnesis is historical: every save creates a new row. Editing an existing row
+-- is only allowed application-side for the SAME doctor_id, within 24h of created_at.
+CREATE TABLE anamneses (
+    id               INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id          CHAR(36)     NOT NULL,
+    doctor_id        CHAR(36)     NOT NULL,
+    chief_complaint  TEXT,
+    illness_history  TEXT,
+    personal_history TEXT,
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_anamneses_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_anamneses_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);

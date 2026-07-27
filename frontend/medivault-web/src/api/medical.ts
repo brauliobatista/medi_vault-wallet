@@ -10,6 +10,43 @@ export const changeDoctorPassword = (data: object) => api.put('/doctors/me/passw
 export const getAccessStatus = (userId: string) =>
   api.get(`/patients/${userId}/access-status`).then((r) => r.data as { hasAccess: boolean; reason: string })
 
+export const getPatientSummary = (userId: string) =>
+  api.get(`/patients/${userId}/summary`).then((r) => r.data)
+
+export const getPathologies = (userId: string) =>
+  api.get(`/patients/${userId}/pathologies`).then((r) => r.data)
+export const addPathology = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/pathologies`, data).then((r) => r.data)
+export const deletePathology = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/pathologies/${id}`)
+
+export const getIcpc2Codes = () => api.get('/icpc2-codes').then((r) => r.data)
+
+export const getVitalSigns = (userId: string) =>
+  api.get(`/patients/${userId}/vital-signs`).then((r) => r.data)
+export const addVitalSign = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/vital-signs`, data).then((r) => r.data)
+export const updateVitalSign = (userId: string, id: number, data: object) =>
+  api.put(`/patients/${userId}/vital-signs/${id}`, data)
+export const deleteVitalSign = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/vital-signs/${id}`)
+
+export const getAssessments = (userId: string) =>
+  api.get(`/patients/${userId}/assessments`).then((r) => r.data)
+export const addAssessment = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/assessments`, data).then((r) => r.data)
+export const updateAssessment = (userId: string, id: number, data: object) =>
+  api.put(`/patients/${userId}/assessments/${id}`, data)
+export const deleteAssessment = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/assessments/${id}`)
+
+export const getAnamneses = (userId: string) =>
+  api.get(`/patients/${userId}/anamneses`).then((r) => r.data)
+export const addAnamnesis = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/anamneses`, data).then((r) => r.data)
+export const updateAnamnesis = (userId: string, id: number, data: object) =>
+  api.put(`/patients/${userId}/anamneses/${id}`, data)
+
 export const getSurgeries = (userId: string) =>
   api.get(`/patients/${userId}/surgeries`).then((r) => r.data)
 export const addSurgery = (userId: number, data: object) =>

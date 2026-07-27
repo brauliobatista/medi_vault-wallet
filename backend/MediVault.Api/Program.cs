@@ -43,6 +43,7 @@ builder.Services.AddScoped<HealthHabitService>();
 builder.Services.AddScoped<VaccinationService>();
 builder.Services.AddScoped<DoctorNoteService>();
 builder.Services.AddScoped<DoctorService>();
+builder.Services.AddScoped<ClinicalRecordsService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -67,7 +68,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCors(opt => opt.AddPolicy("Frontend", policy =>
     policy.WithOrigins("http://localhost:5173", "https://localhost:5173",
                        "http://localhost:5174", "https://localhost:5174",
-                       "http://192.168.1.77:5173")
+                       "http://192.168.1.77:5173",
+                       "http://192.168.1.189:5173", "https://192.168.1.189:5173",
+                       "http://192.168.1.135:5173", "https://192.168.1.135:5173")
           .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();

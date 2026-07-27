@@ -92,3 +92,34 @@ public record CreateDoctorNoteRequest(string UserId, string Section, string Note
 
 public record PendingReviewFlagDto(
     int Id, string UserId, string Section, string CreatedAt, string? ReviewedAt);
+
+public record PatientSummaryDto(
+    string UserId, string FirstName, string LastName, string BiologicalGender,
+    string? BloodType, bool AcceptsTransfusion);
+
+public record PathologyDto(
+    int Id, string Icpc2Description, string Type, string? DiagnosedAt, string? Notes);
+
+public record Icpc2CodeDto(int Id, string Code, string Description);
+
+public record CreatePathologyRequest(int Icpc2Id, string Type, string? DiagnosedAt, string? Notes);
+
+public record VitalSignDto(
+    int Id, string RecordedAt, int? BloodPressureSystolic, int? BloodPressureDiastolic,
+    int? HeartRate, int? RespiratoryRate, decimal? Temperature, int? Spo2,
+    decimal? Weight, decimal? Height, string? Notes);
+
+public record CreateVitalSignRequest(
+    string RecordedAt, int? BloodPressureSystolic, int? BloodPressureDiastolic,
+    int? HeartRate, int? RespiratoryRate, decimal? Temperature, int? Spo2,
+    decimal? Weight, decimal? Height, string? Notes);
+
+public record ClinicalAssessmentDto(int Id, string Hypothesis, string Plan, string CreatedAt, string UpdatedAt);
+
+public record CreateAssessmentRequest(string Hypothesis, string Plan);
+
+public record AnamnesisDto(
+    int Id, string DoctorId, string DoctorName, string? ChiefComplaint, string? IllnessHistory,
+    string? PersonalHistory, string CreatedAt, string UpdatedAt, bool CanEdit);
+
+public record UpsertAnamnesisRequest(string? ChiefComplaint, string? IllnessHistory, string? PersonalHistory);

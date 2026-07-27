@@ -503,3 +503,56 @@ CREATE TABLE app_versions (
     environment  NVARCHAR(20)  NOT NULL CHECK (environment IN ('dev', 'staging', 'prod')),
     is_current   BIT           NOT NULL DEFAULT 0
 );
+GO
+
+-- CLINICAL CONSULTATION RECORDS
+-- -------------------------------------------------------
+
+CREATE TABLE vital_signs (
+    id                       INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id                  UNIQUEIDENTIFIER NOT NULL,
+    doctor_id                UNIQUEIDENTIFIER NOT NULL,
+    recorded_at              DATETIME2        NOT NULL,
+    blood_pressure_systolic  INT,
+    blood_pressure_diastolic INT,
+    heart_rate               INT,
+    respiratory_rate         INT,
+    temperature              DECIMAL(4,1),
+    spo2                     INT,
+    weight                   DECIMAL(5,2),
+    height                   DECIMAL(5,2),
+    notes                    NVARCHAR(MAX),
+    created_at               DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_vital_signs_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_vital_signs_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+GO
+
+CREATE TABLE clinical_assessments (
+    id         INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id    UNIQUEIDENTIFIER NOT NULL,
+    doctor_id  UNIQUEIDENTIFIER NOT NULL,
+    hypothesis NVARCHAR(MAX)    NOT NULL,
+    plan       NVARCHAR(MAX)    NOT NULL,
+    created_at DATETIME2        NOT NULL DEFAULT GETDATE(),
+    updated_at DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_clinical_assessments_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_clinical_assessments_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+GO
+
+-- Anamnesis is historical: every save creates a new row. Editing an existing row
+-- is only allowed application-side for the SAME doctor_id, within 24h of created_at.
+CREATE TABLE anamneses (
+    id               INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id          UNIQUEIDENTIFIER NOT NULL,
+    doctor_id        UNIQUEIDENTIFIER NOT NULL,
+    chief_complaint  NVARCHAR(MAX),
+    illness_history  NVARCHAR(MAX),
+    personal_history NVARCHAR(MAX),
+    created_at       DATETIME2        NOT NULL DEFAULT GETDATE(),
+    updated_at       DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_anamneses_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_anamneses_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+GO

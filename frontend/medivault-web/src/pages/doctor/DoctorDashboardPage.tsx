@@ -108,8 +108,8 @@ export default function DoctorDashboardPage() {
       const r = await scanQrCode(code)
       setScanResult({ patientName: r.patientName, userId: r.userId, publicId: r.publicId ?? '', expiresAt: r.expiresAt })
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 423) {
+      const httpStatus = (err as { response?: { status?: number } })?.response?.status
+      if (httpStatus === 423) {
         setScanCardSuspended(true)
       } else {
         setScanError('QR Code inválido ou sem correspondência.')
@@ -126,135 +126,152 @@ export default function DoctorDashboardPage() {
     <Layout>
       <div style={{ maxWidth: 720 }}>
         {/* QR Code scanner */}
-        <div className="card border-0 shadow-sm mb-4">
-          <div className="card-header bg-white fw-semibold border-bottom">
-            <i className="bi bi-qr-code-scan me-2 text-success" />
-            Ler QR Code do Utente
+        <div className="dash-card mb-4">
+          <div className="dash-card-header">
+            <div className="dash-card-heading">
+              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-qr-code-scan" /></span>
+              <span className="dash-card-title">Ler QR Code do Utente</span>
+            </div>
           </div>
-          <div className="card-body">
-            {scanResult ? (
-              <div className="alert alert-success mb-0">
-                <i className="bi bi-check-circle me-2" />
-                <strong>Acesso concedido!</strong> Utente: <strong>{scanResult.patientName}</strong>
-                <br />
-                <small className="text-muted">Expira: {scanResult.expiresAt.slice(0, 10)}</small>
+
+          {scanResult ? (
+            <div className="consult-context-item context-teal">
+              <i className="bi bi-check-circle-fill" />
+              <div className="flex-grow-1">
+                <div className="consult-context-title">Acesso concedido</div>
+                <div className="consult-context-value">{scanResult.patientName}</div>
+                <div className="consult-context-sub">Expira: {scanResult.expiresAt.slice(0, 10)}</div>
                 <div className="mt-2 d-flex gap-2">
                   <button
-                    className="btn btn-success btn-sm"
+                    className="consult-finish-btn"
                     onClick={() => navigate(`/doctor/patient/${scanResult.userId}`, { state: { publicId: scanResult.publicId, patientName: scanResult.patientName } })}
                   >
-                    <i className="bi bi-eye me-1" />Ver dados
+                    <i className="bi bi-eye" />Ver dados
                   </button>
-                  <button className="btn btn-outline-secondary btn-sm" onClick={() => { setScanResult(null); setManualCode('') }}>
+                  <button className="dash-toolbar-btn" onClick={() => { setScanResult(null); setManualCode('') }}>
                     Novo scan
                   </button>
                 </div>
               </div>
-            ) : scanCardSuspended ? (
-              <div className="alert alert-warning mb-0">
-                <i className="bi bi-shield-x me-2" />
-                <strong>MediCard suspenso.</strong> O utente suspendeu o seu cartão.
-                <br />
-                <small>Não é possível aceder aos dados enquanto o cartão estiver inativo.</small>
+            </div>
+          ) : scanCardSuspended ? (
+            <div className="consult-context-item context-danger">
+              <i className="bi bi-shield-x" />
+              <div className="flex-grow-1">
+                <div className="consult-context-title">MediCard suspenso</div>
+                <div className="consult-context-value">O utente suspendeu o seu cartão.</div>
+                <div className="consult-context-sub">Não é possível aceder aos dados enquanto o cartão estiver inativo.</div>
                 <div className="mt-2">
-                  <button className="btn btn-outline-secondary btn-sm" onClick={() => { setScanCardSuspended(false); setManualCode('') }}>
+                  <button className="dash-toolbar-btn" onClick={() => { setScanCardSuspended(false); setManualCode('') }}>
                     Novo scan
                   </button>
                 </div>
               </div>
-            ) : (
-              <>
-                {scanError && <div className="alert alert-danger py-2 mb-3">{scanError}</div>}
-                {scanning ? (
-                  <div className="text-center">
-                    <video ref={videoRef} className="w-100 rounded mb-2" style={{ maxHeight: 260 }} muted playsInline />
-                    <canvas ref={canvasRef} className="d-none" />
-                    <p className="text-muted small mb-2">A detetar QR code…</p>
-                    <button className="btn btn-outline-secondary btn-sm" onClick={stopCamera}>
-                      <i className="bi bi-x-circle me-1" />Cancelar
+            </div>
+          ) : (
+            <>
+              {scanError && (
+                <div className="consult-context-item context-danger mb-3">
+                  <i className="bi bi-exclamation-triangle-fill" />
+                  <div className="consult-context-value">{scanError}</div>
+                </div>
+              )}
+              {scanning ? (
+                <div className="text-center">
+                  <video ref={videoRef} className="w-100 rounded mb-2" style={{ maxHeight: 260 }} muted playsInline />
+                  <canvas ref={canvasRef} className="d-none" />
+                  <p className="consult-context-sub mb-2">A detetar QR code…</p>
+                  <button className="dash-toolbar-btn" onClick={stopCamera}>
+                    <i className="bi bi-x-circle" />Cancelar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <canvas ref={canvasRef} className="d-none" />
+                  <button className="consult-finish-btn mb-3" onClick={startCamera}>
+                    <i className="bi bi-camera-video" />Abrir câmara
+                  </button>
+                  <div className="consult-context-sub mb-2">ou introduza o código manualmente:</div>
+                  <div className="input-group">
+                    <input
+                      className="form-control font-monospace"
+                      placeholder="MV:uuid:ABCDEF123456"
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
+                    />
+                    <button className="dash-toolbar-btn" onClick={handleManualScan}>
+                      <i className="bi bi-check-lg" />
                     </button>
                   </div>
-                ) : (
-                  <>
-                    <canvas ref={canvasRef} className="d-none" />
-                    <button className="btn btn-success mb-3" onClick={startCamera}>
-                      <i className="bi bi-camera-video me-2" />Abrir câmara
-                    </button>
-                    <div className="text-muted small mb-2">ou introduza o código manualmente:</div>
-                    <div className="input-group">
-                      <input
-                        className="form-control font-monospace"
-                        placeholder="MV:uuid:ABCDEF123456"
-                        value={manualCode}
-                        onChange={(e) => setManualCode(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
-                      />
-                      <button className="btn btn-outline-success" onClick={handleManualScan}>
-                        <i className="bi bi-check-lg" />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {/* Search by utent number */}
-        <div className="card border-0 shadow-sm">
-          <div className="card-header bg-white fw-semibold border-bottom">
-            <i className="bi bi-search me-2" />Pesquisar utente por número
-          </div>
-          <div className="card-body">
-            <div className="input-group mb-3">
-              <input
-                className="form-control"
-                placeholder="Número de utente (ex: 100000001)"
-                value={utentNumber}
-                onChange={(e) => { setUtentNumber(e.target.value); setFound(null); setStatus(null) }}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <button className="btn btn-outline-primary" onClick={handleSearch} disabled={loading}>
-                {loading
-                  ? <span className="spinner-border spinner-border-sm" />
-                  : <><i className="bi bi-search me-1" />Pesquisar</>}
-              </button>
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-heading">
+              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-search" /></span>
+              <span className="dash-card-title">Pesquisar utente por número</span>
             </div>
+          </div>
 
-            {status && (
-              <div className={`alert alert-${status.type === 'success' ? 'success' : status.type === 'info' ? 'info' : 'danger'} py-2`}>
-                {status.msg}
-              </div>
-            )}
+          <div className="input-group mb-3">
+            <input
+              className="form-control"
+              placeholder="Número de utente (ex: 100000001)"
+              value={utentNumber}
+              onChange={(e) => { setUtentNumber(e.target.value); setFound(null); setStatus(null) }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <button className="consult-finish-btn" onClick={handleSearch} disabled={loading}>
+              {loading
+                ? <span className="spinner-border spinner-border-sm" />
+                : <><i className="bi bi-search" />Pesquisar</>}
+            </button>
+          </div>
 
-            {found && (
-              <>
-                {foundCardSuspended && (
-                  <div className="alert alert-warning py-2 mb-2">
-                    <i className="bi bi-shield-x me-2" />
+          {status && (
+            <div className={`consult-context-item ${status.type === 'success' ? 'context-teal' : status.type === 'info' ? 'context-primary' : 'context-danger'}`}>
+              <i className={`bi ${status.type === 'success' ? 'bi-check-circle-fill' : status.type === 'info' ? 'bi-info-circle-fill' : 'bi-exclamation-triangle-fill'}`} />
+              <div className="consult-context-value">{status.msg}</div>
+            </div>
+          )}
+
+          {found && (
+            <>
+              {foundCardSuspended && (
+                <div className="consult-context-item context-danger mb-2">
+                  <i className="bi bi-shield-x" />
+                  <div className="consult-context-value">
                     <strong>MediCard suspenso.</strong> O utente suspendeu o seu cartão — não é possível aceder aos dados enquanto estiver inativo.
                   </div>
-                )}
-                <div className="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-2">
+                </div>
+              )}
+              <div className="consult-context-item context-plain">
+                <i className="bi bi-person-circle" />
+                <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
                   <div>
-                    <i className="bi bi-person-circle me-2 text-primary" />
-                    <strong>{found.name}</strong>
-                    <span className="text-muted ms-2 small font-monospace">{found.publicId}</span>
+                    <div className="consult-context-value fw-semibold">{found.name}</div>
+                    <div className="consult-context-sub font-monospace">{found.publicId}</div>
                   </div>
                   <div className="d-flex gap-2">
-                    <button className="btn btn-outline-primary btn-sm" onClick={handleRequestAccess}>
-                      <i className="bi bi-send me-1" />Pedir acesso
+                    <button className="dash-toolbar-btn" onClick={handleRequestAccess}>
+                      <i className="bi bi-send" />Pedir acesso
                     </button>
                     {!foundCardSuspended && (
-                      <button className="btn btn-primary btn-sm" onClick={() => navigate(`/doctor/patient/${found!.userId}`, { state: { publicId: found!.publicId, patientName: found!.name } })}>
-                        <i className="bi bi-eye me-1" />Ver dados
+                      <button className="consult-finish-btn" onClick={() => navigate(`/doctor/patient/${found!.userId}`, { state: { publicId: found!.publicId, patientName: found!.name } })}>
+                        <i className="bi bi-eye" />Ver dados
                       </button>
                     )}
                   </div>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Layout>

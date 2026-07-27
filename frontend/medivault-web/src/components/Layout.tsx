@@ -33,7 +33,7 @@ const pageInfo: Record<string, { title: string; subtitle: string; icon: string }
   '/habits':          { title: 'Hábitos de Saúde',   subtitle: 'Estilos de vida e hábitos registados',                icon: 'bi-heart' },
   '/vaccinations':    { title: 'Vacinas',             subtitle: 'Registo do seu plano vacinal',                        icon: 'bi-shield-plus' },
   '/access':          { title: 'Acessos e Partilhas', subtitle: 'Gira quem tem acesso ao seu perfil',                 icon: 'bi-key' },
-  '/doctor':          { title: 'Dashboard',           subtitle: 'Visão geral e pesquisa de utentes',                   icon: 'bi-house' },
+  '/doctor':          { title: 'Dashboard',           subtitle: 'Leia o QR code ou pesquise um utente por número',    icon: 'bi-house' },
   '/doctor/profile':  { title: 'Perfil do Médico',   subtitle: 'As suas informações profissionais',                   icon: 'bi-person-badge' },
   '/doctor/access':   { title: 'Pedidos de Acesso',  subtitle: 'Consulte e gira pedidos de acesso a utentes',         icon: 'bi-key' },
 }
@@ -67,6 +67,7 @@ export default function Layout({ children }: Props) {
   const closeMenu = () => setMenuOpen(false)
 
   const initial = user?.name?.charAt(0).toUpperCase() ?? 'U'
+  const avatarContent = isDoctor ? '👩‍⚕️' : initial
 
   return (
     <div className="mv-wrapper">
@@ -101,7 +102,7 @@ export default function Layout({ children }: Props) {
 
         <div className="mv-sidebar-bottom">
           <div className="mv-user-card">
-            <div className="mv-sidebar-avatar">{initial}</div>
+            <div className="mv-sidebar-avatar">{avatarContent}</div>
             <div>
               <div className="mv-user-name">{user?.name}</div>
               <div className="mv-user-role">{user?.role === 'Doctor' ? 'Médico' : 'Paciente'}</div>
@@ -133,7 +134,7 @@ export default function Layout({ children }: Props) {
           </div>
 
           <div className="mv-topbar-right">
-            <div className="mv-topbar-avatar">{initial}</div>
+            <div className="mv-topbar-avatar">{avatarContent}</div>
             <span className="mv-topbar-name">{user?.name}</span>
             <span className={`badge ${isDoctor ? 'bg-success' : 'bg-primary'}`}>
               {user?.role === 'Doctor' ? 'Médico' : 'Paciente'}

@@ -35,6 +35,9 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<PendingReviewFlag> PendingReviewFlags => Set<PendingReviewFlag>();
     public DbSet<SchemaVersion> SchemaVersions => Set<SchemaVersion>();
     public DbSet<AppVersion> AppVersions => Set<AppVersion>();
+    public DbSet<VitalSign> VitalSigns => Set<VitalSign>();
+    public DbSet<ClinicalAssessment> ClinicalAssessments => Set<ClinicalAssessment>();
+    public DbSet<Anamnesis> Anamneses => Set<Anamnesis>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
