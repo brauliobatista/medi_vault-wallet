@@ -111,6 +111,19 @@ erDiagram
     }
 
     %% -------------------------------------------------------
+    %% INSTITUTION CONTACTS
+    %% -------------------------------------------------------
+
+    INSTITUTION_CONTACTS {
+        int id PK
+        guid institution_id FK
+        string service_name
+        string extension
+        bool is_active
+        datetime created_at
+    }
+
+    %% -------------------------------------------------------
     %% USER PROFILE
     %% -------------------------------------------------------
 
@@ -197,6 +210,51 @@ erDiagram
         string status
         bool is_emergency
         string access_code
+    }
+
+    %% -------------------------------------------------------
+    %% SCHEDULING & AGENDA
+    %% Rule: same doctor cannot have overlapping DOCTOR_SCHEDULE_EVENTS date ranges,
+    %% or two non-cancelled PATIENT_APPOINTMENTS at the same scheduled_at
+    %% (enforced by DB trigger, see schema_*.sql)
+    %% -------------------------------------------------------
+
+    SCHEDULE_EVENT_TYPES {
+        int id PK
+        string code UK
+        string description
+    }
+
+    DOCTOR_SCHEDULE_EVENTS {
+        int id PK
+        guid doctor_id FK
+        int event_type_id FK
+        string title
+        string location
+        date start_date
+        date end_date
+        string notes
+        datetime created_at
+    }
+
+    APPOINTMENT_TYPES {
+        int id PK
+        string code UK
+        string description
+    }
+
+    PATIENT_APPOINTMENTS {
+        int id PK
+        guid user_id FK
+        guid doctor_id FK
+        int appointment_type_id FK
+        string modality
+        datetime scheduled_at
+        string status
+        string created_by_role
+        guid created_by_doctor_id FK
+        string notes
+        datetime created_at
     }
 
     %% -------------------------------------------------------
@@ -402,6 +460,7 @@ erDiagram
     %% Institutions & Doctors
     INSTITUTIONS                ||--|{ DOCTORS                    : "employs"
     INSTITUTIONS                ||--o{ INSTITUTION_LICENSES       : "has"
+    INSTITUTIONS                ||--o{ INSTITUTION_CONTACTS       : "provides"
     COUNTRIES                   ||--o{ DOCTORS                    : "nationality"
 
     %% Users — profile
@@ -419,6 +478,13 @@ erDiagram
     USERS                       ||--o{ USER_SUBSCRIPTIONS         : "subscribes"
     USERS                       ||--o{ ACCESS_REQUESTS            : "receives"
     DOCTORS                     ||--o{ ACCESS_REQUESTS            : "requests"
+
+    %% Doctor scheduling & patient appointments
+    DOCTORS                     ||--o{ DOCTOR_SCHEDULE_EVENTS     : "schedules"
+    SCHEDULE_EVENT_TYPES        ||--o{ DOCTOR_SCHEDULE_EVENTS     : "classifies"
+    USERS                       ||--o{ PATIENT_APPOINTMENTS       : "attends"
+    DOCTORS                     ||--o{ PATIENT_APPOINTMENTS       : "sees"
+    APPOINTMENT_TYPES           ||--o{ PATIENT_APPOINTMENTS       : "classifies"
 
     %% Users — files
     USERS                       ||--o{ MEDICAL_FILES              : "owns"

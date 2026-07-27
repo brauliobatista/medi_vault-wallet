@@ -1,229 +1,233 @@
-import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import jsQR from 'jsqr'
+import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
-import api from '../../api/client'
-import { scanQrCode } from '../../api/medical'
+import ScheduleEventsModal from '../../components/ScheduleEventsModal'
+import AppointmentsModal from '../../components/AppointmentsModal'
+import ContactsModal from '../../components/ContactsModal'
+import {
+  getDailyAppointments,
+  getInstitutionContacts,
+  getScheduleEvents,
+  type InstitutionContact,
+  type PatientAppointment,
+  type ScheduleEvent,
+} from '../../api/agenda'
+
+type OpenModal = 'schedule' | 'appointments' | 'contacts' | null
+
+const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+
+function formatDatePt(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${String(d).padStart(2, '0')} ${MONTHS_PT[m - 1]} ${y}`
+}
+
+function formatDateRange(startIso: string, endIso: string) {
+  if (startIso === endIso) return formatDatePt(startIso)
+  const [, sm, sd] = startIso.split('-').map(Number)
+  const [ey, em, ed] = endIso.split('-').map(Number)
+  if (sm === em) return `${String(sd).padStart(2, '0')} – ${String(ed).padStart(2, '0')} ${MONTHS_PT[em - 1]} ${ey}`
+  return `${formatDatePt(startIso)} – ${formatDatePt(endIso)}`
+}
+
+function addDays(iso: string, days: number) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + days)
+  return dt.toISOString().slice(0, 10)
+}
+
+function todayIso() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const eventBadge: Record<string, { label: string; badgeClass: string; iconClass: string; icon: string }> = {
+  CONGRESS: { label: 'Congresso', badgeClass: 'badge-congresso', iconClass: 'icon-congresso', icon: 'bi-calendar-event' },
+  VACATION: { label: 'Férias', badgeClass: 'badge-ferias', iconClass: 'icon-ferias', icon: 'bi-suitcase' },
+  TRAINING: { label: 'Formação', badgeClass: 'badge-confirmada', iconClass: 'icon-congresso', icon: 'bi-mortarboard' },
+}
+
+const statusBadge: Record<string, { label: string; badgeClass: string }> = {
+  em_curso: { label: 'Em curso', badgeClass: 'badge-em-curso' },
+  confirmada: { label: 'Confirmada', badgeClass: 'badge-confirmada' },
+  pendente: { label: 'Pendente', badgeClass: 'badge-ferias' },
+  concluida: { label: 'Concluída', badgeClass: 'badge-em-curso' },
+  cancelada: { label: 'Cancelada', badgeClass: 'badge-congresso' },
+}
 
 export default function DoctorDashboardPage() {
-  const [utentNumber, setUtentNumber] = useState('')
-  const [found, setFound] = useState<{ userId: string; name: string; publicId: string } | null>(null)
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([])
+  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'CONGRESS' | 'VACATION'>('all')
 
-  // QR scan state
-  const [scanning, setScanning] = useState(false)
-  const [manualCode, setManualCode] = useState('')
-  const [scanResult, setScanResult] = useState<{ patientName: string; userId: string; publicId: string; expiresAt: string } | null>(null)
-  const [scanError, setScanError] = useState<string | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const rafRef = useRef<number>(0)
+  const [selectedDate, setSelectedDate] = useState(() => todayIso())
+  const [appointments, setAppointments] = useState<PatientAppointment[]>([])
 
-  const navigate = useNavigate()
+  const [contacts, setContacts] = useState<InstitutionContact[]>([])
+  const [openModal, setOpenModal] = useState<OpenModal>(null)
 
-  // ── Patient search ────────────────────────────────────────────
-  const handleSearch = async () => {
-    if (!utentNumber.trim()) return
-    setLoading(true)
-    setStatus(null)
-    setFound(null)
-    try {
-      const r = await api.get(`/access-requests/search?utentNumber=${utentNumber}`)
-      setFound(r.data)
-    } catch {
-      setStatus({ type: 'error', msg: 'Utente não encontrado. Verifique o número.' })
-    } finally {
-      setLoading(false)
-    }
-  }
+  useEffect(() => {
+    getScheduleEvents().then(setScheduleEvents).catch(() => setScheduleEvents([]))
+    getInstitutionContacts().then(setContacts).catch(() => setContacts([]))
+  }, [])
 
-  const handleRequestAccess = async () => {
-    if (!found) return
-    try {
-      await api.post(`/access-requests/${found.userId}`)
-      setStatus({ type: 'success', msg: `Pedido enviado a ${found.name}. Aguarde aprovação.` })
-    } catch {
-      setStatus({ type: 'error', msg: 'Não foi possível enviar o pedido.' })
-    }
-  }
+  useEffect(() => {
+    getDailyAppointments(selectedDate).then(setAppointments).catch(() => setAppointments([]))
+  }, [selectedDate])
 
-  // ── QR scan (camera) ──────────────────────────────────────────
-  const startCamera = async () => {
-    setScanResult(null)
-    setScanError(null)
-    setScanning(true)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.play()
-        rafRef.current = requestAnimationFrame(tick)
-      }
-    } catch {
-      setScanError('Não foi possível aceder à câmara.')
-      setScanning(false)
-    }
-  }
-
-  const stopCamera = () => {
-    cancelAnimationFrame(rafRef.current)
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
-    setScanning(false)
-  }
-
-  const tick = () => {
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    if (!video || !canvas || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(tick)
-      return
-    }
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const ctx = canvas.getContext('2d')!
-    ctx.drawImage(video, 0, 0)
-    const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    const code = jsQR(img.data, img.width, img.height)
-    if (code) {
-      stopCamera()
-      submitQrCode(code.data)
-    } else {
-      rafRef.current = requestAnimationFrame(tick)
-    }
-  }
-
-  const submitQrCode = async (code: string) => {
-    setScanError(null)
-    try {
-      const r = await scanQrCode(code)
-      setScanResult({ patientName: r.patientName, userId: r.userId, publicId: r.publicId ?? '', expiresAt: r.expiresAt })
-    } catch {
-      setScanError('QR Code inválido ou sem correspondência.')
-    }
-  }
-
-  const handleManualScan = () => {
-    if (!manualCode.trim()) return
-    submitQrCode(manualCode.trim())
-  }
+  const visibleEvents =
+    scheduleFilter === 'all' ? scheduleEvents : scheduleEvents.filter((e) => e.eventTypeCode === scheduleFilter)
 
   return (
     <Layout>
-      <div style={{ maxWidth: 720 }}>
-        {/* QR Code scanner */}
-        <div className="card border-0 shadow-sm mb-4">
-          <div className="card-header bg-white fw-semibold border-bottom">
-            <i className="bi bi-qr-code-scan me-2 text-success" />
-            Ler QR Code do Utente
+      <div className="dash-toolbar">
+        <span className="dash-toolbar-link">
+          <i className="bi bi-sliders" />
+          Personalizar Dashboard
+        </span>
+        <button className="dash-toolbar-btn">
+          <i className="bi bi-plus-lg" />
+          Adicionar Módulo
+        </button>
+      </div>
+
+      <div className="dash-grid">
+        {/* Agenda Médica Programada */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-heading">
+              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-calendar-event" /></span>
+              <span className="dash-card-title">Agenda Médica Programada</span>
+            </div>
+            <button className="dash-card-menu-btn" aria-label="Mais opções">
+              <i className="bi bi-three-dots" />
+            </button>
           </div>
-          <div className="card-body">
-            {scanResult ? (
-              <div className="alert alert-success mb-0">
-                <i className="bi bi-check-circle me-2" />
-                <strong>Acesso concedido!</strong> Utente: <strong>{scanResult.patientName}</strong>
-                <br />
-                <small className="text-muted">Expira: {scanResult.expiresAt.slice(0, 10)}</small>
-                <div className="mt-2 d-flex gap-2">
-                  <button
-                    className="btn btn-success btn-sm"
-                    onClick={() => navigate(`/doctor/patient/${scanResult.userId}`, { state: { publicId: scanResult.publicId, patientName: scanResult.patientName } })}
-                  >
-                    <i className="bi bi-eye me-1" />Ver dados
-                  </button>
-                  <button className="btn btn-outline-secondary btn-sm" onClick={() => { setScanResult(null); setManualCode('') }}>
-                    Novo scan
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {scanError && <div className="alert alert-danger py-2 mb-3">{scanError}</div>}
-                {scanning ? (
-                  <div className="text-center">
-                    <video ref={videoRef} className="w-100 rounded mb-2" style={{ maxHeight: 260 }} muted playsInline />
-                    <canvas ref={canvasRef} className="d-none" />
-                    <p className="text-muted small mb-2">A detetar QR code…</p>
-                    <button className="btn btn-outline-secondary btn-sm" onClick={stopCamera}>
-                      <i className="bi bi-x-circle me-1" />Cancelar
-                    </button>
+
+          <div className="dash-select">
+            <span>Próximos 30 dias</span>
+            <i className="bi bi-chevron-down" />
+          </div>
+
+          <div className="dash-filter-row">
+            <button className={`dash-pill${scheduleFilter === 'all' ? ' active' : ''}`} onClick={() => setScheduleFilter('all')}>Todos</button>
+            <button className={`dash-pill${scheduleFilter === 'CONGRESS' ? ' active' : ''}`} onClick={() => setScheduleFilter('CONGRESS')}>Congressos</button>
+            <button className={`dash-pill${scheduleFilter === 'VACATION' ? ' active' : ''}`} onClick={() => setScheduleFilter('VACATION')}>Férias</button>
+          </div>
+
+          <div className="dash-list">
+            {visibleEvents.length === 0 && <p className="dash-item-sub mb-0">Sem eventos agendados.</p>}
+            {visibleEvents.map((ev) => {
+              const meta = eventBadge[ev.eventTypeCode] ?? eventBadge.TRAINING
+              return (
+                <div className="dash-item" key={ev.id}>
+                  <span className={`dash-item-icon ${meta.iconClass}`}>
+                    <i className={`bi ${meta.icon}`} />
+                  </span>
+                  <div className="dash-item-body">
+                    <div className="dash-item-title">{ev.title}</div>
+                    {ev.location && <div className="dash-item-sub">{ev.location}</div>}
+                    <div className="dash-item-date">{formatDateRange(ev.startDate, ev.endDate)}</div>
                   </div>
-                ) : (
-                  <>
-                    <canvas ref={canvasRef} className="d-none" />
-                    <button className="btn btn-success mb-3" onClick={startCamera}>
-                      <i className="bi bi-camera-video me-2" />Abrir câmara
-                    </button>
-                    <div className="text-muted small mb-2">ou introduza o código manualmente:</div>
-                    <div className="input-group">
-                      <input
-                        className="form-control font-monospace"
-                        placeholder="MV:uuid:ABCDEF123456"
-                        value={manualCode}
-                        onChange={(e) => setManualCode(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
-                      />
-                      <button className="btn btn-outline-success" onClick={handleManualScan}>
-                        <i className="bi bi-check-lg" />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
+                  <span className={`status-badge ${meta.badgeClass}`}>{meta.label}</span>
+                </div>
+              )
+            })}
           </div>
+
+          <button className="dash-card-footer" onClick={() => setOpenModal('schedule')}>
+            Ver agenda completa <i className="bi bi-arrow-right" />
+          </button>
         </div>
 
-        {/* Search by utent number */}
-        <div className="card border-0 shadow-sm">
-          <div className="card-header bg-white fw-semibold border-bottom">
-            <i className="bi bi-search me-2" />Pesquisar utente por número
+        {/* Agenda Diária */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-heading">
+              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-calendar-event" /></span>
+              <span className="dash-card-title">Agenda Diária</span>
+            </div>
+            <button className="dash-card-menu-btn" aria-label="Mais opções">
+              <i className="bi bi-three-dots" />
+            </button>
           </div>
-          <div className="card-body">
-            <div className="input-group mb-3">
-              <input
-                className="form-control"
-                placeholder="Número de utente (ex: 100000001)"
-                value={utentNumber}
-                onChange={(e) => { setUtentNumber(e.target.value); setFound(null); setStatus(null) }}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <button className="btn btn-outline-primary" onClick={handleSearch} disabled={loading}>
-                {loading
-                  ? <span className="spinner-border spinner-border-sm" />
-                  : <><i className="bi bi-search me-1" />Pesquisar</>}
+
+          <div className="dash-date-nav">
+            <span className="dash-date-label">{formatDatePt(selectedDate)}</span>
+            <div className="dash-date-nav-controls">
+              <button className="dash-date-nav-btn" aria-label="Dia anterior" onClick={() => setSelectedDate((d) => addDays(d, -1))}>
+                <i className="bi bi-chevron-left" />
+              </button>
+              <button className="dash-today-btn" onClick={() => setSelectedDate(todayIso())}>Hoje</button>
+              <button className="dash-date-nav-btn" aria-label="Dia seguinte" onClick={() => setSelectedDate((d) => addDays(d, 1))}>
+                <i className="bi bi-chevron-right" />
               </button>
             </div>
-
-            {status && (
-              <div className={`alert alert-${status.type === 'success' ? 'success' : status.type === 'info' ? 'info' : 'danger'} py-2`}>
-                {status.msg}
-              </div>
-            )}
-
-            {found && (
-              <div className="alert alert-light border d-flex justify-content-between align-items-center">
-                <div>
-                  <i className="bi bi-person-circle me-2 text-primary" />
-                  <strong>{found.name}</strong>
-                  <span className="text-muted ms-2 small font-monospace">{found.publicId}</span>
-                </div>
-                <div className="d-flex gap-2">
-                  <button className="btn btn-outline-primary btn-sm" onClick={handleRequestAccess}>
-                    <i className="bi bi-send me-1" />Pedir acesso
-                  </button>
-                  <button className="btn btn-primary btn-sm" onClick={() => navigate(`/doctor/patient/${found!.userId}`, { state: { publicId: found!.publicId, patientName: found!.name } })}>
-                    <i className="bi bi-eye me-1" />Ver dados
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
+
+          <div className="dash-list">
+            {appointments.length === 0 && <p className="dash-item-sub mb-0">Sem consultas agendadas para este dia.</p>}
+            {appointments.map((appt) => {
+              const time = appt.scheduledAt.slice(11, 16)
+              const typeLabel = appt.modality === 'teleconsulta' ? 'Teleconsulta' : appt.appointmentTypeDescription
+              const modalityLabel = appt.modality === 'teleconsulta' ? 'Teleconsulta' : 'Presencial'
+              const meta = statusBadge[appt.status] ?? statusBadge.confirmada
+              return (
+                <div className="dash-time-slot" key={appt.id}>
+                  <span className="dash-time">{time}</span>
+                  <div className="dash-appt-body">
+                    <div className="dash-appt-type">{typeLabel}</div>
+                    <div className="dash-appt-name">{appt.patientName}</div>
+                    <div className="dash-item-sub">Cardiologia • {modalityLabel}</div>
+                  </div>
+                  <span className={`status-badge ${meta.badgeClass}`}>{meta.label}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          <button className="dash-card-footer" onClick={() => setOpenModal('appointments')}>
+            Ver toda a agenda <i className="bi bi-arrow-right" />
+          </button>
+        </div>
+
+        {/* Contactos de Extensão */}
+        <div className="dash-card">
+          <div className="dash-card-header">
+            <div className="dash-card-heading">
+              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-telephone" /></span>
+              <span className="dash-card-title">Contactos de Extensão</span>
+            </div>
+            <button className="dash-card-menu-btn" aria-label="Mais opções">
+              <i className="bi bi-three-dots" />
+            </button>
+          </div>
+
+          <p className="dash-card-subtitle">Contactos rápidos da instituição</p>
+
+          <div className="dash-list">
+            {contacts.length === 0 && <p className="dash-item-sub mb-0">Sem contactos registados.</p>}
+            {contacts.map((c) => (
+              <div className="dash-contact-item" key={c.id}>
+                <div>
+                  <div className="dash-contact-name">{c.serviceName}</div>
+                  <div className="dash-contact-phone">{c.extension}</div>
+                </div>
+                <a className="dash-phone-btn" href={`tel:${c.extension.replace(/\s/g, '')}`} aria-label={`Ligar para ${c.serviceName}`}>
+                  <i className="bi bi-telephone-fill" />
+                </a>
+              </div>
+            ))}
+          </div>
+
+          <button className="dash-card-footer" onClick={() => setOpenModal('contacts')}>
+            Ver todos os contactos <i className="bi bi-arrow-right" />
+          </button>
         </div>
       </div>
+
+      {openModal === 'schedule' && <ScheduleEventsModal onClose={() => setOpenModal(null)} />}
+      {openModal === 'appointments' && <AppointmentsModal onClose={() => setOpenModal(null)} />}
+      {openModal === 'contacts' && <ContactsModal onClose={() => setOpenModal(null)} />}
     </Layout>
   )
 }
