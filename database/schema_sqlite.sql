@@ -98,6 +98,7 @@ CREATE TABLE users (
     phone                 TEXT,
     is_active             INTEGER NOT NULL DEFAULT 1,
     card_active           INTEGER NOT NULL DEFAULT 1,
+    photo_path            TEXT,
     created_at            TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at            TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (sex_id) REFERENCES genders(id),

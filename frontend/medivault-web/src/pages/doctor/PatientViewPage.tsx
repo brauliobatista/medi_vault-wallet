@@ -33,6 +33,10 @@ interface Summary {
   biologicalGender: string
   bloodType: string | null
   acceptsTransfusion: boolean
+  sex: string
+  birthday: string
+  utentNumber: string
+  photoUrl: string | null
 }
 
 interface Pathology { id: number; icpc2Description: string; type: string; diagnosedAt: string | null; notes: string | null }
@@ -53,6 +57,20 @@ function formatDatePt(iso: string) {
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
   return `${String(d).padStart(2, '0')} ${MONTHS_PT[m - 1]} ${y}`
+}
+
+function calculateAge(birthday: string) {
+  const [y, m, d] = birthday.split('-').map(Number)
+  if (!y || !m || !d) return null
+  const today = new Date()
+  let age = today.getFullYear() - y
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--
+  return age
+}
+
+const GENDER_LABELS: Record<string, string> = { M: 'Masculino', F: 'Feminino' }
+function genderLabel(code: string) {
+  return GENDER_LABELS[code] ?? code
 }
 
 const centerTabs: { key: CenterTab; label: string; icon: string }[] = [
@@ -233,6 +251,14 @@ export default function PatientViewPage() {
           <i className="bi bi-arrow-left" /> Voltar
         </Link>
 
+        {summary?.photoUrl ? (
+          <img src={summary.photoUrl} alt={patientName || 'Paciente'} className="consult-patient-photo" />
+        ) : (
+          <div className="consult-patient-photo consult-patient-photo-placeholder">
+            {(patientName || 'U').charAt(0).toUpperCase()}
+          </div>
+        )}
+
         <div className="consult-header-main">
           <div className="consult-patient-name">
             {patientName || 'Paciente'}
@@ -257,24 +283,45 @@ export default function PatientViewPage() {
 
       <div className="consult-chips">
         <div className="consult-chip">
-          <i className="bi bi-droplet-fill" style={{ color: '#dc2626' }} />
+          <i className="bi bi-calendar3" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Grupo Sanguíneo</div>
-            <div className="consult-chip-value">{summary?.bloodType ?? '—'}</div>
+            <div className="consult-chip-label">Idade</div>
+            <div className="consult-chip-value">{summary ? `${calculateAge(summary.birthday) ?? '—'} anos` : '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
-          <i className="bi bi-capsule" style={{ color: '#2563eb' }} />
+          <i className="bi bi-calendar-event" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Medicação</div>
-            <div className="consult-chip-value">{medications.length} ativas</div>
+            <div className="consult-chip-label">Data de Nascimento</div>
+            <div className="consult-chip-value">{summary ? formatDatePt(summary.birthday) : '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
-          <i className="bi bi-exclamation-triangle-fill" style={{ color: '#dc2626' }} />
+          <i className="bi bi-person-vcard" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Alergias</div>
-            <div className="consult-chip-value">{allergies.length}</div>
+            <div className="consult-chip-label">Número de Utente</div>
+            <div className="consult-chip-value">{summary?.utentNumber ?? '—'}</div>
+          </div>
+        </div>
+        <div className="consult-chip">
+          <i className="bi bi-credit-card-2-front" style={{ color: '#2563eb' }} />
+          <div>
+            <div className="consult-chip-label">Número do Cartão</div>
+            <div className="consult-chip-value font-monospace" style={{ fontSize: '0.8rem' }}>{publicId || '—'}</div>
+          </div>
+        </div>
+        <div className="consult-chip">
+          <i className="bi bi-gender-ambiguous" style={{ color: '#2563eb' }} />
+          <div>
+            <div className="consult-chip-label">Sexo</div>
+            <div className="consult-chip-value">{summary ? genderLabel(summary.biologicalGender) : '—'}</div>
+          </div>
+        </div>
+        <div className="consult-chip">
+          <i className="bi bi-gender-trans" style={{ color: '#2563eb' }} />
+          <div>
+            <div className="consult-chip-label">Género</div>
+            <div className="consult-chip-value">{summary ? genderLabel(summary.sex) : '—'}</div>
           </div>
         </div>
       </div>

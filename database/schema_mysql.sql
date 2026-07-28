@@ -99,6 +99,7 @@ CREATE TABLE users (
     phone                 VARCHAR(50),
     is_active             BOOLEAN      NOT NULL DEFAULT TRUE,
     card_active           BOOLEAN      NOT NULL DEFAULT TRUE,
+    photo_path            VARCHAR(255),
     created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),

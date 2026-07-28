@@ -4,6 +4,7 @@ import {
   getAllergies, addAllergy, deleteAllergy,
   getPathologies, addPathology, deletePathology, getIcpc2Codes,
   getMedications, addMedication, deleteMedication,
+  getPatientSummary,
 } from '../api/medical'
 
 interface Props { userId: string; onClose: () => void }
@@ -18,6 +19,7 @@ export default function ContextoClinicoModal({ userId, onClose }: Props) {
   const [pathologies, setPathologies] = useState<Pathology[]>([])
   const [medications, setMedications] = useState<Medication[]>([])
   const [icpc2, setIcpc2] = useState<Icpc2[]>([])
+  const [bloodType, setBloodType] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [allergyForm, setAllergyForm] = useState({ activeSubstance: '', allergicReaction: '', severity: '' })
@@ -31,8 +33,8 @@ export default function ContextoClinicoModal({ userId, onClose }: Props) {
 
   const load = () => {
     setLoading(true)
-    Promise.all([getAllergies(userId), getPathologies(userId), getMedications(userId), getIcpc2Codes()])
-      .then(([a, p, m, i]) => { setAllergies(a); setPathologies(p); setMedications(m); setIcpc2(i) })
+    Promise.all([getAllergies(userId), getPathologies(userId), getMedications(userId), getIcpc2Codes(), getPatientSummary(userId)])
+      .then(([a, p, m, i, s]) => { setAllergies(a); setPathologies(p); setMedications(m); setIcpc2(i); setBloodType(s.bloodType) })
       .finally(() => setLoading(false))
   }
   useEffect(load, [userId])
@@ -82,6 +84,15 @@ export default function ContextoClinicoModal({ userId, onClose }: Props) {
 
   return (
     <Modal title="Contexto Clínico" onClose={onClose}>
+      {/* Grupo Sanguíneo */}
+      <div className="consult-context-item context-danger mb-3">
+        <i className="bi bi-droplet-fill" />
+        <div>
+          <div className="consult-context-title">Grupo Sanguíneo</div>
+          <div className="consult-context-value">{bloodType ?? 'Não registado'}</div>
+        </div>
+      </div>
+
       {/* Alergias */}
       <h6 className="consult-section-title">Alergias</h6>
       {allergies.map((a) => (

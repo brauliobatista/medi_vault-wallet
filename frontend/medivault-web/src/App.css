@@ -253,6 +253,23 @@
 }
 .consult-back:hover { color: #334155; }
 
+.consult-patient-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.consult-patient-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
 .consult-header-main { flex: 1; min-width: 0; }
 
 .consult-patient-name {

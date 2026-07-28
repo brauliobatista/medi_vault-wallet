@@ -95,7 +95,8 @@ public record PendingReviewFlagDto(
 
 public record PatientSummaryDto(
     string UserId, string FirstName, string LastName, string BiologicalGender,
-    string? BloodType, bool AcceptsTransfusion);
+    string? BloodType, bool AcceptsTransfusion,
+    string Sex, string Birthday, string UtentNumber, string? PhotoUrl);
 
 public record PathologyDto(
     int Id, string Icpc2Description, string Type, string? DiagnosedAt, string? Notes);

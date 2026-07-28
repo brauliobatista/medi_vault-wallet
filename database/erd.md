@@ -93,6 +93,7 @@ erDiagram
         string phone
         bool is_active
         bool card_active
+        string photo_path
         datetime created_at
         datetime updated_at
     }
