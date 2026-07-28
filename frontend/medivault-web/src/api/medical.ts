@@ -3,6 +3,15 @@
 export const getProfile = () => api.get('/users/me').then((r) => r.data)
 export const updateProfile = (data: object) => api.put('/users/me', data).then((r) => r.data)
 
+export const uploadProfilePhoto = (file: File) => {
+  const formData = new FormData()
+  formData.append('photo', file)
+  return api.post('/users/me/photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data as { photoUrl: string })
+}
+export const deleteProfilePhoto = () => api.delete('/users/me/photo')
+
 export const getDoctorProfile = () => api.get('/doctors/me').then((r) => r.data)
 export const updateDoctorProfile = (data: object) => api.put('/doctors/me', data).then((r) => r.data)
 export const changeDoctorPassword = (data: object) => api.put('/doctors/me/password', data)
@@ -12,55 +21,55 @@ export const getAccessStatus = (userId: string) =>
 
 export const getSurgeries = (userId: string) =>
   api.get(`/patients/${userId}/surgeries`).then((r) => r.data)
-export const addSurgery = (userId: number, data: object) =>
+export const addSurgery = (userId: string, data: object) =>
   api.post(`/patients/${userId}/surgeries`, data).then((r) => r.data)
-export const deleteSurgery = (userId: number, id: number) =>
+export const deleteSurgery = (userId: string, id: number) =>
   api.delete(`/patients/${userId}/surgeries/${id}`)
 
 export const getMedications = (userId: string) =>
   api.get(`/patients/${userId}/medications`).then((r) => r.data)
-export const addMedication = (userId: number, data: object) =>
+export const addMedication = (userId: string, data: object) =>
   api.post(`/patients/${userId}/medications`, data).then((r) => r.data)
-export const deleteMedication = (userId: number, id: number) =>
+export const deleteMedication = (userId: string, id: number) =>
   api.delete(`/patients/${userId}/medications/${id}`)
 
 export const getAllergies = (userId: string) =>
   api.get(`/patients/${userId}/allergies`).then((r) => r.data)
-export const addAllergy = (userId: number, data: object) =>
+export const addAllergy = (userId: string, data: object) =>
   api.post(`/patients/${userId}/allergies`, data).then((r) => r.data)
-export const deleteAllergy = (userId: number, id: number) =>
+export const deleteAllergy = (userId: string, id: number) =>
   api.delete(`/patients/${userId}/allergies/${id}`)
 
 export const getFamilyHistory = (userId: string) =>
   api.get(`/patients/${userId}/family-history`).then((r) => r.data)
-export const upsertFamilyHistory = (userId: number, data: object) =>
+export const upsertFamilyHistory = (userId: string, data: object) =>
   api.post(`/patients/${userId}/family-history`, data).then((r) => r.data)
 
 export const getHabits = (userId: string) =>
   api.get(`/patients/${userId}/habits`).then((r) => r.data)
-export const upsertHabit = (userId: number, data: object) =>
+export const upsertHabit = (userId: string, data: object) =>
   api.post(`/patients/${userId}/habits`, data).then((r) => r.data)
 
 export const getAnalyticalExams = (userId: string) =>
   api.get(`/patients/${userId}/exams/analytical`).then((r) => r.data)
-export const addAnalyticalExam = (userId: number, data: object) =>
+export const addAnalyticalExam = (userId: string, data: object) =>
   api.post(`/patients/${userId}/exams/analytical`, data).then((r) => r.data)
 
 export const getImagingExams = (userId: string) =>
   api.get(`/patients/${userId}/exams/imaging`).then((r) => r.data)
-export const addImagingExam = (userId: number, data: object) =>
+export const addImagingExam = (userId: string, data: object) =>
   api.post(`/patients/${userId}/exams/imaging`, data).then((r) => r.data)
 
 export const getOptometryExams = (userId: string) =>
   api.get(`/patients/${userId}/exams/optometry`).then((r) => r.data)
-export const addOptometryExam = (userId: number, data: object) =>
+export const addOptometryExam = (userId: string, data: object) =>
   api.post(`/patients/${userId}/exams/optometry`, data).then((r) => r.data)
 
 export const getVaccinations = (userId: string) =>
   api.get(`/patients/${userId}/vaccinations`).then((r) => r.data)
-export const addVaccination = (userId: number, data: object) =>
+export const addVaccination = (userId: string, data: object) =>
   api.post(`/patients/${userId}/vaccinations`, data).then((r) => r.data)
-export const deleteVaccination = (userId: number, id: number) =>
+export const deleteVaccination = (userId: string, id: number) =>
   api.delete(`/patients/${userId}/vaccinations/${id}`)
 
 export const toggleCard = (active: boolean) => api.put('/users/me/card', { active })

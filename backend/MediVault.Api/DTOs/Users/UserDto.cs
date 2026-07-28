@@ -20,7 +20,8 @@ public record UserProfileDto(
     bool IsDependent,
     string? Profession,
     string? Phone,
-    bool CardActive
+    bool CardActive,
+    string? PhotoUrl
 );
 
 public record UpdateUserRequest(

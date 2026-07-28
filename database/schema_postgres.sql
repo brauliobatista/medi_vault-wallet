@@ -97,6 +97,7 @@ CREATE TABLE users (
     is_active             BOOLEAN   NOT NULL DEFAULT TRUE,
     card_active           BOOLEAN   NOT NULL DEFAULT TRUE,
     share_code            TEXT      NOT NULL DEFAULT '',
+    photo_path            TEXT,
     created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),
