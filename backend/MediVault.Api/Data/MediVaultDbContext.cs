@@ -128,5 +128,29 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .WithMany()
             .HasForeignKey(g => g.DependentUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.SexGender)
+            .WithMany()
+            .HasForeignKey(u => u.SexId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.Nationality)
+            .WithMany()
+            .HasForeignKey(u => u.NationalityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Doctor>()
+            .HasOne(d => d.Nationality)
+            .WithMany()
+            .HasForeignKey(d => d.NationalityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<HealthHabit>()
+            .HasOne(h => h.HabitType)
+            .WithMany()
+            .HasForeignKey(h => h.TypeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

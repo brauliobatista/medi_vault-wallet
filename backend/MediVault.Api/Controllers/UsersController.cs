@@ -23,7 +23,7 @@ public class UsersController(UserService userService) : ControllerBase
         {
             name = info.Value.Name,
             publicId = info.Value.Id,
-            biologicalGender = info.Value.BiologicalGender,
+            sexGenderDescription = info.Value.SexGenderDescription,
             bloodType = info.Value.BloodType,
             birthday = info.Value.Birthday,
             nationalityName = info.Value.NationalityName

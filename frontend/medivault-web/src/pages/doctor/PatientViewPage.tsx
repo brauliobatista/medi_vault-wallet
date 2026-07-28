@@ -57,7 +57,7 @@ export default function PatientViewPage() {
     api.get(`/users/${uid}/public-info`).then((r) => {
       setPublicId(r.data.publicId)
       setPatientName(r.data.name)
-      setPatientGender(r.data.biologicalGender ?? '')
+      setPatientGender(r.data.sexGenderDescription ?? '')
       setPatientBloodType(r.data.bloodType ?? '')
       setPatientBirthday(r.data.birthday ?? '')
       setPatientNationality(r.data.nationalityName ?? '')
@@ -172,7 +172,7 @@ export default function PatientViewPage() {
             {patientGender && (
               <span className="badge bg-light text-dark border">
                 <i className="bi bi-gender-ambiguous me-1" />
-                {patientGender === 'M' ? 'Masculino' : patientGender === 'F' ? 'Feminino' : patientGender}
+                {patientGender}
               </span>
             )}
             {patientBloodType && (

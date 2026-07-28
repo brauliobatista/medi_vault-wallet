@@ -83,18 +83,29 @@ O Vite faz proxy de `/api` → `http://localhost:50970` automaticamente — o ba
 
 | Nome | Utente | Password |
 |---|---|---|
-| Braulio Batista | `100000001` | `password123` |
-| Cesar Oliveira | `100000002` | `password123` |
-| Joka Ferreira | `100000003` | `password123` |
-| Tiago Costa | `100000004` | `password123` |
+| Braulio Batista | `678901234` | `password123` |
+| Mónica Cerquido | `789012345` | `password123` |
+| César Campinho | `890123456` | `password123` |
+| Tiago Faria | `901234567` | `password123` |
+| Joaquim Oliveira | `112233445` | `password123` |
+| Maria Costa | `223344556` | `password123` |
+| Diana Almeida | `334455667` | `password123` |
+
+> Utilizadores fictícios (João Silva `123456789`, Ana Santos `234567890`, etc.) têm hashes de placeholder no seed — não conseguem autenticar-se.
 
 **Médicos** (autenticação: número da Ordem + password):
 
-| Nome | Ordem | Password |
-|---|---|---|
-| Monica Sousa | `OM10001` | `password123` |
-| Diana Pereira | `OM10002` | `password123` |
-| Maria Gomes | `OM10003` | `password123` |
+| Nome | Ordem | Especialidade | Password |
+|---|---|---|---|
+| Braulio Batista | `OM-56789` | Pediatria | `password123` |
+| Mónica Cerquido | `OM-67890` | Ginecologia | `password123` |
+| César Campinho | `OM-78901` | Ortopedia | `password123` |
+| Tiago Faria | `OM-89012` | Dermatologia | `password123` |
+| Joaquim Oliveira | `OM-90123` | Psiquiatria | `password123` |
+| Maria Costa | `OM-10234` | Oftalmologia | `password123` |
+| Diana Almeida | `OM-11234` | Clínica Geral | `password123` |
+
+> Médicos fictícios (Carlos Rodrigues `OM-12345`, Sofia Martins `OM-23456`, etc.) têm hashes de placeholder — não conseguem autenticar-se.
 
 ### Stack
 

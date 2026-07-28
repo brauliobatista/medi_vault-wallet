@@ -9,11 +9,27 @@ public class UserService(MediVaultDbContext db)
 {
     public async Task<UserProfileDto?> GetProfileAsync(string userId)
     {
-        var u = await db.Users
-            .Include(x => x.Nationality)
-            .FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
-        if (u is null) return null;
-        return Map(u);
+        var row = await db.Users
+            .Where(x => x.Id == userId && x.IsActive == 1)
+            .Select(x => new {
+                x.Id, x.UtentNumber, x.Email, x.FirstName, x.LastName, x.Birthday,
+                x.BiologicalGender, x.SexId,
+                SexGenderDescription = x.SexGender != null ? x.SexGender.Description : null,
+                x.NationalityId,
+                NationalityName = x.Nationality != null ? x.Nationality.Name : null,
+                x.MaritalStatus, x.BloodType,
+                x.AcceptsTransfusion, x.AcceptsResuscitation, x.EmergencyAccessCode,
+                x.IsDependent, x.Profession, x.Phone, x.CardActive
+            })
+            .FirstOrDefaultAsync();
+        if (row is null) return null;
+        return new UserProfileDto(
+            row.Id, row.UtentNumber, row.Email, row.FirstName, row.LastName, row.Birthday,
+            row.BiologicalGender, row.SexId, row.SexGenderDescription, row.NationalityId, row.NationalityName,
+            row.MaritalStatus, row.BloodType,
+            row.AcceptsTransfusion == 1, row.AcceptsResuscitation == 1,
+            row.EmergencyAccessCode == 1, row.IsDependent == 1, row.Profession, row.Phone,
+            row.CardActive == 1);
     }
 
     public async Task<bool> UpdateProfileAsync(string userId, UpdateUserRequest req)
@@ -47,14 +63,18 @@ public class UserService(MediVaultDbContext db)
         return true;
     }
 
-    public async Task<(string Name, string Id, string BiologicalGender, string? BloodType, string? Birthday, string? NationalityName)?> GetPublicInfoAsync(string userId)
+    public async Task<(string Name, string Id, string? SexGenderDescription, string? BloodType, string? Birthday, string? NationalityName)?> GetPublicInfoAsync(string userId)
     {
         var u = await db.Users
             .Where(x => x.Id == userId && x.IsActive == 1)
-            .Select(x => new { x.FirstName, x.LastName, x.Id, x.BiologicalGender, x.BloodType, x.Birthday, NationalityName = x.Nationality != null ? x.Nationality.Name : null })
+            .Select(x => new {
+                x.FirstName, x.LastName, x.Id, x.BloodType, x.Birthday,
+                SexGenderDescription = x.SexGender != null ? x.SexGender.Description : null,
+                NationalityName = x.Nationality != null ? x.Nationality.Name : null
+            })
             .FirstOrDefaultAsync();
         if (u is null) return null;
-        return ($"{u.FirstName} {u.LastName}", u.Id, u.BiologicalGender, u.BloodType, u.Birthday, u.NationalityName);
+        return ($"{u.FirstName} {u.LastName}", u.Id, u.SexGenderDescription, u.BloodType, u.Birthday, u.NationalityName);
     }
 
     public async Task<string?> GetQrPayloadAsync(string userId)
@@ -97,11 +117,4 @@ public class UserService(MediVaultDbContext db)
         return true;
     }
 
-    private static UserProfileDto Map(Entities.User u) => new(
-        u.Id, u.UtentNumber, u.Email, u.FirstName, u.LastName, u.Birthday,
-        u.BiologicalGender, u.SexId, u.NationalityId, u.Nationality?.Name,
-        u.MaritalStatus, u.BloodType,
-        u.AcceptsTransfusion == 1, u.AcceptsResuscitation == 1,
-        u.EmergencyAccessCode == 1, u.IsDependent == 1, u.Profession, u.Phone,
-        u.CardActive == 1);
 }

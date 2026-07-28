@@ -9,6 +9,7 @@ public record UserProfileDto(
     string Birthday,
     string BiologicalGender,
     int SexId,
+    string? SexGenderDescription,
     int NationalityId,
     string? NationalityName,
     string? MaritalStatus,

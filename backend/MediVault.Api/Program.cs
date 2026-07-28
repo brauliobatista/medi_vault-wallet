@@ -103,7 +103,8 @@ using (var scope = app.Services.CreateScope())
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
     if (usersToBackfill.Count > 0) db.SaveChanges();
 
-    DatabaseSeeder.Seed(db);
+    var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));
+    DatabaseSeeder.Seed(db, seedPath);
 }
 
 if (app.Environment.IsDevelopment())
