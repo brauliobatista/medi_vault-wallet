@@ -42,8 +42,8 @@ export default function ExamsPage() {
                 {item.laboratory ? ` · ${item.laboratory}` : ''}
                 {item.bodyArea ? ` · ${item.bodyArea}` : ''}
               </div>
-              {item.notes && <small className="text-muted d-block">{String(item.notes)}</small>}
-              {item.reportText && <small className="text-muted d-block">{String(item.reportText)}</small>}
+              {Boolean(item.notes) && <small className="text-muted d-block">{String(item.notes)}</small>}
+              {Boolean(item.reportText) && <small className="text-muted d-block">{String(item.reportText)}</small>}
               {(item as { parameters?: unknown[] }).parameters?.length ? (
                 <div className="mt-1">
                   {((item as { parameters: Record<string, unknown>[] }).parameters).map((p) => (
