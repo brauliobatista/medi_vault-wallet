@@ -155,8 +155,8 @@ export default function AccessPage() {
                   <div>
                     <div className="fw-semibold">{String(r.doctorName)}</div>
                     <small className="text-muted">Pedido em: {String(r.requestedAt).slice(0, 10)}</small>
-                    {r.approvedAt && <small className="text-muted"> · Aprovado: {String(r.approvedAt).slice(0, 10)}</small>}
-                    {r.expiresAt && <small className="text-muted"> · Expira: {String(r.expiresAt).slice(0, 10)}</small>}
+                    {Boolean(r.approvedAt) && <small className="text-muted"> · Aprovado: {String(r.approvedAt).slice(0, 10)}</small>}
+                    {Boolean(r.expiresAt) && <small className="text-muted"> · Expira: {String(r.expiresAt).slice(0, 10)}</small>}
                   </div>
                   <div className="d-flex align-items-center gap-2">
                     <span className={`badge bg-${badgeClass[String(r.status)] ?? 'secondary'}`}>

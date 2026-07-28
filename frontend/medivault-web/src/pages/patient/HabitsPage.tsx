@@ -31,10 +31,10 @@ export default function HabitsPage() {
                 </div>
                 <div className="card-body">
                   <dl className="mb-0 row">
-                    {h.name && <><dt className="col-5 small text-muted">Tipo</dt><dd className="col-7 small">{String(h.name)}</dd></>}
-                    {h.frequency && <><dt className="col-5 small text-muted">Frequência</dt><dd className="col-7 small">{String(h.frequency)}</dd></>}
-                    {h.quantity && <><dt className="col-5 small text-muted">Quantidade</dt><dd className="col-7 small">{String(h.quantity)}</dd></>}
-                    {h.startDate && <><dt className="col-5 small text-muted">Desde</dt><dd className="col-7 small">{String(h.startDate)}</dd></>}
+                    {Boolean(h.name) && <><dt className="col-5 small text-muted">Tipo</dt><dd className="col-7 small">{String(h.name)}</dd></>}
+                    {Boolean(h.frequency) && <><dt className="col-5 small text-muted">Frequência</dt><dd className="col-7 small">{String(h.frequency)}</dd></>}
+                    {Boolean(h.quantity) && <><dt className="col-5 small text-muted">Quantidade</dt><dd className="col-7 small">{String(h.quantity)}</dd></>}
+                    {Boolean(h.startDate) && <><dt className="col-5 small text-muted">Desde</dt><dd className="col-7 small">{String(h.startDate)}</dd></>}
                   </dl>
                 </div>
               </div>
