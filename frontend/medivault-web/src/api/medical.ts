@@ -3,6 +3,15 @@
 export const getProfile = () => api.get('/users/me').then((r) => r.data)
 export const updateProfile = (data: object) => api.put('/users/me', data).then((r) => r.data)
 
+export const uploadProfilePhoto = (file: File) => {
+  const formData = new FormData()
+  formData.append('photo', file)
+  return api.post('/users/me/photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data as { photoUrl: string })
+}
+export const deleteProfilePhoto = () => api.delete('/users/me/photo')
+
 export const getDoctorProfile = () => api.get('/doctors/me').then((r) => r.data)
 export const updateDoctorProfile = (data: object) => api.put('/doctors/me', data).then((r) => r.data)
 export const changeDoctorPassword = (data: object) => api.put('/doctors/me/password', data)

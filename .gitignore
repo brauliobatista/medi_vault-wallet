@@ -12,6 +12,7 @@ obj/
 appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
+wwwroot/uploads/
 
 # ── Node / Vite ───────────────────────────────────────────────────────────────
 node_modules/

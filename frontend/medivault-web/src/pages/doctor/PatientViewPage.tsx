@@ -32,6 +32,7 @@ export default function PatientViewPage() {
 
   const [publicId, setPublicId] = useState<string>(navState?.publicId ?? '')
   const [patientName, setPatientName] = useState<string>(navState?.patientName ?? '')
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
 
   const [tab, setTab] = useState<TabKey>('history')
   const [data, setData] = useState<Record<string, unknown>[]>([])
@@ -46,12 +47,13 @@ export default function PatientViewPage() {
 
   useEffect(() => {
     api.get('/vaccines').then((r) => setVaccines(r.data))
-    if (!navState?.publicId) {
-      api.get(`/users/${uid}/public-info`).then((r) => {
+    api.get(`/users/${uid}/public-info`).then((r) => {
+      if (!navState?.publicId) {
         setPublicId(r.data.publicId)
         setPatientName(r.data.name)
-      }).catch(() => {})
-    }
+      }
+      setPhotoUrl(r.data.photoUrl ?? null)
+    }).catch(() => {})
   }, [uid])
 
   const loadTab = async (t: TabKey) => {
@@ -153,10 +155,18 @@ export default function PatientViewPage() {
         <Link to="/doctor" className="btn btn-outline-secondary btn-sm">
           <i className="bi bi-arrow-left me-1" />Voltar
         </Link>
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={patientName || 'Paciente'}
+            className="rounded-circle"
+            style={{ width: 44, height: 44, objectFit: 'cover' }}
+          />
+        ) : (
+          <i className="bi bi-person-vcard text-primary" style={{ fontSize: '1.75rem' }} />
+        )}
         <div>
-          <h5 className="mb-0 fw-semibold">
-            <i className="bi bi-person-vcard me-2 text-primary" />{patientName || 'Paciente'}
-          </h5>
+          <h5 className="mb-0 fw-semibold">{patientName || 'Paciente'}</h5>
           <small className="text-muted font-monospace">{publicId || uid}</small>
         </div>
         {flags.length > 0 && (

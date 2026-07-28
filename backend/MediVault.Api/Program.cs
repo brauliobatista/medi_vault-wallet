@@ -9,6 +9,10 @@ using MediVault.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// wwwroot must exist before Build() runs, or IWebHostEnvironment.WebRootFileProvider
+// resolves to a NullFileProvider and UseStaticFiles() will 404 everything forever.
+Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "profile-photos"));
+
 // Database
 builder.Services.AddDbContext<MediVaultDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -82,6 +86,10 @@ using (var scope = app.Services.CreateScope())
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
     catch { /* column already exists */ }
 
+    // Add photo_path column if this DB pre-dates the feature
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
+    catch { /* column already exists */ }
+
     // Backfill missing share codes
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)
@@ -98,6 +106,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Frontend");
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

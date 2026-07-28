@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MediVault.Api.DTOs.Users;
 using MediVault.Api.Services;
@@ -19,7 +20,7 @@ public class UsersController(UserService userService) : ControllerBase
     {
         var info = await userService.GetPublicInfoAsync(userId);
         if (info is null) return NotFound();
-        return Ok(new { name = info.Value.Name, publicId = info.Value.Id });
+        return Ok(new { name = info.Value.Name, publicId = info.Value.Id, photoUrl = info.Value.PhotoUrl });
     }
 
     [HttpGet("me")]
@@ -65,5 +66,23 @@ public class UsersController(UserService userService) : ControllerBase
         var payload = await userService.GetQrPayloadAsync(CurrentUserId);
         if (payload is null) return NotFound();
         return Ok(new { payload });
+    }
+
+    [HttpPost("me/photo")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> UploadPhoto(IFormFile photo)
+    {
+        var url = await userService.UploadPhotoAsync(CurrentUserId, photo);
+        if (url is null) return BadRequest(new { message = "Ficheiro inválido. Use JPG, PNG ou WEBP até 5MB." });
+        return Ok(new { photoUrl = url });
+    }
+
+    [HttpDelete("me/photo")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> DeletePhoto()
+    {
+        var success = await userService.DeletePhotoAsync(CurrentUserId);
+        if (!success) return NotFound();
+        return NoContent();
     }
 }
