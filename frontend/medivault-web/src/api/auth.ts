@@ -3,7 +3,7 @@ import api from './client'
 export interface LoginResponse {
   token: string
   role: 'Patient' | 'Doctor'
-  id: number
+  id: string
   name: string
 }
 
