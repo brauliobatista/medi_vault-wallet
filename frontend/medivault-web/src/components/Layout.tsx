@@ -20,7 +20,7 @@ const patientNav: NavItem[] = [
 ]
 
 const doctorNav: NavItem[] = [
-  { path: '/doctor',          label: 'Dashboard',        icon: 'bi-house',              exact: true },
+  { path: '/doctor',          label: 'Consulta',         icon: 'bi-qr-code-scan',       exact: true },
   { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
   { path: '/doctor/access',   label: 'Pedidos de Acesso', icon: 'bi-key' },
 ]
@@ -33,7 +33,7 @@ const pageInfo: Record<string, { title: string; subtitle: string; icon: string }
   '/habits':          { title: 'Hábitos de Saúde',   subtitle: 'Estilos de vida e hábitos registados',                icon: 'bi-heart' },
   '/vaccinations':    { title: 'Vacinas',             subtitle: 'Registo do seu plano vacinal',                        icon: 'bi-shield-plus' },
   '/access':          { title: 'Acessos e Partilhas', subtitle: 'Gira quem tem acesso ao seu perfil',                 icon: 'bi-key' },
-  '/doctor':          { title: 'Dashboard',           subtitle: 'Leia o QR code ou pesquise um utente por número',    icon: 'bi-house' },
+  '/doctor':          { title: 'Consulta',            subtitle: 'Leia o QR code ou pesquise um utente por número',    icon: 'bi-qr-code-scan' },
   '/doctor/profile':  { title: 'Perfil do Médico',   subtitle: 'As suas informações profissionais',                   icon: 'bi-person-badge' },
   '/doctor/access':   { title: 'Pedidos de Acesso',  subtitle: 'Consulte e gira pedidos de acesso a utentes',         icon: 'bi-key' },
 }
