@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
-import { scanQrCode, getAccessStatus } from '../../api/medical'
+import { scanQrCode, getAccessStatus, grantAccessDev } from '../../api/medical'
 
 export default function DoctorDashboardPage() {
   const [utentNumber, setUtentNumber] = useState('')
@@ -52,6 +52,18 @@ export default function DoctorDashboardPage() {
     } catch {
       setStatus({ type: 'error', msg: 'Não foi possível enviar o pedido.' })
     }
+  }
+
+  // DEV-ONLY: auto-grants access before opening the record, so testing doesn't require a
+  // separate patient login to approve the request. See AccessControlService.GrantAccessDevAsync.
+  const handleViewData = async () => {
+    if (!found) return
+    try {
+      await grantAccessDev(found.userId)
+    } catch {
+      // ignore — PatientViewPage will show its own "Sem acesso" state if this failed
+    }
+    navigate(`/doctor/patient/${found.userId}`, { state: { publicId: found.publicId, patientName: found.name } })
   }
 
   // ── QR scan (camera) ──────────────────────────────────────────
@@ -263,7 +275,7 @@ export default function DoctorDashboardPage() {
                       <i className="bi bi-send" />Pedir acesso
                     </button>
                     {!foundCardSuspended && (
-                      <button className="consult-finish-btn" onClick={() => navigate(`/doctor/patient/${found!.userId}`, { state: { publicId: found!.publicId, patientName: found!.name } })}>
+                      <button className="consult-finish-btn" onClick={handleViewData}>
                         <i className="bi bi-eye" />Ver dados
                       </button>
                     )}

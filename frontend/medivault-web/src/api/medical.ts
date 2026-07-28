@@ -118,6 +118,9 @@ export const scanQrCode = (qrCode: string) =>
 export const getAccessRequests = () => api.get('/access-requests').then((r) => r.data)
 export const requestAccess = (userId: string) =>
   api.post(`/access-requests/${userId}`).then((r) => r.data)
+// DEV-ONLY: auto-approves access so "Ver dados" works without a separate patient login to approve it
+export const grantAccessDev = (userId: string) =>
+  api.post(`/access-requests/${userId}/grant-dev`).then((r) => r.data)
 export const respondToRequest = (requestId: number, action: 'approve' | 'revoke') =>
   api.put(`/access-requests/${requestId}/respond`, { action })
 export const deleteRequest = (requestId: number) =>
