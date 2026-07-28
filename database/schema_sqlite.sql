@@ -158,6 +158,7 @@ CREATE TABLE family_guardianships (
     guardian_user_id     TEXT    NOT NULL,
     dependent_user_id    TEXT    NOT NULL,
     relationship_type_id INTEGER NOT NULL,
+    status                TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved')),
     is_active            INTEGER NOT NULL DEFAULT 1,
     created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),

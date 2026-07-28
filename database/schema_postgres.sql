@@ -156,6 +156,7 @@ CREATE TABLE family_guardianships (
     guardian_user_id     UUID      NOT NULL,
     dependent_user_id    UUID      NOT NULL,
     relationship_type_id INT       NOT NULL,
+    status                TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved')),
     is_active            BOOLEAN   NOT NULL DEFAULT TRUE,
     created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_family_guardianships_guardian     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
