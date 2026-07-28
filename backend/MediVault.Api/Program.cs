@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // wwwroot must exist before Build() runs, or IWebHostEnvironment.WebRootFileProvider
 // resolves to a NullFileProvider and UseStaticFiles() will 404 everything forever.
 Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "profile-photos"));
+var documentsDir = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "documents");
+Directory.CreateDirectory(documentsDir);
 
 // Database
 builder.Services.AddDbContext<MediVaultDbContext>(opt =>
@@ -48,6 +50,8 @@ builder.Services.AddScoped<VaccinationService>();
 builder.Services.AddScoped<DoctorNoteService>();
 builder.Services.AddScoped<DoctorService>();
 builder.Services.AddScoped<ClinicalRecordsService>();
+builder.Services.AddScoped<MedicalFileService>();
+builder.Services.AddScoped<TeamChatService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -99,7 +103,7 @@ using (var scope = app.Services.CreateScope())
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
     if (usersToBackfill.Count > 0) db.SaveChanges();
 
-    DatabaseSeeder.Seed(db);
+    DatabaseSeeder.Seed(db, documentsDir);
 }
 
 if (app.Environment.IsDevelopment())

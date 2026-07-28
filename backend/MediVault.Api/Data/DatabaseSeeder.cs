@@ -1,3 +1,4 @@
+using System.Text;
 using MediVault.Api.Entities;
 
 namespace MediVault.Api.Data;
@@ -6,7 +7,42 @@ public static class DatabaseSeeder
 {
     private static string NewShareCode() => Guid.NewGuid().ToString("N")[..12].ToUpper();
 
-    public static void Seed(MediVaultDbContext db)
+    // Builds a minimal, valid, openable PDF (no external library needed) with a heading and two body lines.
+    // Offsets in the xref table are computed exactly so PDF viewers that honor xref render it correctly.
+    private static byte[] GenerateTestPdf(string heading, string bodyLine1, string bodyLine2)
+    {
+        string Esc(string s) => s.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
+        var content =
+            $"BT\n/F1 18 Tf\n50 720 Td\n({Esc(heading)}) Tj\n0 -30 Td\n/F1 12 Tf\n({Esc(bodyLine1)}) Tj\n0 -20 Td\n({Esc(bodyLine2)}) Tj\nET\n";
+        var contentBytes = Encoding.ASCII.GetByteCount(content);
+
+        var objects = new List<string>
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            $"<< /Length {contentBytes} >>\nstream\n{content}endstream"
+        };
+
+        var sb = new StringBuilder();
+        sb.Append("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Count; i++)
+        {
+            offsets.Add(Encoding.ASCII.GetByteCount(sb.ToString()));
+            sb.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+        var xrefOffset = Encoding.ASCII.GetByteCount(sb.ToString());
+        sb.Append($"xref\n0 {objects.Count + 1}\n");
+        sb.Append("0000000000 65535 f \n");
+        foreach (var off in offsets)
+            sb.Append($"{off:D10} 00000 n \n");
+        sb.Append($"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF");
+        return Encoding.ASCII.GetBytes(sb.ToString());
+    }
+
+    public static void Seed(MediVaultDbContext db, string documentsDir)
     {
         if (db.Users.Any()) return;
 
@@ -229,7 +265,9 @@ public static class DatabaseSeeder
         {
             UserId = braulio.Id, DoctorId = diana.Id, RecordedAt = "2026-07-26 10:30:00",
             BloodPressureSystolic = 128, BloodPressureDiastolic = 80, HeartRate = 72, RespiratoryRate = 16,
-            Temperature = 36.6m, Spo2 = 98, Weight = 72.4m, Height = 168, CreatedAt = DateTime.UtcNow.ToString("o")
+            Temperature = 36.6m, Spo2 = 98, Weight = 72.4m, Height = 168,
+            Notes = "Doente com bom aspeto geral, eupneico em repouso. Auscultação cardíaca com sopro sistólico II/VI no foco mitral. Sem edemas periféricos. Abdómen mole e depressível, sem massas palpáveis.",
+            CreatedAt = DateTime.UtcNow.ToString("o")
         });
 
         db.ClinicalAssessments.AddRange(
@@ -245,6 +283,57 @@ public static class DatabaseSeeder
             PersonalHistory = "Hipertensão arterial diagnosticada há 5 anos. Dislipidemia.",
             CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
         });
+
+        // --- Documents for Braulio ("Documentos" in the consultation view) ---
+        // Real, openable test PDFs with test text, physically written to disk (mirrors the profile-photo static-file pattern).
+        Directory.CreateDirectory(documentsDir);
+
+        var pdf1Name = $"{braulio.Id}-{Guid.NewGuid()}.pdf";
+        File.WriteAllBytes(Path.Combine(documentsDir, pdf1Name), GenerateTestPdf(
+            "Relatorio de Ecocardiograma - Documento de Teste",
+            "Paciente: Braulio Batista - Utente 100000001",
+            "Funcao sistolica preservada. Sem alteracoes valvulares significativas."));
+
+        var pdf2Name = $"{braulio.Id}-{Guid.NewGuid()}.pdf";
+        File.WriteAllBytes(Path.Combine(documentsDir, pdf2Name), GenerateTestPdf(
+            "Analises Clinicas - Documento de Teste",
+            "Paciente: Braulio Batista - Utente 100000001",
+            "Colesterol Total 245 mg/dL (elevado). Glicemia em jejum 92 mg/dL (normal)."));
+
+        db.MedicalFiles.AddRange(
+            new MedicalFile
+            {
+                UserId = braulio.Id, FileName = "Relatorio_Ecocardiograma.pdf", FileType = "pdf",
+                FilePath = Path.Combine(documentsDir, pdf1Name), UploadedBy = diana.Id,
+                UploadedAt = DateTime.UtcNow.AddDays(-3).ToString("o")
+            },
+            new MedicalFile
+            {
+                UserId = braulio.Id, FileName = "Analises_Sangue.pdf", FileType = "pdf",
+                FilePath = Path.Combine(documentsDir, pdf2Name), UploadedBy = diana.Id,
+                UploadedAt = DateTime.UtcNow.AddDays(-1).ToString("o")
+            });
+
+        // --- Team chat for Braulio (Monica and Diana discussing the case) ---
+        db.TeamChatMessages.AddRange(
+            new TeamChatMessage
+            {
+                UserId = braulio.Id, AuthorDoctorId = monica.Id,
+                Message = "Bom dia Diana, o Braulio esteve cá esta semana queixando-se de fadiga fácil e dispneia. Podes dar uma vista de olhos do lado da cardiologia?",
+                CreatedAt = DateTime.UtcNow.AddDays(-2).ToString("o")
+            },
+            new TeamChatMessage
+            {
+                UserId = braulio.Id, AuthorDoctorId = diana.Id,
+                Message = "Bom dia, obrigada pelo aviso. Vou pedir um ecocardiograma e reavaliar a medicação anti-hipertensiva dele.",
+                CreatedAt = DateTime.UtcNow.AddDays(-2).AddHours(3).ToString("o")
+            },
+            new TeamChatMessage
+            {
+                UserId = braulio.Id, AuthorDoctorId = diana.Id,
+                Message = "Resultados do eco dentro da normalidade, função sistólica preservada. Reveja os resultados do eco anexados nos documentos.",
+                CreatedAt = DateTime.UtcNow.AddHours(-9).ToString("o")
+            });
 
         db.SaveChanges();
     }

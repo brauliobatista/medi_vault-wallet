@@ -98,6 +98,16 @@ public record PatientSummaryDto(
     string? BloodType, bool AcceptsTransfusion,
     string Sex, string Birthday, string UtentNumber, string? PhotoUrl);
 
+public record UpdateBloodTypeRequest(string? BloodType);
+
+public record MedicalFileDto(
+    int Id, string FileName, string? FileType, string FileUrl, string UploadedAt, string? UploadedByName);
+
+public record ChatMessageDto(
+    int Id, string AuthorDoctorId, string AuthorName, string Message, string CreatedAt);
+
+public record CreateChatMessageRequest(string Message);
+
 public record PathologyDto(
     int Id, string Icpc2Description, string Type, string? DiagnosedAt, string? Notes);
 

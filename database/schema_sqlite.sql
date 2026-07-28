@@ -555,3 +555,14 @@ CREATE TABLE anamneses (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+
+-- Team chat: doctors discussing a patient's case amongst themselves.
+CREATE TABLE patient_chat_messages (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id           TEXT    NOT NULL,
+    author_doctor_id  TEXT    NOT NULL,
+    message           TEXT    NOT NULL,
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);

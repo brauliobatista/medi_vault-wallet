@@ -4,8 +4,10 @@ import {
   getAllergies, addAllergy, deleteAllergy,
   getPathologies, addPathology, deletePathology, getIcpc2Codes,
   getMedications, addMedication, deleteMedication,
-  getPatientSummary,
+  getPatientSummary, updateBloodType,
 } from '../api/medical'
+
+const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 interface Props { userId: string; onClose: () => void }
 
@@ -21,6 +23,8 @@ export default function ContextoClinicoModal({ userId, onClose }: Props) {
   const [icpc2, setIcpc2] = useState<Icpc2[]>([])
   const [bloodType, setBloodType] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editingBloodType, setEditingBloodType] = useState(false)
+  const [bloodTypeDraft, setBloodTypeDraft] = useState('')
 
   const [allergyForm, setAllergyForm] = useState({ activeSubstance: '', allergicReaction: '', severity: '' })
   const [showAllergyForm, setShowAllergyForm] = useState(false)
@@ -38,6 +42,12 @@ export default function ContextoClinicoModal({ userId, onClose }: Props) {
       .finally(() => setLoading(false))
   }
   useEffect(load, [userId])
+
+  const handleSaveBloodType = async () => {
+    await updateBloodType(userId, bloodTypeDraft || null)
+    setEditingBloodType(false)
+    load()
+  }
 
   const handleAddAllergy = async () => {
     if (!allergyForm.activeSubstance.trim()) return
@@ -87,9 +97,23 @@ export default function ContextoClinicoModal({ userId, onClose }: Props) {
       {/* Grupo Sanguíneo */}
       <div className="consult-context-item context-danger mb-3">
         <i className="bi bi-droplet-fill" />
-        <div>
+        <div className="flex-grow-1">
           <div className="consult-context-title">Grupo Sanguíneo</div>
-          <div className="consult-context-value">{bloodType ?? 'Não registado'}</div>
+          {editingBloodType ? (
+            <div className="d-flex gap-2 align-items-center mt-1">
+              <select className="form-select form-select-sm" style={{ maxWidth: 120 }} value={bloodTypeDraft} onChange={(e) => setBloodTypeDraft(e.target.value)}>
+                <option value="">Não registado</option>
+                {BLOOD_TYPES.map((bt) => <option key={bt} value={bt}>{bt}</option>)}
+              </select>
+              <button className="consult-finish-btn" onClick={handleSaveBloodType}><i className="bi bi-check-lg" /></button>
+              <button className="dash-toolbar-btn" onClick={() => setEditingBloodType(false)}>Cancelar</button>
+            </div>
+          ) : (
+            <div className="d-flex gap-2 align-items-center">
+              <div className="consult-context-value">{bloodType ?? 'Não registado'}</div>
+              <button className="mv-icon-btn" onClick={() => { setBloodTypeDraft(bloodType ?? ''); setEditingBloodType(true) }}><i className="bi bi-pencil" /></button>
+            </div>
+          )}
         </div>
       </div>
 

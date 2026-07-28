@@ -121,4 +121,51 @@ public class ClinicalRecordsController(ClinicalRecordsService records, AccessCon
         if (!success) return BadRequest(new { message = error });
         return NoContent();
     }
+
+    // --- Documents ---
+
+    [HttpGet("documents")]
+    public async Task<IActionResult> GetDocuments(string userId, [FromServices] MedicalFileService files)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        return Ok(await files.GetDocumentsAsync(userId));
+    }
+
+    [HttpPost("documents")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> UploadDocument(string userId, IFormFile file, [FromServices] MedicalFileService files)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        var (dto, error) = await files.UploadAsync(userId, CurrentId, file);
+        if (dto is null) return BadRequest(new { message = error });
+        return Ok(dto);
+    }
+
+    [HttpDelete("documents/{id}")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> DeleteDocument(string userId, int id, [FromServices] MedicalFileService files)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        var success = await files.DeleteAsync(id, userId);
+        if (!success) return NotFound();
+        return NoContent();
+    }
+
+    // --- Team chat ---
+
+    [HttpGet("chat-messages")]
+    public async Task<IActionResult> GetChatMessages(string userId, [FromServices] TeamChatService chat)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        return Ok(await chat.GetMessagesAsync(userId));
+    }
+
+    [HttpPost("chat-messages")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> AddChatMessage(string userId, CreateChatMessageRequest req, [FromServices] TeamChatService chat)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        if (string.IsNullOrWhiteSpace(req.Message)) return BadRequest(new { message = "Mensagem vazia." });
+        return Ok(await chat.AddMessageAsync(userId, CurrentId, req.Message));
+    }
 }

@@ -21,6 +21,8 @@ export const getAccessStatus = (userId: string) =>
 
 export const getPatientSummary = (userId: string) =>
   api.get(`/patients/${userId}/summary`).then((r) => r.data)
+export const updateBloodType = (userId: string, bloodType: string | null) =>
+  api.put(`/patients/${userId}/blood-type`, { bloodType })
 
 export const getPathologies = (userId: string) =>
   api.get(`/patients/${userId}/pathologies`).then((r) => r.data)
@@ -140,4 +142,21 @@ export const getFlags = (userId: string) =>
   api.get(`/doctor-notes/flags/${userId}`).then((r) => r.data)
 export const markFlagReviewed = (flagId: number) =>
   api.put(`/doctor-notes/flags/${flagId}/review`)
+
+export const getDocuments = (userId: string) =>
+  api.get(`/patients/${userId}/documents`).then((r) => r.data)
+export const uploadDocument = (userId: string, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(`/patients/${userId}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data)
+}
+export const deleteDocument = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/documents/${id}`)
+
+export const getChatMessages = (userId: string) =>
+  api.get(`/patients/${userId}/chat-messages`).then((r) => r.data)
+export const sendChatMessage = (userId: string, message: string) =>
+  api.post(`/patients/${userId}/chat-messages`, { message }).then((r) => r.data)
 

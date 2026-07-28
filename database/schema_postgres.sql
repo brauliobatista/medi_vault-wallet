@@ -551,3 +551,14 @@ CREATE TABLE anamneses (
     CONSTRAINT fk_anamneses_user   FOREIGN KEY (user_id)   REFERENCES users(id),
     CONSTRAINT fk_anamneses_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
+
+-- Team chat: doctors discussing a patient's case amongst themselves.
+CREATE TABLE patient_chat_messages (
+    id                SERIAL    PRIMARY KEY,
+    user_id           UUID      NOT NULL,
+    author_doctor_id  UUID      NOT NULL,
+    message           TEXT      NOT NULL,
+    created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
+    CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);

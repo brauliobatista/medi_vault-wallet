@@ -38,6 +38,7 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<VitalSign> VitalSigns => Set<VitalSign>();
     public DbSet<ClinicalAssessment> ClinicalAssessments => Set<ClinicalAssessment>();
     public DbSet<Anamnesis> Anamneses => Set<Anamnesis>();
+    public DbSet<TeamChatMessage> TeamChatMessages => Set<TeamChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

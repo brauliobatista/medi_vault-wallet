@@ -15,6 +15,8 @@ import {
   getAssessments,
   getVitalSigns,
   getAccessStatus,
+  getDocuments,
+  getChatMessages,
 } from '../../api/medical'
 import ContextoClinicoModal from '../../components/ContextoClinicoModal'
 import PrescricaoModal from '../../components/PrescricaoModal'
@@ -22,9 +24,11 @@ import ExamesModal from '../../components/ExamesModal'
 import VitalSignsModal from '../../components/VitalSignsModal'
 import AssessmentsModal from '../../components/AssessmentsModal'
 import AnamneseModal from '../../components/AnamneseModal'
+import DocumentsModal from '../../components/DocumentsModal'
+import ChatModal from '../../components/ChatModal'
 
 type CenterTab = 'anamnese' | 'exame' | 'diagnostico' | 'plano' | 'prescricao' | 'documentos'
-type OpenModal = 'contexto' | 'prescricao' | 'exames' | 'vitais' | 'avaliacoes' | 'anamnese' | null
+type OpenModal = 'contexto' | 'prescricao' | 'exames' | 'vitais' | 'avaliacoes' | 'anamnese' | 'documentos' | 'chat' | null
 
 interface Summary {
   userId: string
@@ -49,8 +53,10 @@ interface VitalSign {
   id: number; recordedAt: string
   bloodPressureSystolic: number | null; bloodPressureDiastolic: number | null
   heartRate: number | null; respiratoryRate: number | null; temperature: number | null
-  spo2: number | null; weight: number | null; height: number | null
+  spo2: number | null; weight: number | null; height: number | null; notes: string | null
 }
+interface MedicalFile { id: number; fileName: string; fileType: string | null; fileUrl: string; uploadedAt: string; uploadedByName: string | null }
+interface ChatMessage { id: number; authorDoctorId: string; authorName: string; message: string; createdAt: string }
 
 const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 function formatDatePt(iso: string) {
@@ -82,12 +88,6 @@ const centerTabs: { key: CenterTab; label: string; icon: string }[] = [
   { key: 'documentos', label: 'Documentos', icon: 'bi-file-earmark-text' },
 ]
 
-const mockDocs = [
-  { id: 1, name: 'Atestado de Incapacidade', date: '20 abr 2025', type: 'PDF' },
-  { id: 2, name: 'Pedido de Exames', date: '15 abr 2025', type: 'PDF' },
-  { id: 3, name: 'Pedido de Consulta', date: '10 abr 2025', type: 'PDF' },
-]
-
 function bmi(w?: number | null, h?: number | null) {
   return w && h ? (w / ((h / 100) ** 2)).toFixed(1) : '—'
 }
@@ -110,6 +110,8 @@ export default function PatientViewPage() {
   const [anamneses, setAnamneses] = useState<Anamnesis[]>([])
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [vitals, setVitals] = useState<VitalSign[]>([])
+  const [documents, setDocuments] = useState<MedicalFile[]>([])
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [deniedReason, setDeniedReason] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<CenterTab>('anamnese')
@@ -153,8 +155,10 @@ export default function PatientViewPage() {
       getAnamneses(uid),
       getAssessments(uid),
       getVitalSigns(uid),
+      getDocuments(uid),
+      getChatMessages(uid),
     ])
-      .then(([summaryRes, pathRes, allergyRes, medRes, analyticalRes, imagingRes, optometryRes, anamnesesRes, assessmentsRes, vitalsRes]) => {
+      .then(([summaryRes, pathRes, allergyRes, medRes, analyticalRes, imagingRes, optometryRes, anamnesesRes, assessmentsRes, vitalsRes, documentsRes, chatRes]) => {
         setSummary(summaryRes)
         setPathologies(pathRes)
         setAllergies(allergyRes)
@@ -162,6 +166,8 @@ export default function PatientViewPage() {
         setAnamneses(anamnesesRes)
         setAssessments(assessmentsRes)
         setVitals(vitalsRes)
+        setDocuments(documentsRes)
+        setChatMessages(chatRes)
 
         type Analytical = { id: number; examDate: string; laboratory: string | null; parameters: { isAbnormal: boolean }[] }
         type Imaging = { id: number; examType: string; examDate: string }
@@ -436,15 +442,88 @@ export default function PatientViewPage() {
                     <p className="text-muted mb-0">Sem anamnese registada.</p>
                   )}
                 </>
+              ) : tab === 'exame' ? (
+                <>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="consult-section-title mb-0">Exame Objetivo</h6>
+                    <button className="consult-link-btn" onClick={() => setOpenModal('vitais')}>
+                      <i className="bi bi-pencil" /> Editar
+                    </button>
+                  </div>
+                  {latestVital?.notes ? (
+                    <p className="mb-0">{latestVital.notes}</p>
+                  ) : (
+                    <p className="text-muted mb-0">Sem registo de exame objetivo.</p>
+                  )}
+                </>
+              ) : tab === 'diagnostico' ? (
+                <>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="consult-section-title mb-0">Diagnóstico</h6>
+                    <button className="consult-link-btn" onClick={() => setOpenModal('avaliacoes')}>
+                      <i className="bi bi-plus-lg" /> Adicionar / Editar
+                    </button>
+                  </div>
+                  {assessments.length > 0 ? (
+                    assessments.map((a) => <p key={a.id} className="consult-context-value mb-2">{a.hypothesis}</p>)
+                  ) : (
+                    <p className="text-muted mb-0">Sem hipóteses diagnósticas registadas.</p>
+                  )}
+                </>
+              ) : tab === 'plano' ? (
+                <>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="consult-section-title mb-0">Plano</h6>
+                    <button className="consult-link-btn" onClick={() => setOpenModal('avaliacoes')}>
+                      <i className="bi bi-plus-lg" /> Adicionar / Editar
+                    </button>
+                  </div>
+                  {assessments.length > 0 ? (
+                    assessments.map((a) => <p key={a.id} className="consult-context-value mb-2">{a.plan}</p>)
+                  ) : (
+                    <p className="text-muted mb-0">Sem plano registado.</p>
+                  )}
+                </>
               ) : tab === 'prescricao' ? (
-                <p className="text-muted mb-0">
-                  {medications.length} medicamento(s) ativo(s).{' '}
-                  <button className="consult-link-btn" onClick={() => setOpenModal('prescricao')}>Ver prescrição completa</button>
-                </p>
-              ) : tab === 'documentos' ? (
-                <p className="text-muted mb-0">Sem documentos associados a esta consulta. <span className="badge bg-secondary">Em breve</span></p>
+                <>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="consult-section-title mb-0">Prescrição</h6>
+                    <button className="consult-link-btn" onClick={() => setOpenModal('prescricao')}>Ver prescrição completa</button>
+                  </div>
+                  {medications.length > 0 ? (
+                    medications.map((m) => (
+                      <div key={m.id} className="consult-med-row mb-2">
+                        <div className="consult-context-value">{m.activeSubstance}{m.dose ? ` ${m.dose}` : ''}</div>
+                        {m.posology && <div className="consult-context-sub">{m.posology}</div>}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted mb-0">Sem medicação ativa.</p>
+                  )}
+                </>
               ) : (
-                <p className="text-muted mb-0">Sem registos nesta secção. <span className="badge bg-secondary">Em breve</span></p>
+                <>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="consult-section-title mb-0">Documentos</h6>
+                    <button className="consult-link-btn" onClick={() => setOpenModal('documentos')}>
+                      <i className="bi bi-upload" /> Adicionar documento
+                    </button>
+                  </div>
+                  {documents.length > 0 ? (
+                    documents.map((d) => (
+                      <div className="consult-doc-row" key={d.id}>
+                        <i className="bi bi-file-earmark-text consult-doc-icon" />
+                        <div className="flex-grow-1">
+                          <div className="consult-context-value">{d.fileName}</div>
+                          <div className="consult-context-sub">{d.uploadedAt.slice(0, 10)}{d.uploadedByName ? ` · ${d.uploadedByName}` : ''}</div>
+                        </div>
+                        <a className="dash-toolbar-btn" href={d.fileUrl} target="_blank" rel="noreferrer"><i className="bi bi-eye" /> Abrir</a>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted mb-0">Sem documentos associados.</p>
+                  )}
+                </>
               )}
             </div>
 
@@ -503,36 +582,42 @@ export default function PatientViewPage() {
           <div className="consult-panel">
             <div className="consult-panel-header">
               Documentos
-              <button className="consult-link-btn">Ver todos</button>
+              <button className="consult-link-btn" onClick={() => setOpenModal('documentos')}>Ver todos</button>
             </div>
-            {mockDocs.map((d) => (
+            {documents.slice(0, 3).map((d) => (
               <div className="consult-doc-row" key={d.id}>
                 <i className="bi bi-file-earmark-text consult-doc-icon" />
                 <div className="flex-grow-1">
-                  <div className="consult-context-value">{d.name}</div>
-                  <div className="consult-context-sub">{d.date}</div>
+                  <div className="consult-context-value">{d.fileName}</div>
+                  <div className="consult-context-sub">{d.uploadedAt.slice(0, 10)}</div>
                 </div>
-                <span className="consult-doc-badge">{d.type}</span>
+                <a className="consult-doc-badge" href={d.fileUrl} target="_blank" rel="noreferrer">{(d.fileType ?? 'file').toUpperCase()}</a>
               </div>
             ))}
+            {documents.length === 0 && <p className="consult-context-sub mb-0">Sem documentos associados.</p>}
           </div>
 
           <div className="consult-panel">
             <div className="consult-panel-header">
               Chat da Equipa
-              <button className="consult-link-btn">Ver conversas</button>
+              <button className="consult-link-btn" onClick={() => setOpenModal('chat')}>Ver conversas</button>
             </div>
-            <div className="consult-chat-row">
-              <div className="consult-chat-avatar">DR</div>
-              <div className="flex-grow-1">
-                <div className="consult-context-value">Dr. Pedro Martins</div>
-                <div className="consult-context-sub">Bom dia, reveja os resultados do eco.</div>
+            {chatMessages.length > 0 ? (
+              <div className="consult-chat-row">
+                <div className="consult-chat-avatar">
+                  {chatMessages[chatMessages.length - 1].authorName.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase()}
+                </div>
+                <div className="flex-grow-1">
+                  <div className="consult-context-value">{chatMessages[chatMessages.length - 1].authorName}</div>
+                  <div className="consult-context-sub">{chatMessages[chatMessages.length - 1].message}</div>
+                </div>
+                <div className="consult-chat-meta">
+                  <small className="text-muted">{chatMessages[chatMessages.length - 1].createdAt.slice(11, 16)}</small>
+                </div>
               </div>
-              <div className="consult-chat-meta">
-                <small className="text-muted">09:14</small>
-                <span className="badge rounded-pill bg-primary">1</span>
-              </div>
-            </div>
+            ) : (
+              <p className="consult-context-sub mb-0">Sem mensagens ainda.</p>
+            )}
           </div>
         </div>
       </div>
@@ -543,6 +628,8 @@ export default function PatientViewPage() {
       {openModal === 'vitais' && <VitalSignsModal userId={uid} onClose={closeModalAndReload} />}
       {openModal === 'avaliacoes' && <AssessmentsModal userId={uid} onClose={closeModalAndReload} />}
       {openModal === 'anamnese' && <AnamneseModal userId={uid} onClose={closeModalAndReload} />}
+      {openModal === 'documentos' && <DocumentsModal userId={uid} onClose={closeModalAndReload} />}
+      {openModal === 'chat' && <ChatModal userId={uid} onClose={closeModalAndReload} />}
     </Layout>
   )
 }

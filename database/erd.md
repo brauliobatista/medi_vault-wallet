@@ -245,6 +245,15 @@ erDiagram
         datetime updated_at
     }
 
+    %% Team chat: doctors discussing a patient's case amongst themselves.
+    PATIENT_CHAT_MESSAGES {
+        int id PK
+        guid user_id FK
+        guid author_doctor_id FK
+        text message
+        datetime created_at
+    }
+
     %% -------------------------------------------------------
     %% FILES
     %% -------------------------------------------------------
@@ -473,6 +482,8 @@ erDiagram
     DOCTORS                     ||--o{ CLINICAL_ASSESSMENTS       : "records"
     USERS                       ||--o{ ANAMNESES                  : "has"
     DOCTORS                     ||--o{ ANAMNESES                  : "records"
+    USERS                       ||--o{ PATIENT_CHAT_MESSAGES      : "concerns"
+    DOCTORS                     ||--o{ PATIENT_CHAT_MESSAGES      : "authors"
 
     %% Users — files
     USERS                       ||--o{ MEDICAL_FILES              : "owns"

@@ -41,6 +41,16 @@ public class MedicalHistoryController(
         return Ok(summary);
     }
 
+    [HttpPut("blood-type")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> UpdateBloodType(string userId, UpdateBloodTypeRequest req)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        var success = await medicalHistory.UpdateBloodTypeAsync(userId, req.BloodType);
+        if (!success) return NotFound();
+        return NoContent();
+    }
+
     // --- Active pathologies ---
 
     [HttpGet("/api/icpc2-codes")]

@@ -153,6 +153,16 @@ public class MedicalHistoryService(MediVaultDbContext db, UserService userServic
             u.Sex, u.Birthday, u.UtentNumber, photoUrl);
     }
 
+    public async Task<bool> UpdateBloodTypeAsync(string userId, string? bloodType)
+    {
+        var u = await db.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (u is null) return false;
+        u.BloodType = bloodType;
+        u.UpdatedAt = DateTime.UtcNow.ToString("o");
+        await db.SaveChangesAsync();
+        return true;
+    }
+
     // --- Active pathologies ("Problemas Ativos") ---
 
     public async Task<List<PathologyDto>> GetPathologiesAsync(string userId) =>
