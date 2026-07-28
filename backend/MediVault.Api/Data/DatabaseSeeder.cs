@@ -195,25 +195,45 @@ public static class DatabaseSeeder
             new InstitutionContact { InstitutionId = clinica.Id,  ServiceName = "Farmácia Hospitalar",        Extension = "210 025 211", IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o") }
         );
 
-        // --- Doctor's own agenda (congresses, training, vacation) — Diana (Cardiologia) ---
+        // --- Doctor's own agenda (congresses, training, vacation) ---
         db.DoctorScheduleEvents.AddRange(
-            new DoctorScheduleEvent { DoctorId = diana.Id, EventTypeId = eventTypeCongress.Id, Title = "Congresso Nacional de Cardiologia", Location = "Lisboa, Portugal", StartDate = "2026-05-15", EndDate = "2026-05-17", CreatedAt = DateTime.UtcNow.ToString("o") },
-            new DoctorScheduleEvent { DoctorId = diana.Id, EventTypeId = eventTypeCongress.Id, Title = "European Society of Cardiology",    Location = "Madrid, Espanha",  StartDate = "2026-06-05", EndDate = "2026-06-07", CreatedAt = DateTime.UtcNow.ToString("o") },
-            new DoctorScheduleEvent { DoctorId = diana.Id, EventTypeId = eventTypeVacation.Id, Title = "Período de Férias",                 Location = null,               StartDate = "2026-08-02", EndDate = "2026-08-08", CreatedAt = DateTime.UtcNow.ToString("o") },
-            new DoctorScheduleEvent { DoctorId = maria.Id, EventTypeId = eventTypeTraining.Id, Title = "Formação em Endocrinologia Pediátrica", Location = "Porto, Portugal", StartDate = "2026-05-22", EndDate = "2026-05-23", Notes = "Ação de formação interna", CreatedAt = DateTime.UtcNow.ToString("o") }
+            new DoctorScheduleEvent { DoctorId = diana.Id,  EventTypeId = eventTypeCongress.Id, Title = "Congresso Nacional de Cardiologia",        Location = "Lisboa, Portugal",   StartDate = "2026-05-15", EndDate = "2026-05-17", CreatedAt = DateTime.UtcNow.ToString("o") },
+            new DoctorScheduleEvent { DoctorId = diana.Id,  EventTypeId = eventTypeCongress.Id, Title = "European Society of Cardiology",           Location = "Madrid, Espanha",    StartDate = "2026-06-05", EndDate = "2026-06-07", CreatedAt = DateTime.UtcNow.ToString("o") },
+            new DoctorScheduleEvent { DoctorId = diana.Id,  EventTypeId = eventTypeVacation.Id, Title = "Período de Férias",                        Location = null,                 StartDate = "2026-08-02", EndDate = "2026-08-08", CreatedAt = DateTime.UtcNow.ToString("o") },
+            new DoctorScheduleEvent { DoctorId = maria.Id,  EventTypeId = eventTypeTraining.Id, Title = "Formação em Endocrinologia Pediátrica",    Location = "Porto, Portugal",    StartDate = "2026-05-22", EndDate = "2026-05-23", Notes = "Ação de formação interna", CreatedAt = DateTime.UtcNow.ToString("o") },
+            new DoctorScheduleEvent { DoctorId = monica.Id, EventTypeId = eventTypeCongress.Id, Title = "Congresso Português de Medicina Geral e Familiar", Location = "Lisboa, Portugal", StartDate = "2026-09-10", EndDate = "2026-09-12", CreatedAt = DateTime.UtcNow.ToString("o") },
+            new DoctorScheduleEvent { DoctorId = monica.Id, EventTypeId = eventTypeTraining.Id, Title = "Formação em Cuidados Paliativos",          Location = "Coimbra, Portugal",  StartDate = "2026-08-03", EndDate = "2026-08-04", Notes = "Ação de formação interna", CreatedAt = DateTime.UtcNow.ToString("o") },
+            new DoctorScheduleEvent { DoctorId = monica.Id, EventTypeId = eventTypeVacation.Id, Title = "Período de Férias",                        Location = null,                 StartDate = "2026-08-15", EndDate = "2026-08-22", CreatedAt = DateTime.UtcNow.ToString("o") }
         );
 
-        // --- Daily patient agenda — Diana's appointments ---
+        // --- Daily patient agenda — Diana's and Monica's appointments ---
         var todayStr = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var tomorrowStr = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd");
         db.PatientAppointments.AddRange(
+            // Diana — fixed past date, all statuses already covered by original data
             new PatientAppointment { UserId = braulio.Id, DoctorId = diana.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "presencial",   ScheduledAt = "2026-05-10 09:00:00", Status = "em_curso",   CreatedByRole = "doctor", CreatedByDoctorId = diana.Id, CreatedAt = DateTime.UtcNow.ToString("o") },
             new PatientAppointment { UserId = cesar.Id,   DoctorId = diana.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "presencial",   ScheduledAt = "2026-05-10 10:30:00", Status = "confirmada", CreatedByRole = "staff",  CreatedByDoctorId = null,     CreatedAt = DateTime.UtcNow.ToString("o") },
             new PatientAppointment { UserId = joka.Id,    DoctorId = diana.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "teleconsulta", ScheduledAt = "2026-05-10 11:30:00", Status = "confirmada", CreatedByRole = "staff",  CreatedByDoctorId = null,     CreatedAt = DateTime.UtcNow.ToString("o") },
             new PatientAppointment { UserId = tiago.Id,   DoctorId = diana.Id, AppointmentTypeId = apptTypeReturn.Id,       Modality = "presencial",   ScheduledAt = "2026-05-10 14:00:00", Status = "confirmada", CreatedByRole = "doctor", CreatedByDoctorId = diana.Id, CreatedAt = DateTime.UtcNow.ToString("o") },
+
+            // Diana — today, now covering every status the UI can render
+            new PatientAppointment { UserId = cesar.Id,   DoctorId = diana.Id, AppointmentTypeId = apptTypeFollowup.Id,     Modality = "presencial",   ScheduledAt = $"{todayStr} 08:00:00", Status = "pendente",   CreatedByRole = "staff",  CreatedByDoctorId = null,     CreatedAt = DateTime.UtcNow.ToString("o") },
             new PatientAppointment { UserId = braulio.Id, DoctorId = diana.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "presencial",   ScheduledAt = $"{todayStr} 09:00:00", Status = "em_curso",   CreatedByRole = "staff",  CreatedByDoctorId = null,     CreatedAt = DateTime.UtcNow.ToString("o") },
             new PatientAppointment { UserId = cesar.Id,   DoctorId = diana.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "presencial",   ScheduledAt = $"{todayStr} 10:30:00", Status = "confirmada", CreatedByRole = "staff",  CreatedByDoctorId = null,     CreatedAt = DateTime.UtcNow.ToString("o") },
             new PatientAppointment { UserId = joka.Id,    DoctorId = diana.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "teleconsulta", ScheduledAt = $"{todayStr} 11:30:00", Status = "confirmada", CreatedByRole = "staff",  CreatedByDoctorId = null,     CreatedAt = DateTime.UtcNow.ToString("o") },
-            new PatientAppointment { UserId = tiago.Id,   DoctorId = diana.Id, AppointmentTypeId = apptTypeReturn.Id,       Modality = "presencial",   ScheduledAt = $"{todayStr} 14:00:00", Status = "confirmada", CreatedByRole = "doctor", CreatedByDoctorId = diana.Id, CreatedAt = DateTime.UtcNow.ToString("o") }
+            new PatientAppointment { UserId = braulio.Id, DoctorId = diana.Id, AppointmentTypeId = apptTypeExam.Id,         Modality = "presencial",   ScheduledAt = $"{todayStr} 12:30:00", Status = "concluida",  CreatedByRole = "doctor", CreatedByDoctorId = diana.Id, CreatedAt = DateTime.UtcNow.ToString("o") },
+            new PatientAppointment { UserId = tiago.Id,   DoctorId = diana.Id, AppointmentTypeId = apptTypeReturn.Id,       Modality = "presencial",   ScheduledAt = $"{todayStr} 14:00:00", Status = "confirmada", CreatedByRole = "doctor", CreatedByDoctorId = diana.Id, CreatedAt = DateTime.UtcNow.ToString("o") },
+            new PatientAppointment { UserId = tiago.Id,   DoctorId = diana.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "teleconsulta", ScheduledAt = $"{todayStr} 16:00:00", Status = "cancelada",  CreatedByRole = "staff",  CreatedByDoctorId = null,     CreatedAt = DateTime.UtcNow.ToString("o") },
+
+            // Monica — today, all statuses + modalities
+            new PatientAppointment { UserId = cesar.Id,   DoctorId = monica.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "presencial",   ScheduledAt = $"{todayStr} 08:30:00", Status = "pendente",   CreatedByRole = "staff",  CreatedByDoctorId = null,      CreatedAt = DateTime.UtcNow.ToString("o") },
+            new PatientAppointment { UserId = joka.Id,    DoctorId = monica.Id, AppointmentTypeId = apptTypeFollowup.Id,     Modality = "teleconsulta", ScheduledAt = $"{todayStr} 09:30:00", Status = "confirmada", CreatedByRole = "staff",  CreatedByDoctorId = null,      CreatedAt = DateTime.UtcNow.ToString("o") },
+            new PatientAppointment { UserId = braulio.Id, DoctorId = monica.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "presencial",   ScheduledAt = $"{todayStr} 10:30:00", Status = "em_curso",   CreatedByRole = "doctor", CreatedByDoctorId = monica.Id, CreatedAt = DateTime.UtcNow.ToString("o") },
+            new PatientAppointment { UserId = tiago.Id,   DoctorId = monica.Id, AppointmentTypeId = apptTypeExam.Id,         Modality = "presencial",   ScheduledAt = $"{todayStr} 11:30:00", Status = "concluida",  CreatedByRole = "staff",  CreatedByDoctorId = null,      CreatedAt = DateTime.UtcNow.ToString("o") },
+            new PatientAppointment { UserId = cesar.Id,   DoctorId = monica.Id, AppointmentTypeId = apptTypeReturn.Id,       Modality = "presencial",   ScheduledAt = $"{todayStr} 15:00:00", Status = "cancelada",  CreatedByRole = "staff",  CreatedByDoctorId = null,      CreatedAt = DateTime.UtcNow.ToString("o") },
+
+            // Monica — tomorrow, so date navigation ("Dia seguinte") has something to show too
+            new PatientAppointment { UserId = joka.Id,    DoctorId = monica.Id, AppointmentTypeId = apptTypeConsultation.Id, Modality = "presencial",   ScheduledAt = $"{tomorrowStr} 09:00:00", Status = "confirmada", CreatedByRole = "doctor", CreatedByDoctorId = monica.Id, CreatedAt = DateTime.UtcNow.ToString("o") }
         );
 
         db.SaveChanges();
