@@ -17,6 +17,7 @@ const patientNav: NavItem[] = [
   { path: '/habits',          label: 'Hábitos de Saúde', icon: 'bi-heart' },
   { path: '/vaccinations',    label: 'Vacinas',          icon: 'bi-shield-plus' },
   { path: '/access',          label: 'Acessos',          icon: 'bi-key' },
+  { path: '/family',          label: 'Agregado Familiar', icon: 'bi-people' },
 ]
 
 const doctorNav: NavItem[] = [
@@ -33,6 +34,7 @@ const pageInfo: Record<string, { title: string; subtitle: string; icon: string }
   '/habits':          { title: 'Hábitos de Saúde',   subtitle: 'Estilos de vida e hábitos registados',                icon: 'bi-heart' },
   '/vaccinations':    { title: 'Vacinas',             subtitle: 'Registo do seu plano vacinal',                        icon: 'bi-shield-plus' },
   '/access':          { title: 'Acessos e Partilhas', subtitle: 'Gira quem tem acesso ao seu perfil',                 icon: 'bi-key' },
+  '/family':          { title: 'Agregado Familiar',   subtitle: 'Gira os membros do seu agregado familiar',           icon: 'bi-people' },
   '/doctor':          { title: 'Dashboard',           subtitle: 'Visão geral e pesquisa de utentes',                   icon: 'bi-house' },
   '/doctor/profile':  { title: 'Perfil do Médico',   subtitle: 'As suas informações profissionais',                   icon: 'bi-person-badge' },
   '/doctor/access':   { title: 'Pedidos de Acesso',  subtitle: 'Consulte e gira pedidos de acesso a utentes',         icon: 'bi-key' },

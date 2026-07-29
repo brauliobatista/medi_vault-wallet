@@ -47,6 +47,7 @@ builder.Services.AddScoped<HealthHabitService>();
 builder.Services.AddScoped<VaccinationService>();
 builder.Services.AddScoped<DoctorNoteService>();
 builder.Services.AddScoped<DoctorService>();
+builder.Services.AddScoped<FamilyService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -80,7 +81,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
-    db.Database.EnsureCreated();
+    var dbJustCreated = db.Database.EnsureCreated();
 
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
     catch { /* column already exists */ }
@@ -91,6 +92,31 @@ using (var scope = app.Services.CreateScope())
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex TEXT"); }
     catch { /* column already exists */ }
 
+    // Create family-guardianship tables + seed relationship_types if this DB pre-dates the feature
+    // (KAN-33 + Agregado Familiar). Skipped on a brand-new DB: EnsureCreated() already built these
+    // tables from the current EF model, and DatabaseSeeder.Seed() below populates relationship_types
+    // for it — running both would double-insert and violate the unique constraint on code.
+    if (!dbJustCreated)
+    {
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS relationship_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT)");
+            db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS family_guardianships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, guardian_user_id TEXT NOT NULL, dependent_user_id TEXT NOT NULL,
+                relationship_type_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved')),
+                is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (guardian_user_id) REFERENCES users(id), FOREIGN KEY (dependent_user_id) REFERENCES users(id),
+                FOREIGN KEY (relationship_type_id) REFERENCES relationship_types(id), CHECK (guardian_user_id <> dependent_user_id))");
+            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('parent','Pai / mãe')");
+            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('legal_guardian','Tutor legal nomeado por tribunal (pessoa incapacitada)')");
+            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('tutor','Tutor de menor sem tutela parental')");
+            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('other','Outro tipo de responsável')");
+        }
+        catch { /* tables already exist */ }
+    }
+
+    // Backfill missing share codes
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();

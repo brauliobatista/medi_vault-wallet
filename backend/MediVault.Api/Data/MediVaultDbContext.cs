@@ -35,6 +35,8 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<PendingReviewFlag> PendingReviewFlags => Set<PendingReviewFlag>();
     public DbSet<SchemaVersion> SchemaVersions => Set<SchemaVersion>();
     public DbSet<AppVersion> AppVersions => Set<AppVersion>();
+    public DbSet<RelationshipType> RelationshipTypes => Set<RelationshipType>();
+    public DbSet<FamilyGuardianship> FamilyGuardianships => Set<FamilyGuardianship>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,5 +113,26 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .WithMany(d => d.ReviewedFlags)
             .HasForeignKey(f => f.ReviewedBy)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<RelationshipType>()
+            .HasIndex(r => r.Code).IsUnique();
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(f => f.Guardian)
+            .WithMany()
+            .HasForeignKey(f => f.GuardianUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(f => f.Dependent)
+            .WithMany()
+            .HasForeignKey(f => f.DependentUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(f => f.RelationshipType)
+            .WithMany()
+            .HasForeignKey(f => f.RelationshipTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

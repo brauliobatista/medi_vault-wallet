@@ -142,6 +142,7 @@ erDiagram
         guid guardian_user_id FK
         guid dependent_user_id FK
         int relationship_type_id FK
+        string status
         bool is_active
         datetime created_at
     }

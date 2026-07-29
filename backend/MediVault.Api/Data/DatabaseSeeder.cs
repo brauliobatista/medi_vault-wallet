@@ -44,6 +44,15 @@ public static class DatabaseSeeder
             new MedicalSpecialty { Name = "Endocrinologia" }
         );
 
+        // --- Relationship types (Agregado Familiar) ---
+        var relParent = new RelationshipType { Code = "parent", Description = "Pai / mãe" };
+        db.RelationshipTypes.AddRange(
+            relParent,
+            new RelationshipType { Code = "legal_guardian", Description = "Tutor legal nomeado por tribunal (pessoa incapacitada)" },
+            new RelationshipType { Code = "tutor", Description = "Tutor de menor sem tutela parental" },
+            new RelationshipType { Code = "other", Description = "Outro tipo de responsável" }
+        );
+
         db.SaveChanges();
 
         // --- Patients ---
@@ -93,6 +102,12 @@ public static class DatabaseSeeder
 
         db.Users.AddRange(braulio, cesar, joka, tiago);
         db.SaveChanges();
+
+        // --- Family guardianships (Agregado Familiar) ---
+        db.FamilyGuardianships.AddRange(
+            new FamilyGuardianship { GuardianUserId = braulio.Id, DependentUserId = tiago.Id, RelationshipTypeId = relParent.Id, Status = "approved", IsActive = 1 },
+            new FamilyGuardianship { GuardianUserId = cesar.Id, DependentUserId = joka.Id, RelationshipTypeId = relParent.Id, Status = "pending", IsActive = 1 }
+        );
 
         // --- Doctors ---
         var monica = new Doctor
