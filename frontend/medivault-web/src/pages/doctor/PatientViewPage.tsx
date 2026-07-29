@@ -101,6 +101,7 @@ export default function PatientViewPage() {
   const [patientName, setPatientName] = useState(navState?.patientName ?? '')
   const [publicId, setPublicId] = useState(navState?.publicId ?? '')
   const [doctorSpecialty, setDoctorSpecialty] = useState('')
+  const [patientNationality, setPatientNationality] = useState('')
 
   const [summary, setSummary] = useState<Summary | null>(null)
   const [pathologies, setPathologies] = useState<Pathology[]>([])
@@ -127,12 +128,13 @@ export default function PatientViewPage() {
 
   useEffect(() => {
     getDoctorProfile().then((p) => setDoctorSpecialty(p.speciality ?? '')).catch(() => {})
-    if (!navState?.patientName) {
-      api.get(`/users/${uid}/public-info`).then((r) => {
+    api.get(`/users/${uid}/public-info`).then((r) => {
+      if (!navState?.patientName) {
         setPatientName(r.data.name)
         setPublicId(r.data.publicId)
-      }).catch(() => {})
-    }
+      }
+      setPatientNationality(r.data.nationalityName ?? '')
+    }).catch(() => {})
   }, [uid])
 
   useEffect(() => {
@@ -328,6 +330,20 @@ export default function PatientViewPage() {
           <div>
             <div className="consult-chip-label">Género</div>
             <div className="consult-chip-value">{summary ? genderLabel(summary.sex) : '—'}</div>
+          </div>
+        </div>
+        <div className="consult-chip">
+          <i className="bi bi-droplet" style={{ color: '#2563eb' }} />
+          <div>
+            <div className="consult-chip-label">Tipo Sanguíneo</div>
+            <div className="consult-chip-value">{summary?.bloodType ?? '—'}</div>
+          </div>
+        </div>
+        <div className="consult-chip">
+          <i className="bi bi-globe" style={{ color: '#2563eb' }} />
+          <div>
+            <div className="consult-chip-label">Nacionalidade</div>
+            <div className="consult-chip-value">{patientNationality || '—'}</div>
           </div>
         </div>
       </div>

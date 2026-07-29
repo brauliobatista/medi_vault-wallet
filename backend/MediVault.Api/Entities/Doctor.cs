@@ -14,10 +14,12 @@ public class Doctor
     [Column("password_hash")] public string PasswordHash { get; set; } = null!;
     [Column("speciality")] public string? Speciality { get; set; }
     [Column("institution_id")] public string InstitutionId { get; set; } = null!;
+    [Column("nationality_id")] public int NationalityId { get; set; }
     [Column("is_active")] public int IsActive { get; set; } = 1;
     [Column("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
 
     [ForeignKey("InstitutionId")] public Institution Institution { get; set; } = null!;
+    [ForeignKey("NationalityId")] public Country? Nationality { get; set; }
 
     public ICollection<AccessRequest> AccessRequests { get; set; } = [];
     public ICollection<DoctorNote> Notes { get; set; } = [];

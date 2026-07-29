@@ -8,7 +8,8 @@ public record DoctorProfileDto(
     string LastName,
     string? Speciality,
     string InstitutionId,
-    string InstitutionName
+    string InstitutionName,
+    string? NationalityName
 );
 
 public record UpdateDoctorRequest(

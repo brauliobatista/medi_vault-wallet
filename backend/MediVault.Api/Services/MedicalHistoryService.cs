@@ -145,12 +145,12 @@ public class MedicalHistoryService(MediVaultDbContext db, UserService userServic
 
     public async Task<PatientSummaryDto?> GetPatientSummaryAsync(string userId)
     {
-        var u = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
+        var u = await db.Users.Include(x => x.SexGender).FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
         if (u is null) return null;
         var photoUrl = u.PhotoPath is null ? null : $"/uploads/profile-photos/{u.PhotoPath}";
         return new PatientSummaryDto(
             u.Id, u.FirstName, u.LastName, u.BiologicalGender, u.BloodType, u.AcceptsTransfusion == 1,
-            u.Sex, u.Birthday, u.UtentNumber, photoUrl);
+            u.SexGender?.Description ?? u.BiologicalGender, u.Birthday, u.UtentNumber, photoUrl);
     }
 
     public async Task<bool> UpdateBloodTypeAsync(string userId, string? bloodType)
