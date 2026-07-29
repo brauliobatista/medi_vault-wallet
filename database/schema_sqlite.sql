@@ -507,3 +507,63 @@ CREATE TABLE app_versions (
     environment  TEXT    NOT NULL CHECK (environment IN ('dev', 'staging', 'prod')),
     is_current   INTEGER NOT NULL DEFAULT 0
 );
+
+-- CLINICAL CONSULTATION RECORDS
+-- -------------------------------------------------------
+
+CREATE TABLE vital_signs (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id                  TEXT    NOT NULL,
+    doctor_id                TEXT    NOT NULL,
+    recorded_at              TEXT    NOT NULL,
+    blood_pressure_systolic  INTEGER,
+    blood_pressure_diastolic INTEGER,
+    heart_rate               INTEGER,
+    respiratory_rate         INTEGER,
+    temperature              REAL,
+    spo2                     INTEGER,
+    weight                   REAL,
+    height                   REAL,
+    notes                    TEXT,
+    created_at               TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+CREATE TABLE clinical_assessments (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    TEXT    NOT NULL,
+    doctor_id  TEXT    NOT NULL,
+    hypothesis TEXT    NOT NULL,
+    plan       TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- Anamnesis is historical: every save creates a new row. Editing an existing row
+-- is only allowed application-side for the SAME doctor_id, within 24h of created_at.
+CREATE TABLE anamneses (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id          TEXT    NOT NULL,
+    doctor_id        TEXT    NOT NULL,
+    chief_complaint  TEXT,
+    illness_history  TEXT,
+    personal_history TEXT,
+    created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- Team chat: doctors discussing a patient's case amongst themselves.
+CREATE TABLE patient_chat_messages (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id           TEXT    NOT NULL,
+    author_doctor_id  TEXT    NOT NULL,
+    message           TEXT    NOT NULL,
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);

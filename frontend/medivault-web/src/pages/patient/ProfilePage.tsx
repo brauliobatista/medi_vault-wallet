@@ -139,7 +139,7 @@ export default function ProfilePage() {
                 <div className="row g-2">
                   <CheckField label="Aceita transfusão" field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} />
                   <CheckField label="Manobras de reanimação" field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} />
-                  <CheckField label="Acesso de emergência" field="emergencyAccess" form={form} setForm={setForm} editing={editing} />
+                  <CheckField label="Acesso de emergência" field="emergencyAccess" form={form} setForm={setForm} editing={false} />
                 </div>
               </div>
             </div>
