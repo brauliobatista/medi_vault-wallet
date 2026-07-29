@@ -383,6 +383,14 @@ export default function PatientViewPage() {
             <div className="consult-context-item context-danger">
               <i className="bi bi-droplet-fill" />
               <div>
+                <div className="consult-context-title">Grupo Sanguíneo</div>
+                <div className="consult-context-value">{summary?.bloodType ?? 'Não registado'}</div>
+              </div>
+            </div>
+
+            <div className="consult-context-item context-danger">
+              <i className="bi bi-droplet-fill" />
+              <div>
                 <div className="consult-context-title">Transfusão de Sangue</div>
                 <div className="consult-context-value">{summary?.acceptsTransfusion ? 'Sim' : 'Não'}</div>
               </div>
