@@ -125,6 +125,18 @@ CREATE TABLE doctors (
     FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
 
+-- A doctor may practice at more than one institution (many-to-many).
+-- doctors.institution_id remains the doctor's primary/default institution.
+CREATE TABLE doctor_institutions (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    doctor_id      TEXT    NOT NULL,
+    institution_id TEXT    NOT NULL,
+    created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (doctor_id, institution_id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+
 -- -------------------------------------------------------
 -- USER PROFILE
 -- -------------------------------------------------------

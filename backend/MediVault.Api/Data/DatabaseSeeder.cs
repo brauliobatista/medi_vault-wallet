@@ -17,9 +17,11 @@ public static class DatabaseSeeder
         db.SubscriptionPlans.AddRange(planBasic, planMedium, planPremium);
 
         // --- Institutions ---
-        var hospital = new Institution { Id = Guid.NewGuid().ToString(), Name = "Hospital de Santa Maria", Type = "hospital", Address = "Av. Prof. Egas Moniz, Lisboa", Phone = "217 805 000", IsActive = 1 };
-        var clinica  = new Institution { Id = Guid.NewGuid().ToString(), Name = "CUF Descobertas",         Type = "clinic",   Address = "R. Mário Botas, Lisboa",       Phone = "210 025 200", IsActive = 1 };
-        db.Institutions.AddRange(hospital, clinica);
+        var hospital = new Institution { Id = Guid.NewGuid().ToString(), Name = "Hospital de Santa Maria",      Type = "hospital", Address = "Av. Prof. Egas Moniz, Lisboa",   Phone = "217 805 000", IsActive = 1 };
+        var clinica  = new Institution { Id = Guid.NewGuid().ToString(), Name = "CUF Descobertas",              Type = "clinic",   Address = "R. Mário Botas, Lisboa",         Phone = "210 025 200", IsActive = 1 };
+        var laborat  = new Institution { Id = Guid.NewGuid().ToString(), Name = "Laboratório Germano de Sousa", Type = "lab",      Address = "Av. Liberdade 110, Lisboa",      Phone = "213 185 100", IsActive = 1 };
+        var portoCH  = new Institution { Id = Guid.NewGuid().ToString(), Name = "Centro Hospitalar do Porto",   Type = "hospital", Address = "Largo Prof. Abel Salazar, Porto", Phone = "222 077 500", IsActive = 1 };
+        db.Institutions.AddRange(hospital, clinica, laborat, portoCH);
 
         // --- Vaccines ---
         db.Vaccines.AddRange(
@@ -41,7 +43,10 @@ public static class DatabaseSeeder
         db.MedicalSpecialties.AddRange(
             new MedicalSpecialty { Name = "Medicina Geral e Familiar" },
             new MedicalSpecialty { Name = "Cardiologia" },
-            new MedicalSpecialty { Name = "Endocrinologia" }
+            new MedicalSpecialty { Name = "Endocrinologia" },
+            new MedicalSpecialty { Name = "Neurologia" },
+            new MedicalSpecialty { Name = "Pediatria" },
+            new MedicalSpecialty { Name = "Ortopedia" }
         );
 
         db.SaveChanges();
@@ -120,6 +125,17 @@ public static class DatabaseSeeder
         };
 
         db.Doctors.AddRange(monica, diana, maria);
+        db.SaveChanges();
+
+        // --- Doctor institutions (a doctor may practice at more than one) ---
+        db.DoctorInstitutions.AddRange(
+            new DoctorInstitution { DoctorId = monica.Id, InstitutionId = hospital.Id },
+            new DoctorInstitution { DoctorId = diana.Id,  InstitutionId = clinica.Id },
+            new DoctorInstitution { DoctorId = diana.Id,  InstitutionId = hospital.Id },
+            new DoctorInstitution { DoctorId = diana.Id,  InstitutionId = laborat.Id },
+            new DoctorInstitution { DoctorId = maria.Id,  InstitutionId = hospital.Id },
+            new DoctorInstitution { DoctorId = maria.Id,  InstitutionId = portoCH.Id }
+        );
         db.SaveChanges();
 
         // --- Subscriptions ---

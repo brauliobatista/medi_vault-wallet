@@ -15,6 +15,8 @@ export const deleteProfilePhoto = () => api.delete('/users/me/photo')
 export const getDoctorProfile = () => api.get('/doctors/me').then((r) => r.data)
 export const updateDoctorProfile = (data: object) => api.put('/doctors/me', data).then((r) => r.data)
 export const changeDoctorPassword = (data: object) => api.put('/doctors/me/password', data)
+export const getInstitutionOptions = () => api.get('/doctors/institutions').then((r) => r.data)
+export const getSpecialtyOptions = () => api.get('/doctors/specialties').then((r) => r.data)
 
 export const getAccessStatus = (userId: string) =>
   api.get(`/patients/${userId}/access-status`).then((r) => r.data as { hasAccess: boolean; reason: string })
