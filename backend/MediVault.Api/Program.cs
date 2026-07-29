@@ -89,7 +89,6 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
     db.Database.EnsureCreated();
 
-    // Add card_active column if this DB pre-dates the feature
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
     catch { /* column already exists */ }
 
@@ -97,11 +96,16 @@ using (var scope = app.Services.CreateScope())
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
     catch { /* column already exists */ }
 
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex TEXT"); }
+    catch { /* column already exists */ }
+
     // Backfill missing share codes
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
     if (usersToBackfill.Count > 0) db.SaveChanges();
+
+    db.Database.ExecuteSqlRaw("UPDATE users SET sex = biological_gender WHERE sex IS NULL OR sex = ''");
 
     DatabaseSeeder.Seed(db, documentsDir);
 }
