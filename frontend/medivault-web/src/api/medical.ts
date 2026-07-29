@@ -19,6 +19,45 @@ export const changeDoctorPassword = (data: object) => api.put('/doctors/me/passw
 export const getAccessStatus = (userId: string) =>
   api.get(`/patients/${userId}/access-status`).then((r) => r.data as { hasAccess: boolean; reason: string })
 
+export const getPatientSummary = (userId: string) =>
+  api.get(`/patients/${userId}/summary`).then((r) => r.data)
+export const updateBloodType = (userId: string, bloodType: string | null) =>
+  api.put(`/patients/${userId}/blood-type`, { bloodType })
+
+export const getPathologies = (userId: string) =>
+  api.get(`/patients/${userId}/pathologies`).then((r) => r.data)
+export const addPathology = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/pathologies`, data).then((r) => r.data)
+export const deletePathology = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/pathologies/${id}`)
+
+export const getIcpc2Codes = () => api.get('/icpc2-codes').then((r) => r.data)
+
+export const getVitalSigns = (userId: string) =>
+  api.get(`/patients/${userId}/vital-signs`).then((r) => r.data)
+export const addVitalSign = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/vital-signs`, data).then((r) => r.data)
+export const updateVitalSign = (userId: string, id: number, data: object) =>
+  api.put(`/patients/${userId}/vital-signs/${id}`, data)
+export const deleteVitalSign = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/vital-signs/${id}`)
+
+export const getAssessments = (userId: string) =>
+  api.get(`/patients/${userId}/assessments`).then((r) => r.data)
+export const addAssessment = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/assessments`, data).then((r) => r.data)
+export const updateAssessment = (userId: string, id: number, data: object) =>
+  api.put(`/patients/${userId}/assessments/${id}`, data)
+export const deleteAssessment = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/assessments/${id}`)
+
+export const getAnamneses = (userId: string) =>
+  api.get(`/patients/${userId}/anamneses`).then((r) => r.data)
+export const addAnamnesis = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/anamneses`, data).then((r) => r.data)
+export const updateAnamnesis = (userId: string, id: number, data: object) =>
+  api.put(`/patients/${userId}/anamneses/${id}`, data)
+
 export const getSurgeries = (userId: string) =>
   api.get(`/patients/${userId}/surgeries`).then((r) => r.data)
 export const addSurgery = (userId: string, data: object) =>
@@ -81,6 +120,9 @@ export const scanQrCode = (qrCode: string) =>
 export const getAccessRequests = () => api.get('/access-requests').then((r) => r.data)
 export const requestAccess = (userId: string) =>
   api.post(`/access-requests/${userId}`).then((r) => r.data)
+// DEV-ONLY: auto-approves access so "Ver dados" works without a separate patient login to approve it
+export const grantAccessDev = (userId: string) =>
+  api.post(`/access-requests/${userId}/grant-dev`).then((r) => r.data)
 export const respondToRequest = (requestId: number, action: 'approve' | 'revoke') =>
   api.put(`/access-requests/${requestId}/respond`, { action })
 export const deleteRequest = (requestId: number) =>
@@ -100,4 +142,21 @@ export const getFlags = (userId: string) =>
   api.get(`/doctor-notes/flags/${userId}`).then((r) => r.data)
 export const markFlagReviewed = (flagId: number) =>
   api.put(`/doctor-notes/flags/${flagId}/review`)
+
+export const getDocuments = (userId: string) =>
+  api.get(`/patients/${userId}/documents`).then((r) => r.data)
+export const uploadDocument = (userId: string, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(`/patients/${userId}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data)
+}
+export const deleteDocument = (userId: string, id: number) =>
+  api.delete(`/patients/${userId}/documents/${id}`)
+
+export const getChatMessages = (userId: string) =>
+  api.get(`/patients/${userId}/chat-messages`).then((r) => r.data)
+export const sendChatMessage = (userId: string, message: string) =>
+  api.post(`/patients/${userId}/chat-messages`, { message }).then((r) => r.data)
 

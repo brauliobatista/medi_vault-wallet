@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // wwwroot must exist before Build() runs, or IWebHostEnvironment.WebRootFileProvider
 // resolves to a NullFileProvider and UseStaticFiles() will 404 everything forever.
 Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "profile-photos"));
+var documentsDir = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "documents");
+Directory.CreateDirectory(documentsDir);
 
 // Database
 builder.Services.AddDbContext<MediVaultDbContext>(opt =>
@@ -47,6 +49,9 @@ builder.Services.AddScoped<HealthHabitService>();
 builder.Services.AddScoped<VaccinationService>();
 builder.Services.AddScoped<DoctorNoteService>();
 builder.Services.AddScoped<DoctorService>();
+builder.Services.AddScoped<ClinicalRecordsService>();
+builder.Services.AddScoped<MedicalFileService>();
+builder.Services.AddScoped<TeamChatService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -71,7 +76,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCors(opt => opt.AddPolicy("Frontend", policy =>
     policy.WithOrigins("http://localhost:5173", "https://localhost:5173",
                        "http://localhost:5174", "https://localhost:5174",
-                       "http://192.168.1.77:5173")
+                       "http://192.168.1.77:5173",
+                       "http://192.168.1.189:5173", "https://192.168.1.189:5173",
+                       "http://192.168.1.135:5173", "https://192.168.1.135:5173")
           .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -85,12 +92,14 @@ using (var scope = app.Services.CreateScope())
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
     catch { /* column already exists */ }
 
+    // Add photo_path column if this DB pre-dates the feature
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
     catch { /* column already exists */ }
 
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex TEXT"); }
     catch { /* column already exists */ }
 
+    // Backfill missing share codes
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
@@ -98,7 +107,7 @@ using (var scope = app.Services.CreateScope())
 
     db.Database.ExecuteSqlRaw("UPDATE users SET sex = biological_gender WHERE sex IS NULL OR sex = ''");
 
-    DatabaseSeeder.Seed(db);
+    DatabaseSeeder.Seed(db, documentsDir);
 }
 
 if (app.Environment.IsDevelopment())

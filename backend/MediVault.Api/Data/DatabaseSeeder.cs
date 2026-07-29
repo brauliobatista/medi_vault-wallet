@@ -1,3 +1,4 @@
+using System.Text;
 using MediVault.Api.Entities;
 
 namespace MediVault.Api.Data;
@@ -6,7 +7,42 @@ public static class DatabaseSeeder
 {
     private static string NewShareCode() => Guid.NewGuid().ToString("N")[..12].ToUpper();
 
-    public static void Seed(MediVaultDbContext db)
+    // Builds a minimal, valid, openable PDF (no external library needed) with a heading and two body lines.
+    // Offsets in the xref table are computed exactly so PDF viewers that honor xref render it correctly.
+    private static byte[] GenerateTestPdf(string heading, string bodyLine1, string bodyLine2)
+    {
+        string Esc(string s) => s.Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
+        var content =
+            $"BT\n/F1 18 Tf\n50 720 Td\n({Esc(heading)}) Tj\n0 -30 Td\n/F1 12 Tf\n({Esc(bodyLine1)}) Tj\n0 -20 Td\n({Esc(bodyLine2)}) Tj\nET\n";
+        var contentBytes = Encoding.ASCII.GetByteCount(content);
+
+        var objects = new List<string>
+        {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            $"<< /Length {contentBytes} >>\nstream\n{content}endstream"
+        };
+
+        var sb = new StringBuilder();
+        sb.Append("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Count; i++)
+        {
+            offsets.Add(Encoding.ASCII.GetByteCount(sb.ToString()));
+            sb.Append($"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+        var xrefOffset = Encoding.ASCII.GetByteCount(sb.ToString());
+        sb.Append($"xref\n0 {objects.Count + 1}\n");
+        sb.Append("0000000000 65535 f \n");
+        foreach (var off in offsets)
+            sb.Append($"{off:D10} 00000 n \n");
+        sb.Append($"trailer\n<< /Size {objects.Count + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF");
+        return Encoding.ASCII.GetBytes(sb.ToString());
+    }
+
+    public static void Seed(MediVaultDbContext db, string documentsDir)
     {
         if (db.Users.Any()) return;
 
@@ -31,8 +67,11 @@ public static class DatabaseSeeder
         );
 
         // --- ICPC2 codes ---
+        var icpc2Hypertension = new Icpc2Code { Code = "K86", Description = "Hipertensão arterial sem complicações", Chapter = "K - Cardiovascular" };
+        var icpc2Dyslipidemia = new Icpc2Code { Code = "T93", Description = "Dislipidemia",                          Chapter = "T - Endócrino" };
         db.Icpc2Codes.AddRange(
-            new Icpc2Code { Code = "K86", Description = "Hipertensão arterial sem complicações", Chapter = "K - Cardiovascular" },
+            icpc2Hypertension,
+            icpc2Dyslipidemia,
             new Icpc2Code { Code = "T90", Description = "Diabetes mellitus tipo 2",              Chapter = "T - Endócrino" },
             new Icpc2Code { Code = "R96", Description = "Asma",                                  Chapter = "R - Respiratório" }
         );
@@ -131,19 +170,17 @@ public static class DatabaseSeeder
         );
 
         // --- Sample medical data for Braulio ---
-        db.ChronicMedications.Add(new ChronicMedication
-        {
-            UserId = braulio.Id, ActiveSubstance = "Metformina", Dose = "850mg",
-            Posology = "2x/dia às refeições", StartDate = "2022-06-01",
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
-        });
+        db.ChronicMedications.AddRange(
+            new ChronicMedication { UserId = braulio.Id, ActiveSubstance = "Metformina",    Dose = "850mg", Posology = "2x/dia às refeições",    StartDate = "2022-06-01", PrescribedBy = diana.Id, IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o") },
+            new ChronicMedication { UserId = braulio.Id, ActiveSubstance = "Atorvastatina",  Dose = "20mg",  Posology = "1x ao dia à noite",       StartDate = "2022-06-15", PrescribedBy = diana.Id, IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o") },
+            new ChronicMedication { UserId = braulio.Id, ActiveSubstance = "Losartan",       Dose = "50mg",  Posology = "1x ao dia de manhã",      StartDate = "2021-03-10", PrescribedBy = diana.Id, IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o") },
+            new ChronicMedication { UserId = braulio.Id, ActiveSubstance = "AAS",            Dose = "100mg", Posology = "1x ao dia",               StartDate = "2023-01-05", PrescribedBy = diana.Id, IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o") }
+        );
 
-        db.DrugAllergies.Add(new DrugAllergy
-        {
-            UserId = braulio.Id, ActiveSubstance = "Penicilina",
-            AllergicReaction = "Urticária generalizada", Severity = "moderate",
-            CreatedAt = DateTime.UtcNow.ToString("o")
-        });
+        db.DrugAllergies.AddRange(
+            new DrugAllergy { UserId = braulio.Id, ActiveSubstance = "Penicilina", AllergicReaction = "Urticária generalizada", Severity = "moderate", CreatedAt = DateTime.UtcNow.ToString("o") },
+            new DrugAllergy { UserId = braulio.Id, ActiveSubstance = "AINEs",      AllergicReaction = "Urticária generalizada", Severity = "moderate", CreatedAt = DateTime.UtcNow.ToString("o") }
+        );
 
         db.SurgicalHistories.Add(new SurgicalHistory
         {
@@ -170,6 +207,133 @@ public static class DatabaseSeeder
             ExpiresAt   = DateTime.UtcNow.AddDays(25).ToString("o"),
             IsEmergency = 0
         });
+
+        // --- Access: Diana → Braulio (approved) — so the consultation view has a patient to open ---
+        db.AccessRequests.Add(new AccessRequest
+        {
+            UserId = braulio.Id, DoctorId = diana.Id,
+            Status = "approved",
+            RequestedAt = DateTime.UtcNow.AddDays(-5).ToString("o"),
+            ApprovedAt  = DateTime.UtcNow.AddDays(-4).ToString("o"),
+            ExpiresAt   = DateTime.UtcNow.AddDays(25).ToString("o"),
+            IsEmergency = 0
+        });
+
+        // --- Active pathologies for Braulio ("Problemas Ativos" in the consultation view) ---
+        db.UserPathologies.AddRange(
+            new UserPathology { UserId = braulio.Id, Icpc2Id = icpc2Hypertension.Id, Type = "chronic", DiagnosedAt = "2021-03-10" },
+            new UserPathology { UserId = braulio.Id, Icpc2Id = icpc2Dyslipidemia.Id, Type = "chronic", DiagnosedAt = "2022-06-15" }
+        );
+
+        // --- Exams for Braulio ("Últimos Exames" in the consultation view) ---
+        var analyticalExam = new AnalyticalExam
+        {
+            UserId = braulio.Id, ExamDate = "2025-04-15", Laboratory = "Germano de Sousa",
+            Notes = "Perfil lipídico e glicemia de jejum", AddedBy = diana.Id, IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
+        };
+        db.AnalyticalExams.Add(analyticalExam);
+        db.SaveChanges();
+
+        db.AnalyticalExamParameters.AddRange(
+            new AnalyticalExamParameter { ExamId = analyticalExam.Id, ParameterName = "Colesterol Total",   Value = 245, Unit = "mg/dL", ReferenceMin = 0,  ReferenceMax = 200, IsAbnormal = 1 },
+            new AnalyticalExamParameter { ExamId = analyticalExam.Id, ParameterName = "Glicemia em Jejum",  Value = 92,  Unit = "mg/dL", ReferenceMin = 70, ReferenceMax = 100, IsAbnormal = 0 }
+        );
+
+        db.ImagingExams.Add(new ImagingExam
+        {
+            UserId = braulio.Id, ExamType = "Ecocardiograma", BodyArea = "Cardíaco", ExamDate = "2025-05-05",
+            Institution = "Hospital de Santa Maria", ReportText = "Função sistólica preservada. Sem alterações valvulares significativas.",
+            AddedBy = diana.Id, IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
+        });
+
+        db.OptometryExams.Add(new OptometryExam
+        {
+            UserId = braulio.Id, ExamDate = "2025-02-10",
+            RightSphere = -1.5, RightCylinder = -0.5, RightAxis = 90,
+            LeftSphere = -1.25, LeftCylinder = -0.5, LeftAxis = 85,
+            AddedBy = diana.Id, IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
+        });
+
+        db.UserVaccinations.Add(new UserVaccination
+        {
+            UserId = braulio.Id, VaccineId = 4, DoseNumber = "1ª", AdministeredAt = "2020-05-10",
+            NextDueDate = "2030-05-10", Institution = "Centro de Saúde", AddedBy = diana.Id
+        });
+
+        // --- Vital signs, clinical assessments and anamnesis for Braulio (Diana's consultation view) ---
+        db.VitalSigns.Add(new VitalSign
+        {
+            UserId = braulio.Id, DoctorId = diana.Id, RecordedAt = "2026-07-26 10:30:00",
+            BloodPressureSystolic = 128, BloodPressureDiastolic = 80, HeartRate = 72, RespiratoryRate = 16,
+            Temperature = 36.6m, Spo2 = 98, Weight = 72.4m, Height = 168,
+            Notes = "Doente com bom aspeto geral, eupneico em repouso. Auscultação cardíaca com sopro sistólico II/VI no foco mitral. Sem edemas periféricos. Abdómen mole e depressível, sem massas palpáveis.",
+            CreatedAt = DateTime.UtcNow.ToString("o")
+        });
+
+        db.ClinicalAssessments.AddRange(
+            new ClinicalAssessment { UserId = braulio.Id, DoctorId = diana.Id, Hypothesis = "Insuficiência Cardíaca", Plan = "Ecocardiograma transtorácico, NT-proBNP, RX tórax", CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o") },
+            new ClinicalAssessment { UserId = braulio.Id, DoctorId = diana.Id, Hypothesis = "Doença arterial coronária", Plan = "Teste provocação isquémica, ECG de esforço", CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o") }
+        );
+
+        db.Anamneses.Add(new Anamnesis
+        {
+            UserId = braulio.Id, DoctorId = diana.Id,
+            ChiefComplaint = "Dispneia aos esforços médios (subir escadas), fadiga fácil, sem dor torácica.",
+            IllnessHistory = "Sintomas iniciados há cerca de 3 semanas, progressivos. Nega ortopneia, PND ou edema.",
+            PersonalHistory = "Hipertensão arterial diagnosticada há 5 anos. Dislipidemia.",
+            CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
+        });
+
+        // --- Documents for Braulio ("Documentos" in the consultation view) ---
+        // Real, openable test PDFs with test text, physically written to disk (mirrors the profile-photo static-file pattern).
+        Directory.CreateDirectory(documentsDir);
+
+        var pdf1Name = $"{braulio.Id}-{Guid.NewGuid()}.pdf";
+        File.WriteAllBytes(Path.Combine(documentsDir, pdf1Name), GenerateTestPdf(
+            "Relatorio de Ecocardiograma - Documento de Teste",
+            "Paciente: Braulio Batista - Utente 100000001",
+            "Funcao sistolica preservada. Sem alteracoes valvulares significativas."));
+
+        var pdf2Name = $"{braulio.Id}-{Guid.NewGuid()}.pdf";
+        File.WriteAllBytes(Path.Combine(documentsDir, pdf2Name), GenerateTestPdf(
+            "Analises Clinicas - Documento de Teste",
+            "Paciente: Braulio Batista - Utente 100000001",
+            "Colesterol Total 245 mg/dL (elevado). Glicemia em jejum 92 mg/dL (normal)."));
+
+        db.MedicalFiles.AddRange(
+            new MedicalFile
+            {
+                UserId = braulio.Id, FileName = "Relatorio_Ecocardiograma.pdf", FileType = "pdf",
+                FilePath = Path.Combine(documentsDir, pdf1Name), UploadedBy = diana.Id,
+                UploadedAt = DateTime.UtcNow.AddDays(-3).ToString("o")
+            },
+            new MedicalFile
+            {
+                UserId = braulio.Id, FileName = "Analises_Sangue.pdf", FileType = "pdf",
+                FilePath = Path.Combine(documentsDir, pdf2Name), UploadedBy = diana.Id,
+                UploadedAt = DateTime.UtcNow.AddDays(-1).ToString("o")
+            });
+
+        // --- Team chat for Braulio (Monica and Diana discussing the case) ---
+        db.TeamChatMessages.AddRange(
+            new TeamChatMessage
+            {
+                UserId = braulio.Id, AuthorDoctorId = monica.Id,
+                Message = "Bom dia Diana, o Braulio esteve cá esta semana queixando-se de fadiga fácil e dispneia. Podes dar uma vista de olhos do lado da cardiologia?",
+                CreatedAt = DateTime.UtcNow.AddDays(-2).ToString("o")
+            },
+            new TeamChatMessage
+            {
+                UserId = braulio.Id, AuthorDoctorId = diana.Id,
+                Message = "Bom dia, obrigada pelo aviso. Vou pedir um ecocardiograma e reavaliar a medicação anti-hipertensiva dele.",
+                CreatedAt = DateTime.UtcNow.AddDays(-2).AddHours(3).ToString("o")
+            },
+            new TeamChatMessage
+            {
+                UserId = braulio.Id, AuthorDoctorId = diana.Id,
+                Message = "Resultados do eco dentro da normalidade, função sistólica preservada. Reveja os resultados do eco anexados nos documentos.",
+                CreatedAt = DateTime.UtcNow.AddHours(-9).ToString("o")
+            });
 
         db.SaveChanges();
     }

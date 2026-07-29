@@ -122,6 +122,42 @@ public class AccessControlService(MediVaultDbContext db)
         return (request, $"{user.FirstName} {user.LastName}", user.Id);
     }
 
+    // DEV-ONLY: auto-approves access straight from the search result's "Ver dados" button so
+    // testing doesn't require a separate patient login to approve the request. Remove/replace
+    // with the real request→approve flow before production.
+    public async Task<AccessRequest?> GrantAccessDevAsync(string doctorId, string userId)
+    {
+        var user = await db.Users.AnyAsync(u => u.Id == userId && u.IsActive == 1);
+        if (!user) return null;
+
+        var expiry = DateTime.UtcNow.AddDays(7).ToString("o");
+
+        var existing = await db.AccessRequests
+            .FirstOrDefaultAsync(r => r.DoctorId == doctorId && r.UserId == userId && r.Status == "approved");
+
+        if (existing is not null)
+        {
+            existing.ExpiresAt = expiry;
+            await db.SaveChangesAsync();
+            return existing;
+        }
+
+        var request = new AccessRequest
+        {
+            DoctorId = doctorId,
+            UserId = userId,
+            Status = "approved",
+            AccessCode = new Random().Next(100000, 999999).ToString(),
+            IsEmergency = 0,
+            RequestedAt = DateTime.UtcNow.ToString("o"),
+            ApprovedAt = DateTime.UtcNow.ToString("o"),
+            ExpiresAt = expiry
+        };
+        db.AccessRequests.Add(request);
+        await db.SaveChangesAsync();
+        return request;
+    }
+
     public async Task<(string UserId, string Name, string PublicId)?> FindPatientByUtentNumberAsync(string utentNumber)
     {
         var user = await db.Users
