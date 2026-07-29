@@ -629,3 +629,54 @@ INSERT INTO app_versions (version, release_date, description, deployed_by, envir
 ('0.1.0', '2026-05-01', 'Versão inicial — autenticação e perfil de utilizador', 'braulio.batista', 'dev', 0),
 ('0.2.0', '2026-06-01', 'MCDTS — exames analíticos e de imagem',                'braulio.batista', 'dev', 0),
 ('0.3.0', '2026-06-21', 'Hábitos de saúde consolidados e versionamento',        'braulio.batista', 'dev', 1);
+
+-- -------------------------------------------------------
+-- SCHEDULE_EVENT_TYPES
+-- -------------------------------------------------------
+INSERT INTO schedule_event_types (code, description) VALUES
+('CONGRESS', 'Congresso'),
+('TRAINING', 'Formação'),
+('VACATION', 'Férias');
+
+-- -------------------------------------------------------
+-- APPOINTMENT_TYPES
+-- -------------------------------------------------------
+INSERT INTO appointment_types (code, description) VALUES
+('CONSULTATION', 'Consulta'),
+('FOLLOWUP',     'Acompanhamento'),
+('EXAM',         'Exame'),
+('RETURN',       'Retorno');
+
+-- -------------------------------------------------------
+-- INSTITUTION_CONTACTS
+-- -------------------------------------------------------
+INSERT INTO institution_contacts (institution_id, service_name, extension, is_active) VALUES
+('10000000-0000-0000-0000-000000000001', 'Receção Principal',          '+351 210 000 100', 1),
+('10000000-0000-0000-0000-000000000001', 'Secretaria de Cardiologia',  '+351 210 000 101', 1),
+('10000000-0000-0000-0000-000000000001', 'Enfermaria 2º Andar',        '+351 210 000 102', 1),
+('10000000-0000-0000-0000-000000000001', 'Exames – Marcação',          '+351 210 000 103', 1),
+('10000000-0000-0000-0000-000000000002', 'Apoio ao Utente',            '+351 210 025 210', 1),
+('10000000-0000-0000-0000-000000000002', 'Farmácia Hospitalar',        '+351 210 025 211', 1);
+
+-- -------------------------------------------------------
+-- DOCTOR_SCHEDULE_EVENTS
+-- -------------------------------------------------------
+INSERT INTO doctor_schedule_events (doctor_id, event_type_id, title, location, start_date, end_date, notes) VALUES
+('20000000-0000-0000-0000-000000000001', 1, 'Congresso Nacional de Cardiologia', 'Lisboa, Portugal', '2026-05-15', '2026-05-17', NULL),
+('20000000-0000-0000-0000-000000000001', 1, 'European Society of Cardiology',    'Madrid, Espanha',  '2026-06-05', '2026-06-07', NULL),
+('20000000-0000-0000-0000-000000000001', 3, 'Período de Férias',                 NULL,               '2026-08-02', '2026-08-08', NULL),
+('20000000-0000-0000-0000-000000000003', 2, 'Formação em Neurologia Pediátrica', 'Porto, Portugal',  '2026-05-22', '2026-05-23', 'Ação de formação interna');
+
+-- -------------------------------------------------------
+-- PATIENT_APPOINTMENTS
+-- -------------------------------------------------------
+INSERT INTO patient_appointments (user_id, doctor_id, appointment_type_id, modality, scheduled_at, status, created_by_role, created_by_doctor_id) VALUES
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 1, 'presencial',   '2026-05-10 09:00:00', 'em_curso',   'doctor', '20000000-0000-0000-0000-000000000001'),
+('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 1, 'presencial',   '2026-05-10 10:30:00', 'confirmada', 'staff',  NULL),
+('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 1, 'teleconsulta', '2026-05-10 11:30:00', 'confirmada', 'staff',  NULL),
+('30000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000001', 4, 'presencial',   '2026-05-10 14:00:00', 'confirmada', 'doctor', '20000000-0000-0000-0000-000000000001'),
+('30000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000001', 1, 'presencial',   '2026-05-10 15:30:00', 'confirmada', 'staff',  NULL),
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 1, 'presencial',   '2026-07-26 09:00:00', 'em_curso',   'staff',  NULL),
+('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 1, 'presencial',   '2026-07-26 10:30:00', 'confirmada', 'staff',  NULL),
+('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 1, 'teleconsulta', '2026-07-26 11:30:00', 'confirmada', 'staff',  NULL),
+('30000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000001', 4, 'presencial',   '2026-07-26 14:00:00', 'confirmada', 'doctor', '20000000-0000-0000-0000-000000000001');

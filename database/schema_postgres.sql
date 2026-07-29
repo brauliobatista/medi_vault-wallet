@@ -501,3 +501,152 @@ CREATE TABLE app_versions (
     environment  TEXT      NOT NULL CHECK (environment IN ('dev', 'staging', 'prod')),
     is_current   BOOLEAN   NOT NULL DEFAULT FALSE
 );
+
+-- -------------------------------------------------------
+-- SCHEDULING & AGENDA
+-- -------------------------------------------------------
+
+CREATE TABLE schedule_event_types (
+    id          SERIAL PRIMARY KEY,
+    code        TEXT   NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE appointment_types (
+    id          SERIAL PRIMARY KEY,
+    code        TEXT   NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE institution_contacts (
+    id             SERIAL    PRIMARY KEY,
+    institution_id UUID      NOT NULL,
+    service_name   TEXT      NOT NULL,
+    extension      TEXT      NOT NULL,
+    is_active      BOOLEAN   NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_institution_contacts_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+
+CREATE TABLE doctor_schedule_events (
+    id            SERIAL    PRIMARY KEY,
+    doctor_id     UUID      NOT NULL,
+    event_type_id INT       NOT NULL,
+    title         TEXT      NOT NULL,
+    location      TEXT,
+    start_date    DATE      NOT NULL,
+    end_date      DATE      NOT NULL,
+    notes         TEXT,
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_doctor_schedule_events_dates CHECK (end_date >= start_date),
+    CONSTRAINT fk_doctor_schedule_events_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_doctor_schedule_events_type   FOREIGN KEY (event_type_id) REFERENCES schedule_event_types(id)
+);
+
+-- Prevent overlapping schedule events (congress/training/vacation) for the same doctor
+CREATE OR REPLACE FUNCTION check_doctor_schedule_events_no_overlap()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND id <> COALESCE(NEW.id, -1)
+          AND NEW.start_date <= end_date
+          AND NEW.end_date >= start_date
+    ) THEN
+        RAISE EXCEPTION 'doctor_schedule_events: overlapping date range for doctor_id %', NEW.doctor_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_doctor_schedule_events_no_overlap
+BEFORE INSERT OR UPDATE ON doctor_schedule_events
+FOR EACH ROW
+EXECUTE FUNCTION check_doctor_schedule_events_no_overlap();
+
+CREATE TABLE patient_appointments (
+    id                   SERIAL    PRIMARY KEY,
+    user_id              UUID      NOT NULL,
+    doctor_id            UUID      NOT NULL,
+    appointment_type_id  INT       NOT NULL,
+    modality             TEXT      NOT NULL CHECK (modality IN ('presencial', 'teleconsulta')),
+    scheduled_at         TIMESTAMP NOT NULL,
+    status               TEXT      NOT NULL DEFAULT 'confirmada' CHECK (status IN ('pendente', 'confirmada', 'em_curso', 'concluida', 'cancelada')),
+    created_by_role      TEXT      NOT NULL CHECK (created_by_role IN ('doctor', 'staff')),
+    created_by_doctor_id UUID,
+    notes                TEXT,
+    created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_patient_appointments_created_by CHECK (
+        (created_by_role = 'doctor' AND created_by_doctor_id IS NOT NULL) OR
+        (created_by_role = 'staff'  AND created_by_doctor_id IS NULL)
+    ),
+    CONSTRAINT fk_patient_appointments_user             FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_patient_appointments_doctor           FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_patient_appointments_type             FOREIGN KEY (appointment_type_id) REFERENCES appointment_types(id),
+    CONSTRAINT fk_patient_appointments_created_by_doctor FOREIGN KEY (created_by_doctor_id) REFERENCES doctors(id)
+);
+
+-- Prevent double-booking: same doctor cannot have two active appointments at the same scheduled_at
+CREATE OR REPLACE FUNCTION check_patient_appointments_no_overlap()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND scheduled_at = NEW.scheduled_at
+          AND status <> 'cancelada'
+          AND id <> COALESCE(NEW.id, -1)
+    ) THEN
+        RAISE EXCEPTION 'patient_appointments: doctor % already has an appointment at %', NEW.doctor_id, NEW.scheduled_at;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_patient_appointments_no_overlap
+BEFORE INSERT OR UPDATE ON patient_appointments
+FOR EACH ROW
+EXECUTE FUNCTION check_patient_appointments_no_overlap();
+
+-- Prevent a patient appointment on a date the doctor has a scheduled event (congress/training/vacation)
+CREATE OR REPLACE FUNCTION check_patient_appointments_no_schedule_conflict()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND NEW.scheduled_at::date BETWEEN start_date AND end_date
+    ) THEN
+        RAISE EXCEPTION 'patient_appointments: doctor % has a schedule event covering %', NEW.doctor_id, NEW.scheduled_at::date;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_patient_appointments_no_schedule_conflict
+BEFORE INSERT OR UPDATE ON patient_appointments
+FOR EACH ROW
+EXECUTE FUNCTION check_patient_appointments_no_schedule_conflict();
+
+-- Prevent scheduling a doctor event (congress/training/vacation) over a date with an active patient appointment
+CREATE OR REPLACE FUNCTION check_doctor_schedule_events_no_appointment_conflict()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND status <> 'cancelada'
+          AND scheduled_at::date BETWEEN NEW.start_date AND NEW.end_date
+    ) THEN
+        RAISE EXCEPTION 'doctor_schedule_events: doctor % already has an appointment within % and %', NEW.doctor_id, NEW.start_date, NEW.end_date;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_doctor_schedule_events_no_appointment_conflict
+BEFORE INSERT OR UPDATE ON doctor_schedule_events
+FOR EACH ROW
+EXECUTE FUNCTION check_doctor_schedule_events_no_appointment_conflict();
+

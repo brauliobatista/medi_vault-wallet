@@ -9,6 +9,7 @@ import HabitsPage from './pages/patient/HabitsPage'
 import VaccinationsPage from './pages/patient/VaccinationsPage'
 import AccessPage from './pages/patient/AccessPage'
 import DoctorDashboardPage from './pages/doctor/DoctorDashboardPage'
+import DoctorAgendasPage from './pages/doctor/DoctorAgendasPage'
 import PatientViewPage from './pages/doctor/PatientViewPage'
 import DoctorProfilePage from './pages/doctor/DoctorProfilePage'
 import DoctorAccessPage from './pages/doctor/DoctorAccessPage'
@@ -38,6 +39,7 @@ export default function App() {
 
       {/* Doctor routes */}
       <Route path="/doctor" element={<RequireRole role="Doctor"><DoctorDashboardPage /></RequireRole>} />
+      <Route path="/doctor/agendas" element={<RequireRole role="Doctor"><DoctorAgendasPage /></RequireRole>} />
       <Route path="/doctor/patient/:patientId" element={<RequireRole role="Doctor"><PatientViewPage /></RequireRole>} />
       <Route path="/doctor/profile" element={<RequireRole role="Doctor"><DoctorProfilePage /></RequireRole>} />
       <Route path="/doctor/access" element={<RequireRole role="Doctor"><DoctorAccessPage /></RequireRole>} />
