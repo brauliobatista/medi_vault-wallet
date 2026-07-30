@@ -37,6 +37,7 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<AppVersion> AppVersions => Set<AppVersion>();
     public DbSet<RelationshipType> RelationshipTypes => Set<RelationshipType>();
     public DbSet<FamilyGuardianship> FamilyGuardianships => Set<FamilyGuardianship>();
+    public DbSet<Gender> Genders => Set<Gender>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -116,6 +117,9 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
 
         modelBuilder.Entity<RelationshipType>()
             .HasIndex(r => r.Code).IsUnique();
+
+        modelBuilder.Entity<Gender>()
+            .HasIndex(g => g.Code).IsUnique();
 
         modelBuilder.Entity<FamilyGuardianship>()
             .HasOne(f => f.Guardian)

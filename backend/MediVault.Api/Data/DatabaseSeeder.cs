@@ -53,6 +53,13 @@ public static class DatabaseSeeder
             new RelationshipType { Code = "other", Description = "Outro tipo de responsável" }
         );
 
+        // --- Genders ---
+        db.Genders.AddRange(
+            new Gender { Code = "M", Description = "Masculino" },
+            new Gender { Code = "F", Description = "Feminino" },
+            new Gender { Code = "Other", Description = "Outro" }
+        );
+
         db.SaveChanges();
 
         // --- Patients ---

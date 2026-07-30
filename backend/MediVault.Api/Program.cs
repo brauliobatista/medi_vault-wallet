@@ -114,6 +114,16 @@ using (var scope = app.Services.CreateScope())
             db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('other','Outro tipo de responsável')");
         }
         catch { /* tables already exist */ }
+
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS genders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT)");
+            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO genders (code, description) VALUES ('M','Masculino')");
+            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO genders (code, description) VALUES ('F','Feminino')");
+            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO genders (code, description) VALUES ('Other','Outro')");
+        }
+        catch { /* table already exists */ }
     }
 
     // Backfill missing share codes

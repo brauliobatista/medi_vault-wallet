@@ -31,6 +31,12 @@ public class FamilyController(FamilyService familyService) : ControllerBase
         return Ok(await familyService.GetRelationshipTypesAsync());
     }
 
+    [HttpGet("/api/genders")]
+    public async Task<IActionResult> GetGenders()
+    {
+        return Ok(await familyService.GetGendersAsync());
+    }
+
     [HttpGet("search")]
     public async Task<IActionResult> SearchByEmail([FromQuery] string email)
     {

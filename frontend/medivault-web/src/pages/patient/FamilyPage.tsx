@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import {
-  getFamily, getPendingInvitations, getRelationshipTypes,
+  getFamily, getPendingInvitations, getRelationshipTypes, getGenders,
   searchUserByEmail, inviteByEmail, createDependent,
   respondToGuardianship, removeGuardianship,
 } from '../../api/family'
@@ -9,6 +10,7 @@ import {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 type RelationshipType = { id: number; code: string; description: string | null }
+type Gender = { id: number; code: string; description: string | null }
 
 const relationshipLabels: Record<string, string> = {
   parent: 'Pai / Mãe',
@@ -17,10 +19,13 @@ const relationshipLabels: Record<string, string> = {
   other: 'Outro',
 }
 
+const biologicalGenderLabels: Record<string, string> = { M: 'Masculino', F: 'Feminino' }
+
 export default function FamilyPage() {
   const [family, setFamily] = useState<Record<string, unknown>[]>([])
   const [invitations, setInvitations] = useState<Record<string, unknown>[]>([])
   const [relationshipTypes, setRelationshipTypes] = useState<RelationshipType[]>([])
+  const [genders, setGenders] = useState<Gender[]>([])
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<number | null>(null)
 
@@ -40,6 +45,7 @@ export default function FamilyPage() {
   useEffect(() => {
     refresh()
     getRelationshipTypes().then(setRelationshipTypes)
+    getGenders().then(setGenders)
   }, [])
 
   const flash = (msg: string) => {
@@ -54,6 +60,16 @@ export default function FamilyPage() {
     setFoundUser(null)
     setShowCreateForm(false)
     setCreateForm({ firstName: '', lastName: '', birthday: '', biologicalGender: 'M', sex: 'M' })
+  }
+
+  const handleCreateDirectly = () => {
+    setSearchError(null)
+    setFoundUser(null)
+    if (relationshipTypeId === '') {
+      setSearchError('Selecione o tipo de relação.')
+      return
+    }
+    setShowCreateForm(true)
   }
 
   const handleSearch = async () => {
@@ -187,6 +203,11 @@ export default function FamilyPage() {
                   </div>
                   <div className="d-flex align-items-center gap-2">
                     <span className={`badge bg-${badgeClass[String(f.status)] ?? 'secondary'}`}>{String(f.status)}</span>
+                    {String(f.status) === 'approved' && (
+                      <Link to={`/family/${String(f.userId)}`} className="btn btn-outline-primary btn-sm">
+                        <i className="bi bi-eye me-1" />Aceder
+                      </Link>
+                    )}
                     {confirmRemove === Number(f.guardianshipId) ? (
                       <div className="d-flex align-items-center gap-2">
                         <span className="text-muted small">Remover?</span>
@@ -242,7 +263,11 @@ export default function FamilyPage() {
               </div>
             </div>
 
-            {searchError && <div className="alert alert-danger py-2 mt-3 mb-0">{searchError}</div>}
+            <button className="btn btn-link btn-sm ps-0 mt-2" onClick={handleCreateDirectly}>
+              <i className="bi bi-person-plus me-1" />Não tem email? Criar novo perfil sem email
+            </button>
+
+            {searchError && <div className="alert alert-danger py-2 mt-2 mb-0">{searchError}</div>}
 
             {foundUser && (
               <div className="alert alert-light border d-flex justify-content-between align-items-center mt-3 mb-0">
@@ -256,7 +281,9 @@ export default function FamilyPage() {
             {showCreateForm && (
               <div className="border rounded p-3 mt-3">
                 <p className="text-muted small mb-3">
-                  Não encontrámos ninguém com este email. Pode criar um perfil que fica totalmente sob a sua gestão (sem login próprio).
+                  {email.trim()
+                    ? 'Não encontrámos ninguém com este email. Pode criar um perfil que fica totalmente sob a sua gestão (sem login próprio).'
+                    : 'Crie um perfil que fica totalmente sob a sua gestão (sem login próprio) — ideal para menores ou pessoas incapacitadas.'}
                 </p>
                 <div className="row g-2">
                   <div className="col-md-6">
@@ -278,16 +305,18 @@ export default function FamilyPage() {
                     <label className="form-label small text-muted">Sexo biológico</label>
                     <select className="form-select form-select-sm" value={createForm.biologicalGender}
                       onChange={(e) => setCreateForm({ ...createForm, biologicalGender: e.target.value })}>
-                      <option value="M">M</option>
-                      <option value="F">F</option>
+                      {Object.entries(biologicalGenderLabels).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="col-md-4">
                     <label className="form-label small text-muted">Sexo</label>
                     <select className="form-select form-select-sm" value={createForm.sex}
                       onChange={(e) => setCreateForm({ ...createForm, sex: e.target.value })}>
-                      <option value="M">M</option>
-                      <option value="F">F</option>
+                      {genders.map((g) => (
+                        <option key={g.id} value={g.code}>{g.description ?? g.code}</option>
+                      ))}
                     </select>
                   </div>
                 </div>

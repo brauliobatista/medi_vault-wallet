@@ -14,6 +14,13 @@ public class FamilyService(MediVaultDbContext db)
             .ToListAsync();
     }
 
+    public async Task<List<GenderDto>> GetGendersAsync()
+    {
+        return await db.Genders
+            .Select(g => new GenderDto(g.Id, g.Code, g.Description))
+            .ToListAsync();
+    }
+
     public async Task<List<FamilyMemberDto>> GetFamilyAsync(string guardianUserId)
     {
         return await db.FamilyGuardianships
