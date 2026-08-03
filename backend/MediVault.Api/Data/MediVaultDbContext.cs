@@ -56,6 +56,23 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email).IsUnique();
 
+        modelBuilder.Entity<User>()
+            .Property(u => u.ShareCode).HasDefaultValue("");
+
+        // seed.sql's raw INSERT statements omit timestamp columns (relying on the DB-level
+        // default documented in database/schema_sqlite.sql), but EnsureCreated() only builds
+        // a SQL-level DEFAULT for properties explicitly configured here — without this, every
+        // "*At" timestamp column would reject seed rows that don't set it, on a fresh DB.
+        var timestampProperties = new[] { "CreatedAt", "UpdatedAt", "AppliedAt", "DeployedAt" };
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(string) && timestampProperties.Contains(property.Name))
+                    property.SetDefaultValueSql("(datetime('now'))");
+            }
+        }
+
         modelBuilder.Entity<Doctor>()
             .HasIndex(d => d.OrdemMedicosId).IsUnique();
         modelBuilder.Entity<Doctor>()

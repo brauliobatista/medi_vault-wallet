@@ -15,17 +15,81 @@ public static class DatabaseSeeder
         }
 
         var sql = File.ReadAllText(seedSqlPath);
-        var statements = sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var statements = SplitStatements(sql);
 
         using var tx = db.Database.BeginTransaction();
         foreach (var stmt in statements)
         {
-            var trimmed = stmt.TrimStart();
-            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("--")) continue;
+            if (!HasSqlContent(stmt)) continue;
             try { db.Database.ExecuteSqlRaw(stmt); }
             catch (Exception ex) { Console.WriteLine($"[Seeder] SKIP: {ex.Message[..Math.Min(100, ex.Message.Length)]}"); }
         }
         tx.Commit();
         Console.WriteLine("[Seeder] seed.sql aplicado.");
+    }
+
+    // Splits a SQL script into individual statements on ';', ignoring semicolons that
+    // appear inside a '-- line comment' or a 'single-quoted string' — a plain
+    // sql.Split(';') breaks as soon as a comment contains a semicolon (e.g.
+    // "-- sex_id references GENDERS.id; nationality_id references COUNTRIES.id"),
+    // which silently corrupts the statement that follows.
+    private static IEnumerable<string> SplitStatements(string sql)
+    {
+        var statements = new List<string>();
+        var current = new System.Text.StringBuilder();
+        var inString = false;
+        var inLineComment = false;
+
+        for (var i = 0; i < sql.Length; i++)
+        {
+            var c = sql[i];
+
+            if (inLineComment)
+            {
+                if (c == '\n') inLineComment = false;
+                current.Append(c);
+                continue;
+            }
+
+            if (c == '\'')
+            {
+                inString = !inString;
+                current.Append(c);
+                continue;
+            }
+
+            if (!inString && c == '-' && i + 1 < sql.Length && sql[i + 1] == '-')
+            {
+                inLineComment = true;
+                current.Append(c);
+                continue;
+            }
+
+            if (!inString && c == ';')
+            {
+                statements.Add(current.ToString());
+                current.Clear();
+                continue;
+            }
+
+            current.Append(c);
+        }
+
+        if (current.Length > 0) statements.Add(current.ToString());
+        return statements;
+    }
+
+    // A statement is worth executing if at least one of its lines has real content once
+    // that line's own '-- ...' comment (if any) is stripped — a chunk made up entirely of
+    // banner/header comments (no actual SQL) is skipped, but a statement that merely
+    // *starts* with descriptive comment lines above real SQL is not.
+    private static bool HasSqlContent(string stmt)
+    {
+        foreach (var line in stmt.Split('\n'))
+        {
+            var codePart = line.Split("--", 2)[0].Trim();
+            if (codePart.Length > 0) return true;
+        }
+        return false;
     }
 }
