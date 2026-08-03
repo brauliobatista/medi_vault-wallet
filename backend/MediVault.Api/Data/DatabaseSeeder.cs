@@ -1,198 +1,31 @@
-using MediVault.Api.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace MediVault.Api.Data;
 
 public static class DatabaseSeeder
 {
-    private static string NewShareCode() => Guid.NewGuid().ToString("N")[..12].ToUpper();
-
-    public static void Seed(MediVaultDbContext db)
+    public static void Seed(MediVaultDbContext db, string seedSqlPath)
     {
         if (db.Users.Any()) return;
 
-        // --- Subscription plans ---
-        var planBasic   = new SubscriptionPlan { Name = "basic",   StorageLimitMb = 512,  PriceAnnual = 9.99m,  PriceMonthly = 1.29m };
-        var planMedium  = new SubscriptionPlan { Name = "medium",  StorageLimitMb = 2048, PriceAnnual = 19.99m, PriceMonthly = 2.49m };
-        var planPremium = new SubscriptionPlan { Name = "premium", StorageLimitMb = 8192, PriceAnnual = 39.99m, PriceMonthly = 4.99m };
-        db.SubscriptionPlans.AddRange(planBasic, planMedium, planPremium);
-
-        // --- Institutions ---
-        var hospital = new Institution { Id = Guid.NewGuid().ToString(), Name = "Hospital de Santa Maria", Type = "hospital", Address = "Av. Prof. Egas Moniz, Lisboa", Phone = "217 805 000", IsActive = 1 };
-        var clinica  = new Institution { Id = Guid.NewGuid().ToString(), Name = "CUF Descobertas",         Type = "clinic",   Address = "R. Mário Botas, Lisboa",       Phone = "210 025 200", IsActive = 1 };
-        db.Institutions.AddRange(hospital, clinica);
-
-        // --- Vaccines ---
-        db.Vaccines.AddRange(
-            new Vaccine { Name = "COVID-19 (Comirnaty)",           Description = "Vacina BioNTech/Pfizer" },
-            new Vaccine { Name = "Gripe sazonal",                  Description = "Vacina antigripal anual" },
-            new Vaccine { Name = "Hepatite B",                     Description = "Vacina contra Hepatite B" },
-            new Vaccine { Name = "Tétano",                         Description = "Vacina antitetânica" },
-            new Vaccine { Name = "MMR (Sarampo, Parotidite, Rubéola)", Description = "Vacina combinada" }
-        );
-
-        // --- ICPC2 codes ---
-        db.Icpc2Codes.AddRange(
-            new Icpc2Code { Code = "K86", Description = "Hipertensão arterial sem complicações", Chapter = "K - Cardiovascular" },
-            new Icpc2Code { Code = "T90", Description = "Diabetes mellitus tipo 2",              Chapter = "T - Endócrino" },
-            new Icpc2Code { Code = "R96", Description = "Asma",                                  Chapter = "R - Respiratório" }
-        );
-
-        // --- Medical specialties ---
-        db.MedicalSpecialties.AddRange(
-            new MedicalSpecialty { Name = "Medicina Geral e Familiar" },
-            new MedicalSpecialty { Name = "Cardiologia" },
-            new MedicalSpecialty { Name = "Endocrinologia" }
-        );
-
-        // --- Relationship types (Agregado Familiar) ---
-        var relParent = new RelationshipType { Code = "parent", Description = "Pai / mãe" };
-        db.RelationshipTypes.AddRange(
-            relParent,
-            new RelationshipType { Code = "legal_guardian", Description = "Tutor legal nomeado por tribunal (pessoa incapacitada)" },
-            new RelationshipType { Code = "tutor", Description = "Tutor de menor sem tutela parental" },
-            new RelationshipType { Code = "other", Description = "Outro tipo de responsável" }
-        );
-
-        // --- Genders ---
-        db.Genders.AddRange(
-            new Gender { Code = "M", Description = "Masculino" },
-            new Gender { Code = "F", Description = "Feminino" },
-            new Gender { Code = "Other", Description = "Outro" }
-        );
-
-        db.SaveChanges();
-
-        // --- Patients ---
-        var braulio = new User
+        if (!File.Exists(seedSqlPath))
         {
-            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000001", FiscalNumber = "100000001", CitizenNumber = "10000001",
-            Email = "braulio@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            FirstName = "Braulio", LastName = "Batista", Birthday = "1990-05-10",
-            BiologicalGender = "M", Sex = "M", BloodType = "A+",
-            AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
-            Phone = "910 000 001", Profession = "Engenheiro",
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
-        };
+            Console.WriteLine($"[Seeder] seed.sql não encontrado: {seedSqlPath}");
+            return;
+        }
 
-        var cesar = new User
+        var sql = File.ReadAllText(seedSqlPath);
+        var statements = sql.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        using var tx = db.Database.BeginTransaction();
+        foreach (var stmt in statements)
         {
-            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000002", FiscalNumber = "100000002", CitizenNumber = "10000002",
-            Email = "cesar@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            FirstName = "Cesar", LastName = "Oliveira", Birthday = "1988-11-23",
-            BiologicalGender = "M", Sex = "M", BloodType = "O+",
-            AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
-            Phone = "910 000 002", Profession = "Gestor",
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
-        };
-
-        var joka = new User
-        {
-            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000003", FiscalNumber = "100000003", CitizenNumber = "10000003",
-            Email = "joka@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            FirstName = "Joka", LastName = "Ferreira", Birthday = "1995-02-14",
-            BiologicalGender = "M", Sex = "M", BloodType = "B+",
-            AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
-            Phone = "910 000 003", Profession = "Designer",
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
-        };
-
-        var tiago = new User
-        {
-            Id = Guid.NewGuid().ToString(), ShareCode = NewShareCode(), UtentNumber = "100000004", FiscalNumber = "100000004", CitizenNumber = "10000004",
-            Email = "tiago@email.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            FirstName = "Tiago", LastName = "Costa", Birthday = "1993-08-30",
-            BiologicalGender = "M", Sex = "M", BloodType = "AB+",
-            AcceptsTransfusion = 1, AcceptsResuscitation = 1, EmergencyAccessCode = 0, IsDependent = 0,
-            Phone = "910 000 004", Profession = "Programador",
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o")
-        };
-
-        db.Users.AddRange(braulio, cesar, joka, tiago);
-        db.SaveChanges();
-
-        // --- Family guardianships (Agregado Familiar) ---
-        db.FamilyGuardianships.AddRange(
-            new FamilyGuardianship { GuardianUserId = braulio.Id, DependentUserId = tiago.Id, RelationshipTypeId = relParent.Id, Status = "approved", IsActive = 1 },
-            new FamilyGuardianship { GuardianUserId = cesar.Id, DependentUserId = joka.Id, RelationshipTypeId = relParent.Id, Status = "pending", IsActive = 1 }
-        );
-
-        // --- Doctors ---
-        var monica = new Doctor
-        {
-            Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10001", FirstName = "Monica", LastName = "Sousa",
-            Email = "monica.sousa@hsm.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            Speciality = "Medicina Geral e Familiar", InstitutionId = hospital.Id,
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
-        };
-
-        var diana = new Doctor
-        {
-            Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10002", FirstName = "Diana", LastName = "Pereira",
-            Email = "diana.pereira@cuf.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            Speciality = "Cardiologia", InstitutionId = clinica.Id,
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
-        };
-
-        var maria = new Doctor
-        {
-            Id = Guid.NewGuid().ToString(), OrdemMedicosId = "OM10003", FirstName = "Maria", LastName = "Gomes",
-            Email = "maria.gomes@hsm.pt", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-            Speciality = "Endocrinologia", InstitutionId = hospital.Id,
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
-        };
-
-        db.Doctors.AddRange(monica, diana, maria);
-        db.SaveChanges();
-
-        // --- Subscriptions ---
-        db.UserSubscriptions.AddRange(
-            new UserSubscription { UserId = braulio.Id, PlanId = planPremium.Id, CardType = "SC1", StartDate = "2025-01-01", EndDate = "2026-01-01", IsActive = 1 },
-            new UserSubscription { UserId = cesar.Id,   PlanId = planMedium.Id,  CardType = "SC2", StartDate = "2025-03-01", EndDate = "2026-03-01", IsActive = 1 },
-            new UserSubscription { UserId = joka.Id,    PlanId = planBasic.Id,   CardType = "SC3", StartDate = "2025-06-01", EndDate = "2026-06-01", IsActive = 1 },
-            new UserSubscription { UserId = tiago.Id,   PlanId = planMedium.Id,  CardType = "SC4", StartDate = "2025-04-01", EndDate = "2026-04-01", IsActive = 1 }
-        );
-
-        // --- Sample medical data for Braulio ---
-        db.ChronicMedications.Add(new ChronicMedication
-        {
-            UserId = braulio.Id, ActiveSubstance = "Metformina", Dose = "850mg",
-            Posology = "2x/dia às refeições", StartDate = "2022-06-01",
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
-        });
-
-        db.DrugAllergies.Add(new DrugAllergy
-        {
-            UserId = braulio.Id, ActiveSubstance = "Penicilina",
-            AllergicReaction = "Urticária generalizada", Severity = "moderate",
-            CreatedAt = DateTime.UtcNow.ToString("o")
-        });
-
-        db.SurgicalHistories.Add(new SurgicalHistory
-        {
-            UserId = braulio.Id, SurgeryName = "Apendicectomia",
-            SurgeryDate = "2015-04-20", Location = "Hospital de Santa Maria",
-            IsActive = 1, CreatedAt = DateTime.UtcNow.ToString("o")
-        });
-
-        db.HealthHabits.Add(new HealthHabit
-        {
-            UserId = braulio.Id, Type = "tobacco", Name = "Cigarro",
-            Consumes = 0, Frequency = "Ex-fumador",
-            StartDate = "2010-01-01", UpdatedAt = DateTime.UtcNow.ToString("o"),
-            Details = "{\"fagerstrom_score\":3,\"pack_years\":5,\"years_consumption\":4}"
-        });
-
-        // --- Access: Monica → Braulio (approved) ---
-        db.AccessRequests.Add(new AccessRequest
-        {
-            UserId = braulio.Id, DoctorId = monica.Id,
-            Status = "approved",
-            RequestedAt = DateTime.UtcNow.AddDays(-5).ToString("o"),
-            ApprovedAt  = DateTime.UtcNow.AddDays(-4).ToString("o"),
-            ExpiresAt   = DateTime.UtcNow.AddDays(25).ToString("o"),
-            IsEmergency = 0
-        });
-
-        db.SaveChanges();
+            var trimmed = stmt.TrimStart();
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("--")) continue;
+            try { db.Database.ExecuteSqlRaw(stmt); }
+            catch (Exception ex) { Console.WriteLine($"[Seeder] SKIP: {ex.Message[..Math.Min(100, ex.Message.Length)]}"); }
+        }
+        tx.Commit();
+        Console.WriteLine("[Seeder] seed.sql aplicado.");
     }
 }

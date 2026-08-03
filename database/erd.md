@@ -203,6 +203,59 @@ erDiagram
     }
 
     %% -------------------------------------------------------
+    %% CLINICAL CONSULTATION RECORDS
+    %% -------------------------------------------------------
+
+    VITAL_SIGNS {
+        int id PK
+        guid user_id FK
+        guid doctor_id FK
+        datetime recorded_at
+        int blood_pressure_systolic
+        int blood_pressure_diastolic
+        int heart_rate
+        int respiratory_rate
+        decimal temperature
+        int spo2
+        decimal weight
+        decimal height
+        text notes
+        datetime created_at
+    }
+
+    CLINICAL_ASSESSMENTS {
+        int id PK
+        guid user_id FK
+        guid doctor_id FK
+        text hypothesis
+        text plan
+        datetime created_at
+        datetime updated_at
+    }
+
+    %% Historical: every save is a new row. App-layer rule: only the
+    %% creating doctor may edit an existing row, within 24h of created_at.
+    ANAMNESES {
+        int id PK
+        guid user_id FK
+        guid doctor_id FK
+        text chief_complaint
+        text illness_history
+        text personal_history
+        datetime created_at
+        datetime updated_at
+    }
+
+    %% Team chat: doctors discussing a patient's case amongst themselves.
+    PATIENT_CHAT_MESSAGES {
+        int id PK
+        guid user_id FK
+        guid author_doctor_id FK
+        text message
+        datetime created_at
+    }
+
+    %% -------------------------------------------------------
     %% FILES
     %% -------------------------------------------------------
 
@@ -422,6 +475,16 @@ erDiagram
     USERS                       ||--o{ USER_SUBSCRIPTIONS         : "subscribes"
     USERS                       ||--o{ ACCESS_REQUESTS            : "receives"
     DOCTORS                     ||--o{ ACCESS_REQUESTS            : "requests"
+
+    %% Clinical consultation records
+    USERS                       ||--o{ VITAL_SIGNS                : "has"
+    DOCTORS                     ||--o{ VITAL_SIGNS                : "records"
+    USERS                       ||--o{ CLINICAL_ASSESSMENTS       : "has"
+    DOCTORS                     ||--o{ CLINICAL_ASSESSMENTS       : "records"
+    USERS                       ||--o{ ANAMNESES                  : "has"
+    DOCTORS                     ||--o{ ANAMNESES                  : "records"
+    USERS                       ||--o{ PATIENT_CHAT_MESSAGES      : "concerns"
+    DOCTORS                     ||--o{ PATIENT_CHAT_MESSAGES      : "authors"
 
     %% Users — files
     USERS                       ||--o{ MEDICAL_FILES              : "owns"

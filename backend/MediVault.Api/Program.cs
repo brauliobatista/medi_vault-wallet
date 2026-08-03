@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // wwwroot must exist before Build() runs, or IWebHostEnvironment.WebRootFileProvider
 // resolves to a NullFileProvider and UseStaticFiles() will 404 everything forever.
 Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "profile-photos"));
+var documentsDir = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "documents");
+Directory.CreateDirectory(documentsDir);
 
 // Database
 builder.Services.AddDbContext<MediVaultDbContext>(opt =>
@@ -48,6 +50,9 @@ builder.Services.AddScoped<VaccinationService>();
 builder.Services.AddScoped<DoctorNoteService>();
 builder.Services.AddScoped<DoctorService>();
 builder.Services.AddScoped<FamilyService>();
+builder.Services.AddScoped<ClinicalRecordsService>();
+builder.Services.AddScoped<MedicalFileService>();
+builder.Services.AddScoped<TeamChatService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -72,7 +77,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCors(opt => opt.AddPolicy("Frontend", policy =>
     policy.WithOrigins("http://localhost:5173", "https://localhost:5173",
                        "http://localhost:5174", "https://localhost:5174",
-                       "http://192.168.1.77:5173")
+                       "http://192.168.1.77:5173",
+                       "http://192.168.1.189:5173", "https://192.168.1.189:5173",
+                       "http://192.168.1.135:5173", "https://192.168.1.135:5173")
           .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -83,48 +90,27 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
     var dbJustCreated = db.Database.EnsureCreated();
 
+    // Migrations for columns added after initial schema
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
     catch { /* column already exists */ }
-
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN share_code TEXT NOT NULL DEFAULT ''"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE doctors ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE health_habits ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS countries (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, name TEXT NOT NULL)"); }
+    catch { /* table already exists */ }
+    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS genders (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
+    catch { /* table already exists */ }
+    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS habit_types (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
+    catch { /* table already exists */ }
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
     catch { /* column already exists */ }
-
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex TEXT"); }
-    catch { /* column already exists */ }
-
-    // Create family-guardianship tables + seed relationship_types if this DB pre-dates the feature
-    // (KAN-33 + Agregado Familiar). Skipped on a brand-new DB: EnsureCreated() already built these
-    // tables from the current EF model, and DatabaseSeeder.Seed() below populates relationship_types
-    // for it — running both would double-insert and violate the unique constraint on code.
-    if (!dbJustCreated)
-    {
-        try
-        {
-            db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS relationship_types (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT)");
-            db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS family_guardianships (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, guardian_user_id TEXT NOT NULL, dependent_user_id TEXT NOT NULL,
-                relationship_type_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved')),
-                is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                FOREIGN KEY (guardian_user_id) REFERENCES users(id), FOREIGN KEY (dependent_user_id) REFERENCES users(id),
-                FOREIGN KEY (relationship_type_id) REFERENCES relationship_types(id), CHECK (guardian_user_id <> dependent_user_id))");
-            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('parent','Pai / mãe')");
-            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('legal_guardian','Tutor legal nomeado por tribunal (pessoa incapacitada)')");
-            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('tutor','Tutor de menor sem tutela parental')");
-            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO relationship_types (code, description) VALUES ('other','Outro tipo de responsável')");
-        }
-        catch { /* tables already exist */ }
-
-        try
-        {
-            db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS genders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, description TEXT)");
-            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO genders (code, description) VALUES ('M','Masculino')");
-            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO genders (code, description) VALUES ('F','Feminino')");
-            db.Database.ExecuteSqlRaw("INSERT OR IGNORE INTO genders (code, description) VALUES ('Other','Outro')");
-        }
-        catch { /* table already exists */ }
-    }
 
     // Backfill missing share codes
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
@@ -132,9 +118,8 @@ using (var scope = app.Services.CreateScope())
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
     if (usersToBackfill.Count > 0) db.SaveChanges();
 
-    db.Database.ExecuteSqlRaw("UPDATE users SET sex = biological_gender WHERE sex IS NULL OR sex = ''");
-
-    DatabaseSeeder.Seed(db);
+    var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));
+    DatabaseSeeder.Seed(db, seedPath);
 }
 
 if (app.Environment.IsDevelopment())

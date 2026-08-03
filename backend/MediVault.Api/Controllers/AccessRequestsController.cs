@@ -73,6 +73,16 @@ public class AccessRequestsController(AccessControlService accessControl) : Cont
         return Ok(new { request.Id, request.Status, request.AccessCode });
     }
 
+    // DEV-ONLY: see AccessControlService.GrantAccessDevAsync
+    [HttpPost("{userId}/grant-dev")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> GrantAccessDev(string userId)
+    {
+        var request = await accessControl.GrantAccessDevAsync(CurrentId, userId);
+        if (request is null) return NotFound();
+        return Ok(new { request.Id, request.Status, request.ExpiresAt });
+    }
+
     [HttpPut("{requestId}/respond")]
     [Authorize(Roles = "Patient")]
     public async Task<IActionResult> Respond(int requestId, RespondAccessRequest req)

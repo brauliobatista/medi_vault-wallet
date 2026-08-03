@@ -11,9 +11,27 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
 {
     public async Task<UserProfileDto?> GetProfileAsync(string userId)
     {
-        var u = await db.Users.FirstOrDefaultAsync(x => x.Id == userId && x.IsActive == 1);
-        if (u is null) return null;
-        return Map(u);
+        var row = await db.Users
+            .Where(x => x.Id == userId && x.IsActive == 1)
+            .Select(x => new {
+                x.Id, x.UtentNumber, x.Email, x.FirstName, x.LastName, x.Birthday,
+                x.BiologicalGender, x.SexId,
+                SexGenderDescription = x.SexGender != null ? x.SexGender.Description : null,
+                x.NationalityId,
+                NationalityName = x.Nationality != null ? x.Nationality.Name : null,
+                x.MaritalStatus, x.BloodType,
+                x.AcceptsTransfusion, x.AcceptsResuscitation, x.EmergencyAccessCode,
+                x.IsDependent, x.Profession, x.Phone, x.CardActive, x.PhotoPath
+            })
+            .FirstOrDefaultAsync();
+        if (row is null) return null;
+        return new UserProfileDto(
+            row.Id, row.UtentNumber, row.Email, row.FirstName, row.LastName, row.Birthday,
+            row.BiologicalGender, row.SexId, row.SexGenderDescription, row.NationalityId, row.NationalityName,
+            row.MaritalStatus, row.BloodType,
+            row.AcceptsTransfusion == 1, row.AcceptsResuscitation == 1,
+            row.EmergencyAccessCode == 1, row.IsDependent == 1, row.Profession, row.Phone,
+            row.CardActive == 1, ToPhotoUrl(row.PhotoPath));
     }
 
     public async Task<bool> UpdateProfileAsync(string userId, UpdateUserRequest req)
@@ -46,14 +64,18 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
         return true;
     }
 
-    public async Task<(string Name, string Id, string? PhotoUrl)?> GetPublicInfoAsync(string userId)
+    public async Task<(string Name, string Id, string? SexGenderDescription, string? BloodType, string? Birthday, string? NationalityName, string? PhotoUrl)?> GetPublicInfoAsync(string userId)
     {
         var u = await db.Users
             .Where(x => x.Id == userId && x.IsActive == 1)
-            .Select(x => new { x.FirstName, x.LastName, x.Id, x.PhotoPath })
+            .Select(x => new {
+                x.FirstName, x.LastName, x.Id, x.BloodType, x.Birthday, x.PhotoPath,
+                SexGenderDescription = x.SexGender != null ? x.SexGender.Description : null,
+                NationalityName = x.Nationality != null ? x.Nationality.Name : null
+            })
             .FirstOrDefaultAsync();
         if (u is null) return null;
-        return ($"{u.FirstName} {u.LastName}", u.Id, ToPhotoUrl(u.PhotoPath));
+        return ($"{u.FirstName} {u.LastName}", u.Id, u.SexGenderDescription, u.BloodType, u.Birthday, u.NationalityName, ToPhotoUrl(u.PhotoPath));
     }
 
     private static readonly HashSet<string> AllowedPhotoExtensions = [".jpg", ".jpeg", ".png", ".webp"];
@@ -145,10 +167,4 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
         return true;
     }
 
-    private static UserProfileDto Map(Entities.User u) => new(
-        u.Id, u.UtentNumber, u.Email, u.FirstName, u.LastName, u.Birthday,
-        u.BiologicalGender, u.Sex, u.MaritalStatus, u.BloodType,
-        u.AcceptsTransfusion == 1, u.AcceptsResuscitation == 1,
-        u.EmergencyAccessCode == 1, u.IsDependent == 1, u.Profession, u.Phone,
-        u.CardActive == 1, ToPhotoUrl(u.PhotoPath));
 }

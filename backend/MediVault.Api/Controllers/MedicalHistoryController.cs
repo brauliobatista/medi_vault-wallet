@@ -31,6 +31,59 @@ public class MedicalHistoryController(
         return Ok(new { hasAccess, reason });
     }
 
+    // --- Patient summary ---
+
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetSummary(string userId)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        var summary = await medicalHistory.GetPatientSummaryAsync(userId);
+        if (summary is null) return NotFound();
+        return Ok(summary);
+    }
+
+    [HttpPut("blood-type")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> UpdateBloodType(string userId, UpdateBloodTypeRequest req)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        var success = await medicalHistory.UpdateBloodTypeAsync(userId, req.BloodType);
+        if (!success) return NotFound();
+        return NoContent();
+    }
+
+    // --- Active pathologies ---
+
+    [HttpGet("/api/icpc2-codes")]
+    public async Task<IActionResult> GetIcpc2Codes() => Ok(await medicalHistory.GetIcpc2CodesAsync());
+
+    [HttpGet("pathologies")]
+    public async Task<IActionResult> GetPathologies(string userId)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        return Ok(await medicalHistory.GetPathologiesAsync(userId));
+    }
+
+    [HttpPost("pathologies")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> AddPathology(string userId, CreatePathologyRequest req)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        var result = await medicalHistory.AddPathologyAsync(userId, req);
+        if (result is null) return BadRequest(new { message = "Código ICPC-2 inválido." });
+        return Ok(result);
+    }
+
+    [HttpDelete("pathologies/{id}")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> DeletePathology(string userId, int id)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        var success = await medicalHistory.DeletePathologyAsync(id, userId);
+        if (!success) return NotFound();
+        return NoContent();
+    }
+
     // --- Surgical History ---
 
     [HttpGet("surgeries")]

@@ -10,6 +10,11 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<Vaccine> Vaccines => Set<Vaccine>();
     public DbSet<Icpc2Code> Icpc2Codes => Set<Icpc2Code>();
     public DbSet<MedicalSpecialty> MedicalSpecialties => Set<MedicalSpecialty>();
+    public DbSet<Gender> Genders => Set<Gender>();
+    public DbSet<HabitType> HabitTypes => Set<HabitType>();
+    public DbSet<RelationshipType> RelationshipTypes => Set<RelationshipType>();
+    public DbSet<Country> Countries => Set<Country>();
+    public DbSet<FamilyGuardianship> FamilyGuardianships => Set<FamilyGuardianship>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
@@ -35,9 +40,10 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<PendingReviewFlag> PendingReviewFlags => Set<PendingReviewFlag>();
     public DbSet<SchemaVersion> SchemaVersions => Set<SchemaVersion>();
     public DbSet<AppVersion> AppVersions => Set<AppVersion>();
-    public DbSet<RelationshipType> RelationshipTypes => Set<RelationshipType>();
-    public DbSet<FamilyGuardianship> FamilyGuardianships => Set<FamilyGuardianship>();
-    public DbSet<Gender> Genders => Set<Gender>();
+    public DbSet<VitalSign> VitalSigns => Set<VitalSign>();
+    public DbSet<ClinicalAssessment> ClinicalAssessments => Set<ClinicalAssessment>();
+    public DbSet<Anamnesis> Anamneses => Set<Anamnesis>();
+    public DbSet<TeamChatMessage> TeamChatMessages => Set<TeamChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -137,6 +143,30 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .HasOne(f => f.RelationshipType)
             .WithMany()
             .HasForeignKey(f => f.RelationshipTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.SexGender)
+            .WithMany()
+            .HasForeignKey(u => u.SexId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.Nationality)
+            .WithMany()
+            .HasForeignKey(u => u.NationalityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Doctor>()
+            .HasOne(d => d.Nationality)
+            .WithMany()
+            .HasForeignKey(d => d.NationalityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<HealthHabit>()
+            .HasOne(h => h.HabitType)
+            .WithMany()
+            .HasForeignKey(h => h.TypeId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

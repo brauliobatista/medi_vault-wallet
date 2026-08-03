@@ -100,6 +100,10 @@ export default function DoctorProfilePage() {
                   <div className="fw-semibold">{String(profile.speciality ?? '-')}</div>
                 )}
               </div>
+              <div className="col-sm-6">
+                <div className="text-muted small">Nacionalidade</div>
+                <div className="fw-semibold">{String(profile.nationalityName ?? '-')}</div>
+              </div>
             </div>
             {editing && (
               <div className="mt-3">
