@@ -123,6 +123,12 @@ public class FamilyService(MediVaultDbContext db)
         var relationshipType = await db.RelationshipTypes.FirstOrDefaultAsync(r => r.Id == req.RelationshipTypeId);
         if (relationshipType is null) return (false, "Tipo de relação inválido.", null);
 
+        var genderId = await db.Genders.Where(g => g.Code == req.Sex).Select(g => (int?)g.Id).FirstOrDefaultAsync();
+        if (genderId is null) return (false, "Sexo inválido.", null);
+
+        var nationalityId = await db.Countries.Where(c => c.Code == "PRT").Select(c => (int?)c.Id).FirstOrDefaultAsync();
+        if (nationalityId is null) return (false, "Nacionalidade por omissão não configurada.", null);
+
         var syntheticId = Guid.NewGuid().ToString("N");
         var dependent = new User
         {
@@ -136,7 +142,8 @@ public class FamilyService(MediVaultDbContext db)
             LastName = req.LastName,
             Birthday = req.Birthday,
             BiologicalGender = req.BiologicalGender,
-            Sex = req.Sex,
+            SexId = genderId.Value,
+            NationalityId = nationalityId.Value,
             IsDependent = 1,
             IsActive = 1,
             CardActive = 1,
