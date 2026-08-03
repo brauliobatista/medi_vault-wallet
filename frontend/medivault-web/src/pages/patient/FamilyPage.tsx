@@ -65,10 +65,6 @@ export default function FamilyPage() {
   const handleCreateDirectly = () => {
     setSearchError(null)
     setFoundUser(null)
-    if (relationshipTypeId === '') {
-      setSearchError('Selecione o tipo de relação.')
-      return
-    }
     setShowCreateForm(true)
   }
 
@@ -108,7 +104,10 @@ export default function FamilyPage() {
   }
 
   const handleCreateDependent = async () => {
-    if (relationshipTypeId === '') return
+    if (relationshipTypeId === '') {
+      setSearchError('Selecione o tipo de relação.')
+      return
+    }
     if (!createForm.firstName.trim() || !createForm.lastName.trim() || !createForm.birthday) {
       setSearchError('Preencha todos os campos obrigatórios.')
       return
@@ -316,6 +315,19 @@ export default function FamilyPage() {
                       onChange={(e) => setCreateForm({ ...createForm, sex: e.target.value })}>
                       {genders.map((g) => (
                         <option key={g.id} value={g.code}>{g.description ?? g.code}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label small text-muted">Tipo de relação *</label>
+                    <select
+                      className="form-select form-select-sm"
+                      value={relationshipTypeId}
+                      onChange={(e) => setRelationshipTypeId(e.target.value ? Number(e.target.value) : '')}
+                    >
+                      <option value="">Selecione...</option>
+                      {relationshipTypes.map((rt) => (
+                        <option key={rt.id} value={rt.id}>{relationshipLabels[rt.code] ?? rt.code}</option>
                       ))}
                     </select>
                   </div>
