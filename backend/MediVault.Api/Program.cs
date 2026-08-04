@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // wwwroot must exist before Build() runs, or IWebHostEnvironment.WebRootFileProvider
 // resolves to a NullFileProvider and UseStaticFiles() will 404 everything forever.
 Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "profile-photos"));
+var documentsDir = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "documents");
+Directory.CreateDirectory(documentsDir);
 
 // Database
 builder.Services.AddDbContext<MediVaultDbContext>(opt =>
@@ -48,6 +50,10 @@ builder.Services.AddScoped<HealthHabitService>();
 builder.Services.AddScoped<VaccinationService>();
 builder.Services.AddScoped<DoctorNoteService>();
 builder.Services.AddScoped<DoctorService>();
+builder.Services.AddScoped<FamilyService>();
+builder.Services.AddScoped<ClinicalRecordsService>();
+builder.Services.AddScoped<MedicalFileService>();
+builder.Services.AddScoped<TeamChatService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -72,7 +78,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCors(opt => opt.AddPolicy("Frontend", policy =>
     policy.WithOrigins("http://localhost:5173", "https://localhost:5173",
                        "http://localhost:5174", "https://localhost:5174",
-                       "http://192.168.1.77:5173")
+                       "http://192.168.1.77:5173",
+                       "http://192.168.1.189:5173", "https://192.168.1.189:5173",
+                       "http://192.168.1.135:5173", "https://192.168.1.135:5173")
           .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -81,23 +89,39 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
-    db.Database.EnsureCreated();
+    var dbJustCreated = db.Database.EnsureCreated();
 
-    // Add card_active column if this DB pre-dates the feature
+    // Migrations for columns added after initial schema
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
     catch { /* column already exists */ }
-
-    // Add photo_path column if this DB pre-dates the feature
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN share_code TEXT NOT NULL DEFAULT ''"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE doctors ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE health_habits ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS countries (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, name TEXT NOT NULL)"); }
+    catch { /* table already exists */ }
+    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS genders (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
+    catch { /* table already exists */ }
+    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS habit_types (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
+    catch { /* table already exists */ }
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
     catch { /* column already exists */ }
 
-    // Backfill missing share codes
+    var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));
+    DatabaseSeeder.Seed(db, seedPath);
+
+    // Backfill missing share codes (must run after seeding: seed.sql's raw INSERT
+    // statements don't set share_code, and a fresh DB's column has no SQL-level default)
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
     if (usersToBackfill.Count > 0) db.SaveChanges();
-
-    DatabaseSeeder.Seed(db);
 }
 
 if (app.Environment.IsDevelopment())

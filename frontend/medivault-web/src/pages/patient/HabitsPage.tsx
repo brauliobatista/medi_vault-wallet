@@ -3,9 +3,9 @@ import Layout from '../../components/Layout'
 import { getUser } from '../../hooks/useAuth'
 import { getHabits } from '../../api/medical'
 
-const habitLabels: Record<string, string> = {
-  alcohol: 'Álcool', tobacco: 'Tabaco', drugs: 'Drogas',
-  gambling: 'Jogo', physical_activity: 'Atividade Física',
+const habitLabels: Record<number, string> = {
+  1: 'Álcool', 2: 'Tabaco', 3: 'Drogas',
+  4: 'Jogo', 5: 'Atividade Física',
 }
 
 export default function HabitsPage() {
@@ -27,7 +27,7 @@ export default function HabitsPage() {
             <div className="col-md-6" key={String(h.id)}>
               <div className="card border-0 shadow-sm h-100">
                 <div className="card-header bg-white fw-semibold border-bottom">
-                  {habitLabels[String(h.type)] ?? String(h.type)}
+                  {habitLabels[Number(h.typeId)] ?? `Tipo ${h.typeId}`}
                 </div>
                 <div className="card-body">
                   <dl className="mb-0 row">

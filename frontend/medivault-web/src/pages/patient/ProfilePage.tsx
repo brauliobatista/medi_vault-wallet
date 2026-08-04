@@ -130,6 +130,8 @@ export default function ProfilePage() {
               <Field label="Nome" value={`${profile.firstName} ${profile.lastName}`} />
               <Field label="Data de Nascimento" value={String(profile.birthday)} />
               <Field label="Grupo Sanguíneo" value={String(profile.bloodType ?? '-')} />
+              <Field label="Sexo Biológico" value={String(profile.sexGenderDescription ?? '-')} />
+              <Field label="Nacionalidade" value={String(profile.nationalityName ?? '-')} />
               <EditableField label="Email" field="email" form={form} setForm={setForm} editing={editing} />
               <EditableField label="Telefone" field="phone" form={form} setForm={setForm} editing={editing} />
               <EditableField label="Profissão" field="profession" form={form} setForm={setForm} editing={editing} />
@@ -137,7 +139,7 @@ export default function ProfilePage() {
                 <div className="row g-2">
                   <CheckField label="Aceita transfusão" field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} />
                   <CheckField label="Manobras de reanimação" field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} />
-                  <CheckField label="Acesso de emergência" field="emergencyAccess" form={form} setForm={setForm} editing={editing} />
+                  <CheckField label="Acesso de emergência" field="emergencyAccess" form={form} setForm={setForm} editing={false} />
                 </div>
               </div>
             </div>

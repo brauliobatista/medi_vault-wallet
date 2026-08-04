@@ -8,12 +8,14 @@ public class DoctorService(MediVaultDbContext db)
 {
     public async Task<DoctorProfileDto?> GetProfileAsync(string doctorId)
     {
-        var d = await db.Doctors
-            .Include(x => x.Institution)
-            .FirstOrDefaultAsync(x => x.Id == doctorId && x.IsActive == 1);
-        if (d is null) return null;
-        return new DoctorProfileDto(d.Id, d.OrdemMedicosId, d.Email, d.FirstName, d.LastName,
-            d.Speciality, d.InstitutionId, d.Institution?.Name ?? string.Empty);
+        return await db.Doctors
+            .Where(x => x.Id == doctorId && x.IsActive == 1)
+            .Select(x => new DoctorProfileDto(
+                x.Id, x.OrdemMedicosId, x.Email, x.FirstName, x.LastName,
+                x.Speciality, x.InstitutionId,
+                x.Institution != null ? x.Institution.Name : string.Empty,
+                x.Nationality != null ? x.Nationality.Name : null))
+            .FirstOrDefaultAsync();
     }
 
     public async Task<bool> UpdateProfileAsync(string doctorId, UpdateDoctorRequest req)
