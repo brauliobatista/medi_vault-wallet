@@ -2,6 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "medivault-web",
+      "port": 5173,
+      "url": "https://localhost:5173"
+    },
+    {
       "name": "medivault-api",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "backend/MediVault.Api/MediVault.Api.csproj", "--urls", "http://localhost:50970"],
