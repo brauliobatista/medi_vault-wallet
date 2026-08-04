@@ -10,9 +10,42 @@ namespace MediVault.Api.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserService userService) : ControllerBase
+public class UsersController(UserService userService, AccessControlService accessControl) : ControllerBase
 {
     private string CurrentUserId => (User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"))!;
+
+    private async Task<bool> CanAccessUserAsync(string userId)
+        => CurrentUserId == userId || await accessControl.GuardianHasAccessAsync(CurrentUserId, userId);
+
+    [HttpGet("{userId}/profile")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> GetProfileFor(string userId)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        var profile = await userService.GetProfileAsync(userId);
+        if (profile is null) return NotFound();
+        return Ok(profile);
+    }
+
+    [HttpGet("{userId}/qr")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> GetQrCodeFor(string userId)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        var payload = await userService.GetQrPayloadAsync(userId);
+        if (payload is null) return NotFound();
+        return Ok(new { payload });
+    }
+
+    [HttpPut("{userId}/card")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> ToggleCardFor(string userId, ToggleCardRequest req)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        var success = await userService.ToggleCardAsync(userId, req.Active);
+        if (!success) return NotFound();
+        return NoContent();
+    }
 
     [HttpGet("{userId}/public-info")]
     [Authorize(Roles = "Doctor")]

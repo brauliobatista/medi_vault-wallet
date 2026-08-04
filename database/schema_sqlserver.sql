@@ -157,6 +157,7 @@ CREATE TABLE family_guardianships (
     guardian_user_id     UNIQUEIDENTIFIER NOT NULL,
     dependent_user_id    UNIQUEIDENTIFIER NOT NULL,
     relationship_type_id INT           NOT NULL,
+    status                NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved')),
     is_active            BIT           NOT NULL DEFAULT 1,
     created_at           DATETIME2     NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_family_guardianships_guardian     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),

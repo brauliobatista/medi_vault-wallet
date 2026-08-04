@@ -424,9 +424,10 @@ INSERT INTO emergency_contacts (user_id, type, name, phone, address) VALUES
 -- FAMILY_GUARDIANSHIPS (Pedro Costa is_dependent=1; parents divorced, both keep guardianship)
 -- -------------------------------------------------------
 -- relationship_type_id: 1=parent (see RELATIONSHIP_TYPES above)
-INSERT INTO family_guardianships (guardian_user_id, dependent_user_id, relationship_type_id, is_active) VALUES
-('30000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000005', 1, 1),
-('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000005', 1, 1);
+INSERT INTO family_guardianships (guardian_user_id, dependent_user_id, relationship_type_id, status, is_active) VALUES
+('30000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000005', 1, 'approved', 1),
+('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000005', 1, 'approved', 1),
+('30000000-0000-0000-0000-000000000006', '30000000-0000-0000-0000-000000000009', 4, 'pending',  1);
 
 -- -------------------------------------------------------
 -- FEMALE_MEDICAL_INFO (users 2 and 4 are female)

@@ -36,6 +36,13 @@ public class AccessControlService(MediVaultDbContext db)
         return has ? (true, "granted") : (false, "no_access");
     }
 
+    public async Task<bool> GuardianHasAccessAsync(string guardianUserId, string dependentUserId)
+    {
+        return await db.FamilyGuardianships.AnyAsync(f =>
+            f.GuardianUserId == guardianUserId && f.DependentUserId == dependentUserId &&
+            f.IsActive == 1 && f.Status == "approved");
+    }
+
     public async Task<bool> DoctorHasAccessAsync(string doctorId, string userId)
     {
         var cardActive = await db.Users

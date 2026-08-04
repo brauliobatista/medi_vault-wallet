@@ -49,6 +49,7 @@ builder.Services.AddScoped<HealthHabitService>();
 builder.Services.AddScoped<VaccinationService>();
 builder.Services.AddScoped<DoctorNoteService>();
 builder.Services.AddScoped<DoctorService>();
+builder.Services.AddScoped<FamilyService>();
 builder.Services.AddScoped<ClinicalRecordsService>();
 builder.Services.AddScoped<MedicalFileService>();
 builder.Services.AddScoped<TeamChatService>();
@@ -87,7 +88,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
-    db.Database.EnsureCreated();
+    var dbJustCreated = db.Database.EnsureCreated();
 
     // Migrations for columns added after initial schema
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
@@ -111,14 +112,15 @@ using (var scope = app.Services.CreateScope())
     try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
     catch { /* column already exists */ }
 
-    // Backfill missing share codes
+    var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));
+    DatabaseSeeder.Seed(db, seedPath);
+
+    // Backfill missing share codes (must run after seeding: seed.sql's raw INSERT
+    // statements don't set share_code, and a fresh DB's column has no SQL-level default)
     var usersToBackfill = db.Users.Where(u => u.ShareCode == null || u.ShareCode == "").ToList();
     foreach (var u in usersToBackfill)
         if (string.IsNullOrEmpty(u.ShareCode)) u.ShareCode = Guid.NewGuid().ToString("N")[..12].ToUpper();
     if (usersToBackfill.Count > 0) db.SaveChanges();
-
-    var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));
-    DatabaseSeeder.Seed(db, seedPath);
 }
 
 if (app.Environment.IsDevelopment())

@@ -128,6 +128,19 @@ export const respondToRequest = (requestId: number, action: 'approve' | 'revoke'
 export const deleteRequest = (requestId: number) =>
   api.delete(`/access-requests/${requestId}`)
 
+export const getProfileFor = (userId: string) => api.get(`/users/${userId}/profile`).then((r) => r.data)
+export const getQrCodeFor = (userId: string) =>
+  api.get(`/users/${userId}/qr`).then((r) => r.data as { payload: string })
+export const toggleCardFor = (userId: string, active: boolean) =>
+  api.put(`/users/${userId}/card`, { active })
+
+export const getAccessRequestsFor = (userId: string) =>
+  api.get(`/access-requests/${userId}`).then((r) => r.data)
+export const respondToRequestFor = (userId: string, requestId: number, action: 'approve' | 'revoke') =>
+  api.put(`/access-requests/${userId}/${requestId}/respond`, { action })
+export const deleteRequestFor = (userId: string, requestId: number) =>
+  api.delete(`/access-requests/${userId}/${requestId}`)
+
 export const getDoctorNotes = (userId: string) =>
   api.get(`/doctor-notes/${userId}`).then((r) => r.data)
 export const createDoctorNote = (data: object) =>

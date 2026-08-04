@@ -18,7 +18,8 @@ public class MedicalHistoryController(
 
     private async Task<bool> CanAccessPatientAsync(string userId)
     {
-        if (CurrentRole == "Patient") return CurrentId == userId;
+        if (CurrentRole == "Patient")
+            return CurrentId == userId || await accessControl.GuardianHasAccessAsync(CurrentId, userId);
         return await accessControl.DoctorHasAccessAsync(CurrentId, userId);
     }
 

@@ -14,12 +14,46 @@ public class AccessRequestsController(AccessControlService accessControl) : Cont
     private string CurrentId => (User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"))!;
     private string CurrentRole => User.FindFirstValue(ClaimTypes.Role)!;
 
+    private async Task<bool> CanAccessUserAsync(string userId)
+        => CurrentId == userId || await accessControl.GuardianHasAccessAsync(CurrentId, userId);
+
     [HttpGet]
     public async Task<IActionResult> GetMyRequests()
     {
         if (CurrentRole == "Patient")
             return Ok(await accessControl.GetPatientRequestsAsync(CurrentId));
         return Ok(await accessControl.GetDoctorRequestsAsync(CurrentId));
+    }
+
+    [HttpGet("{userId}")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> GetRequestsFor(string userId)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        return Ok(await accessControl.GetPatientRequestsAsync(userId));
+    }
+
+    [HttpPut("{userId}/{requestId}/respond")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> RespondFor(string userId, int requestId, RespondAccessRequest req)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        if (req.Action != "approve" && req.Action != "revoke")
+            return BadRequest(new { message = "Action must be 'approve' or 'revoke'" });
+
+        var success = await accessControl.RespondToRequestAsync(requestId, userId, req.Action);
+        if (!success) return NotFound();
+        return NoContent();
+    }
+
+    [HttpDelete("{userId}/{requestId}")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> DeleteFor(string userId, int requestId)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        var success = await accessControl.DeleteRequestAsync(requestId, userId);
+        if (!success) return NotFound();
+        return NoContent();
     }
 
     [HttpGet("search")]

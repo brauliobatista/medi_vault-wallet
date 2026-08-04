@@ -56,6 +56,23 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email).IsUnique();
 
+        modelBuilder.Entity<User>()
+            .Property(u => u.ShareCode).HasDefaultValue("");
+
+        // seed.sql's raw INSERT statements omit timestamp columns (relying on the DB-level
+        // default documented in database/schema_sqlite.sql), but EnsureCreated() only builds
+        // a SQL-level DEFAULT for properties explicitly configured here — without this, every
+        // "*At" timestamp column would reject seed rows that don't set it, on a fresh DB.
+        var timestampProperties = new[] { "CreatedAt", "UpdatedAt", "AppliedAt", "DeployedAt" };
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(string) && timestampProperties.Contains(property.Name))
+                    property.SetDefaultValueSql("(datetime('now'))");
+            }
+        }
+
         modelBuilder.Entity<Doctor>()
             .HasIndex(d => d.OrdemMedicosId).IsUnique();
         modelBuilder.Entity<Doctor>()
@@ -121,16 +138,28 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .HasForeignKey(f => f.ReviewedBy)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<RelationshipType>()
+            .HasIndex(r => r.Code).IsUnique();
+
+        modelBuilder.Entity<Gender>()
+            .HasIndex(g => g.Code).IsUnique();
+
         modelBuilder.Entity<FamilyGuardianship>()
-            .HasOne(g => g.Guardian)
+            .HasOne(f => f.Guardian)
             .WithMany()
-            .HasForeignKey(g => g.GuardianUserId)
+            .HasForeignKey(f => f.GuardianUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<FamilyGuardianship>()
-            .HasOne(g => g.Dependent)
+            .HasOne(f => f.Dependent)
             .WithMany()
-            .HasForeignKey(g => g.DependentUserId)
+            .HasForeignKey(f => f.DependentUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(f => f.RelationshipType)
+            .WithMany()
+            .HasForeignKey(f => f.RelationshipTypeId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<User>()

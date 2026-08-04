@@ -10,6 +10,7 @@ public class FamilyGuardianship
     [Column("guardian_user_id")] public string GuardianUserId { get; set; } = null!;
     [Column("dependent_user_id")] public string DependentUserId { get; set; } = null!;
     [Column("relationship_type_id")] public int RelationshipTypeId { get; set; }
+    [Column("status")] public string Status { get; set; } = "pending";
     [Column("is_active")] public int IsActive { get; set; } = 1;
     [Column("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
 
