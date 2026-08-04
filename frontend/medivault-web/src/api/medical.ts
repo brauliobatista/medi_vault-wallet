@@ -75,6 +75,7 @@ export const deleteVaccination = (userId: string, id: number) =>
 export const toggleCard = (active: boolean) => api.put('/users/me/card', { active })
 
 export const getQrCode = () => api.get('/users/me/qr').then((r) => r.data as { payload: string })
+export const getGoogleWalletUrl = () => api.get('/users/me/wallet/google').then((r) => r.data as { url: string })
 export const scanQrCode = (qrCode: string) =>
   api.post('/access-requests/qr', { qrCode }).then((r) => r.data)
 

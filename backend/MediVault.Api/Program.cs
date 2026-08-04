@@ -40,6 +40,7 @@ builder.Services.AddSingleton<JwtService>();
 builder.Services.AddSingleton<EncryptionService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<GoogleWalletService>();
 builder.Services.AddScoped<AccessControlService>();
 builder.Services.AddScoped<MedicalHistoryService>();
 builder.Services.AddScoped<ExamService>();
