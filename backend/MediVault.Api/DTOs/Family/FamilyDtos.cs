@@ -17,3 +17,6 @@ public record CreateDependentRequest(
     string BiologicalGender, string Sex, int RelationshipTypeId);
 
 public record RespondGuardianshipRequest(string Action);
+
+public record FamilyContactDto(
+    string UserId, string Name, string? Phone, string RelationshipCode, string Direction);
