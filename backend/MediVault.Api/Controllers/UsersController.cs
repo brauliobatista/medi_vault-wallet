@@ -51,6 +51,8 @@ public class UsersController(UserService userService, GoogleWalletService google
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> GetPublicInfo(string userId)
     {
+        if (!await accessControl.DoctorHasAccessAsync(CurrentUserId, userId)) return Forbid();
+
         var info = await userService.GetPublicInfoAsync(userId);
         if (info is null) return NotFound();
         return Ok(new

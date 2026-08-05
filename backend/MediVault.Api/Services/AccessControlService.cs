@@ -60,32 +60,43 @@ public class AccessControlService(MediVaultDbContext db)
         return candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
     }
 
+    private static string EffectiveStatus(AccessRequest r)
+    {
+        if (r.Status == "approved" && r.ExpiresAt is not null && string.Compare(r.ExpiresAt, DateTime.UtcNow.ToString("o")) <= 0)
+            return "expired";
+        return r.Status;
+    }
+
     public async Task<List<AccessRequestDto>> GetPatientRequestsAsync(string userId)
     {
-        return await db.AccessRequests
+        var requests = await db.AccessRequests
             .Where(r => r.UserId == userId)
             .Include(r => r.Doctor)
             .Include(r => r.User)
             .OrderByDescending(r => r.RequestedAt)
-            .Select(r => new AccessRequestDto(
+            .ToListAsync();
+
+        return requests.Select(r => new AccessRequestDto(
                 r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
                 r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
-                r.Status, r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
-            .ToListAsync();
+                EffectiveStatus(r), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
+            .ToList();
     }
 
     public async Task<List<AccessRequestDto>> GetDoctorRequestsAsync(string doctorId)
     {
-        return await db.AccessRequests
+        var requests = await db.AccessRequests
             .Where(r => r.DoctorId == doctorId)
             .Include(r => r.User)
             .Include(r => r.Doctor)
             .OrderByDescending(r => r.RequestedAt)
-            .Select(r => new AccessRequestDto(
+            .ToListAsync();
+
+        return requests.Select(r => new AccessRequestDto(
                 r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
                 r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
-                r.Status, r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
-            .ToListAsync();
+                EffectiveStatus(r), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
+            .ToList();
     }
 
     public async Task<(AccessRequest Request, string PatientName, string PublicId)?> GrantAccessByQrAsync(string doctorId, string qrCode)
@@ -127,42 +138,6 @@ public class AccessControlService(MediVaultDbContext db)
         db.AccessRequests.Add(request);
         await db.SaveChangesAsync();
         return (request, $"{user.FirstName} {user.LastName}", user.Id);
-    }
-
-    // DEV-ONLY: auto-approves access straight from the search result's "Ver dados" button so
-    // testing doesn't require a separate patient login to approve the request. Remove/replace
-    // with the real request→approve flow before production.
-    public async Task<AccessRequest?> GrantAccessDevAsync(string doctorId, string userId)
-    {
-        var user = await db.Users.AnyAsync(u => u.Id == userId && u.IsActive == 1);
-        if (!user) return null;
-
-        var expiry = DateTime.UtcNow.AddDays(7).ToString("o");
-
-        var existing = await db.AccessRequests
-            .FirstOrDefaultAsync(r => r.DoctorId == doctorId && r.UserId == userId && r.Status == "approved");
-
-        if (existing is not null)
-        {
-            existing.ExpiresAt = expiry;
-            await db.SaveChangesAsync();
-            return existing;
-        }
-
-        var request = new AccessRequest
-        {
-            DoctorId = doctorId,
-            UserId = userId,
-            Status = "approved",
-            AccessCode = new Random().Next(100000, 999999).ToString(),
-            IsEmergency = 0,
-            RequestedAt = DateTime.UtcNow.ToString("o"),
-            ApprovedAt = DateTime.UtcNow.ToString("o"),
-            ExpiresAt = expiry
-        };
-        db.AccessRequests.Add(request);
-        await db.SaveChangesAsync();
-        return request;
     }
 
     public async Task<(string UserId, string Name, string PublicId)?> FindPatientByUtentNumberAsync(string utentNumber)
@@ -207,7 +182,7 @@ public class AccessControlService(MediVaultDbContext db)
         {
             request.Status = "approved";
             request.ApprovedAt = DateTime.UtcNow.ToString("o");
-            request.ExpiresAt = DateTime.UtcNow.AddDays(30).ToString("o");
+            request.ExpiresAt = DateTime.UtcNow.AddDays(7).ToString("o");
         }
         else if (action == "revoke")
         {
