@@ -11,6 +11,8 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .dash-toolbar-link {
@@ -238,6 +240,7 @@
   align-items: flex-start;
   gap: 20px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .consult-back {
@@ -290,6 +293,26 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  /* consult-header-actions has no min-width:0, so it refuses to shrink and
+     squeezes consult-header-main (which does have min-width:0) down to zero
+     width instead — force main onto its own full-width row so the patient's
+     name/specialty stay readable, then let actions wrap below it. */
+  .consult-header-main {
+    flex-basis: 100%;
+    order: 1;
+  }
+  .consult-back { order: 0; }
+  .consult-patient-photo, .consult-patient-photo-placeholder { order: 0; }
+  .consult-header-actions {
+    order: 2;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+  }
+  .consult-timer { flex: 1; justify-content: center; }
+  .consult-draft-btn, .consult-finish-btn { flex: 1; justify-content: center; }
 }
 
 .consult-timer {
@@ -604,6 +627,11 @@
 @media (max-width: 640px) {
   .mv-modal-overlay { padding: 0; }
   .mv-modal-panel { max-width: 100%; max-height: 100%; height: 100%; border-radius: 0; }
+  .mv-modal-body { padding: 16px; overflow-x: auto; }
+  /* mv-modal-table has no responsive markup of its own (plain <table>) —
+     rather than squeeze every column unreadably thin, keep a sane minimum
+     width and let the modal body scroll horizontally to reveal the rest. */
+  .mv-modal-table { min-width: 560px; }
 }
 
 /* ── Modal-internal list/form styling (shared by the 3 agenda/contacts modals) ── */
