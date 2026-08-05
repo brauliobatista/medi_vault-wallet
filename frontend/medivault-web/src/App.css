@@ -11,6 +11,8 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .dash-toolbar-link {
@@ -328,8 +330,23 @@
 }
 .agenda-week-col-add:hover { background: #eff6ff; color: #2563eb; }
 
-@media (max-width: 992px) {
-  .agenda-week-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+@media (max-width: 900px) {
+  /* Below tablet width, 7 fixed/wrapping columns get unreadably narrow or
+     jumble the day order — scroll through the week horizontally instead,
+     one column at a time, keeping Seg→Dom in a single readable row. */
+  .agenda-week-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 1fr);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 6px;
+    margin-bottom: -6px;
+  }
+  .agenda-week-col {
+    scroll-snap-align: start;
+    min-width: 150px;
+  }
 }
 
 /* ── Large modal (agenda / contacts overlays) ── */
@@ -387,6 +404,11 @@
 @media (max-width: 640px) {
   .mv-modal-overlay { padding: 0; }
   .mv-modal-panel { max-width: 100%; max-height: 100%; height: 100%; border-radius: 0; }
+  .mv-modal-body { padding: 16px; overflow-x: auto; }
+  /* mv-modal-table has no responsive markup of its own (plain <table>) —
+     rather than squeeze every column unreadably thin, keep a sane minimum
+     width and let the modal body scroll horizontally to reveal the rest. */
+  .mv-modal-table { min-width: 560px; }
 }
 
 /* ── Modal-internal list/form styling (shared by the 3 agenda/contacts modals) ── */
