@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend/MediVault.Api
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -21,10 +21,13 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore MediVault.Api/MediVault.Api.sln
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build MediVault.Api/MediVault.Api.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test MediVault.Api/MediVault.Api.sln --configuration Release --no-build
 
   frontend:
     name: Frontend (React)
@@ -47,6 +50,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm run test
 
       - name: Build
         run: npm run build
