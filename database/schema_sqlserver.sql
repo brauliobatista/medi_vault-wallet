@@ -122,6 +122,20 @@ CREATE TABLE doctors (
     CONSTRAINT fk_doctors_institution  FOREIGN KEY (institution_id) REFERENCES institutions(id),
     CONSTRAINT fk_doctors_nationality  FOREIGN KEY (nationality_id) REFERENCES countries(id)
 );
+GO
+
+-- A doctor may practice at more than one institution (many-to-many).
+-- doctors.institution_id remains the doctor's primary/default institution.
+CREATE TABLE doctor_institutions (
+    id             INT              IDENTITY(1,1) PRIMARY KEY,
+    doctor_id      UNIQUEIDENTIFIER NOT NULL,
+    institution_id UNIQUEIDENTIFIER NOT NULL,
+    created_at     DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT uq_doctor_institutions             UNIQUE (doctor_id, institution_id),
+    CONSTRAINT fk_doctor_institutions_doctor      FOREIGN KEY (doctor_id)      REFERENCES doctors(id),
+    CONSTRAINT fk_doctor_institutions_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+GO
 
 -- -------------------------------------------------------
 -- USER PROFILE

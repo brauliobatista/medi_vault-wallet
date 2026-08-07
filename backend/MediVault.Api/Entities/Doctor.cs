@@ -22,4 +22,5 @@ public class Doctor
     public ICollection<AccessRequest> AccessRequests { get; set; } = [];
     public ICollection<DoctorNote> Notes { get; set; } = [];
     public ICollection<PendingReviewFlag> ReviewedFlags { get; set; } = [];
+    public ICollection<DoctorInstitution> DoctorInstitutions { get; set; } = [];
 }

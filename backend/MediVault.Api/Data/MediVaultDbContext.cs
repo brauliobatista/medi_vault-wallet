@@ -35,6 +35,7 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<PendingReviewFlag> PendingReviewFlags => Set<PendingReviewFlag>();
     public DbSet<SchemaVersion> SchemaVersions => Set<SchemaVersion>();
     public DbSet<AppVersion> AppVersions => Set<AppVersion>();
+    public DbSet<DoctorInstitution> DoctorInstitutions => Set<DoctorInstitution>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,9 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .HasIndex(d => d.OrdemMedicosId).IsUnique();
         modelBuilder.Entity<Doctor>()
             .HasIndex(d => d.Email).IsUnique();
+
+        modelBuilder.Entity<DoctorInstitution>()
+            .HasIndex(di => new { di.DoctorId, di.InstitutionId }).IsUnique();
 
         modelBuilder.Entity<Icpc2Code>()
             .HasIndex(c => c.Code).IsUnique();

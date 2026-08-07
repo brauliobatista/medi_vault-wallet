@@ -401,6 +401,19 @@ INSERT INTO doctors (id, ordem_medicos_id, first_name, last_name, email, passwor
 ('20000000-0000-0000-0000-000000000011', 'OM-11234', 'Diana',   'Almeida',  'diana.almeida@hsm.pt',    '$2b$12$62zUab6NmnTBVrCmarJo9OI9nmPVgTQNaGdZ0VMbtRSDH92RLwNuW', 'Clínica Geral',  '10000000-0000-0000-0000-000000000001', 184, 1);
 
 -- -------------------------------------------------------
+-- DOCTOR_INSTITUTIONS
+-- A doctor may practice at more than one institution (many-to-many).
+-- doctors.institution_id above remains each doctor's primary/default institution.
+-- -------------------------------------------------------
+INSERT INTO doctor_institutions (doctor_id, institution_id) VALUES
+('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),
+('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002'),
+('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001'),
+('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003'),
+('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000004'),
+('20000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001');
+
+-- -------------------------------------------------------
 -- USER_ADDRESSES
 -- -------------------------------------------------------
 INSERT INTO user_addresses (user_id, street, city, postal_code, country, is_primary) VALUES

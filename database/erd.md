@@ -112,6 +112,15 @@ erDiagram
         datetime created_at
     }
 
+    %% A doctor may practice at more than one institution (many-to-many).
+    %% doctors.institution_id remains the doctor's primary/default institution.
+    DOCTOR_INSTITUTIONS {
+        int id PK
+        guid doctor_id FK
+        guid institution_id FK
+        datetime created_at
+    }
+
     %% -------------------------------------------------------
     %% USER PROFILE
     %% -------------------------------------------------------
@@ -405,6 +414,8 @@ erDiagram
     INSTITUTIONS                ||--|{ DOCTORS                    : "employs"
     INSTITUTIONS                ||--o{ INSTITUTION_LICENSES       : "has"
     COUNTRIES                   ||--o{ DOCTORS                    : "nationality"
+    DOCTORS                     ||--o{ DOCTOR_INSTITUTIONS        : "practices at"
+    INSTITUTIONS                ||--o{ DOCTOR_INSTITUTIONS        : "hosts"
 
     %% Users — profile
     GENDERS                     ||--o{ USERS                      : "classifies"

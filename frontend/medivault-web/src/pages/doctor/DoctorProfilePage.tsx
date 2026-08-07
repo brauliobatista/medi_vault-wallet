@@ -1,32 +1,60 @@
 import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
-import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword } from '../../api/medical'
+import {
+  getDoctorProfile, updateDoctorProfile, changeDoctorPassword,
+  getInstitutionOptions, getSpecialtyOptions,
+} from '../../api/medical'
+
+interface InstitutionOption { id: string; name: string }
+interface SpecialtyOption { id: number; name: string }
+interface DoctorProfile {
+  ordemMedicosId: string
+  firstName: string
+  lastName: string
+  email: string
+  speciality: string | null
+  institutions: InstitutionOption[]
+}
 
 export default function DoctorProfilePage() {
-  const [profile, setProfile] = useState<Record<string, unknown> | null>(null)
+  const [profile, setProfile] = useState<DoctorProfile | null>(null)
+  const [institutionOptions, setInstitutionOptions] = useState<InstitutionOption[]>([])
+  const [specialtyOptions, setSpecialtyOptions] = useState<SpecialtyOption[]>([])
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState<Record<string, string>>({})
+  const [form, setForm] = useState({ email: '', speciality: '', institutionIds: [] as string[] })
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [showPw, setShowPw] = useState(false)
   const [saved, setSaved] = useState(false)
   const [pwError, setPwError] = useState('')
   const [pwOk, setPwOk] = useState(false)
 
-  useEffect(() => {
-    getDoctorProfile().then((p) => {
-      setProfile(p)
-      setForm({ email: p.email, speciality: p.speciality ?? '' })
-    })
-  }, [])
+  const load = () => {
+    Promise.all([getDoctorProfile(), getInstitutionOptions(), getSpecialtyOptions()])
+      .then(([p, institutions, specialties]) => {
+        setProfile(p)
+        setInstitutionOptions(institutions)
+        setSpecialtyOptions(specialties)
+        setForm({
+          email: p.email,
+          speciality: p.speciality ?? '',
+          institutionIds: (p.institutions as InstitutionOption[]).map((i) => i.id),
+        })
+      })
+  }
+
+  useEffect(load, [])
 
   const handleSave = async () => {
-    await updateDoctorProfile(form)
+    await updateDoctorProfile({ email: form.email, speciality: form.speciality, institutionIds: form.institutionIds })
     setEditing(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
-    const p = await getDoctorProfile()
-    setProfile(p)
-    setForm({ email: p.email, speciality: p.speciality ?? '' })
+    load()
+  }
+
+  const handleInstitutionsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const ids = Array.from(e.target.selectedOptions).map((o) => o.value)
+    setForm({ ...form, institutionIds: ids })
   }
 
   const handlePassword = async () => {
@@ -71,33 +99,56 @@ export default function DoctorProfilePage() {
             <div className="row g-3">
               <div className="col-sm-6">
                 <div className="text-muted small">Nº Ordem dos Médicos</div>
-                <div className="fw-semibold">{String(profile.ordemMedicosId)}</div>
+                <div className="fw-semibold">{profile.ordemMedicosId}</div>
               </div>
               <div className="col-sm-6">
                 <div className="text-muted small">Nome</div>
-                <div className="fw-semibold">{String(profile.firstName)} {String(profile.lastName)}</div>
+                <div className="fw-semibold">{profile.firstName} {profile.lastName}</div>
               </div>
               <div className="col-sm-6">
                 <div className="text-muted small">Instituição</div>
-                <div className="fw-semibold">
-                  <i className="bi bi-hospital me-1 text-primary" />
-                  {String(profile.institutionName)}
-                </div>
+                {editing ? (
+                  <>
+                    <select
+                      multiple
+                      className="form-select form-select-sm"
+                      style={{ height: `${Math.min(institutionOptions.length, 5) * 28 + 8}px` }}
+                      value={form.institutionIds}
+                      onChange={handleInstitutionsChange}
+                    >
+                      {institutionOptions.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                    </select>
+                    <div className="form-text">Ctrl/Cmd + clique para selecionar mais do que uma.</div>
+                  </>
+                ) : profile.institutions.length > 0 ? (
+                  <div className="d-flex flex-wrap gap-1 mt-1">
+                    {profile.institutions.map((i) => (
+                      <span className="badge text-bg-light border" key={i.id}>
+                        <i className="bi bi-hospital me-1 text-primary" />{i.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="fw-semibold">-</div>
+                )}
               </div>
               <div className="col-sm-6">
                 <div className="text-muted small">Email</div>
                 {editing ? (
                   <input className="form-control form-control-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 ) : (
-                  <div className="fw-semibold">{String(profile.email)}</div>
+                  <div className="fw-semibold">{profile.email}</div>
                 )}
               </div>
               <div className="col-sm-6">
                 <div className="text-muted small">Especialidade</div>
                 {editing ? (
-                  <input className="form-control form-control-sm" value={form.speciality} onChange={(e) => setForm({ ...form, speciality: e.target.value })} />
+                  <select className="form-select form-select-sm" value={form.speciality} onChange={(e) => setForm({ ...form, speciality: e.target.value })}>
+                    <option value="">Selecionar…</option>
+                    {specialtyOptions.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  </select>
                 ) : (
-                  <div className="fw-semibold">{String(profile.speciality ?? '-')}</div>
+                  <div className="fw-semibold">{profile.speciality ?? '-'}</div>
                 )}
               </div>
             </div>

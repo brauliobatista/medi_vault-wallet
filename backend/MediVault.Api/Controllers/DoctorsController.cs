@@ -21,6 +21,14 @@ public class DoctorsController(DoctorService doctorService) : ControllerBase
         return Ok(profile);
     }
 
+    [HttpGet("institutions")]
+    public async Task<IActionResult> GetInstitutionOptions()
+        => Ok(await doctorService.GetInstitutionOptionsAsync());
+
+    [HttpGet("specialties")]
+    public async Task<IActionResult> GetSpecialtyOptions()
+        => Ok(await doctorService.GetSpecialtyOptionsAsync());
+
     [HttpPut("me")]
     public async Task<IActionResult> UpdateProfile(UpdateDoctorRequest req)
     {
