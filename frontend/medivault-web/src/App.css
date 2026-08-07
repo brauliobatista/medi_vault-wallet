@@ -1,1 +1,481 @@
 /* App-level overrides */
+
+/* ── Doctor dashboard ── */
+
+.dash-toolbar {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dash-toolbar-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.dash-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.dash-toolbar-btn:hover { background: #eff6ff; }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.dash-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.dash-card-heading { display: flex; align-items: center; gap: 10px; }
+
+.dash-card-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+.dash-card-icon-blue { background: #eff6ff; color: #2563eb; }
+
+.dash-card-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; }
+
+.dash-card-menu-btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dash-card-menu-btn:hover { background: #f1f5f9; color: #64748b; }
+
+.dash-card-subtitle { font-size: 0.8rem; color: #64748b; margin: -4px 0 12px; }
+
+.dash-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 12px;
+}
+.dash-select i { color: #94a3b8; font-size: 0.8rem; }
+
+.dash-filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
+
+.dash-pill {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.dash-pill:hover { background: #e2e8f0; }
+.dash-pill.active { background: #2563eb; color: white; }
+
+.dash-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 14px; }
+
+.dash-item, .dash-time-slot, .dash-contact-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.dash-list > .dash-item:last-child,
+.dash-list > .dash-time-slot:last-child,
+.dash-list > .dash-contact-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.dash-item-icon {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.icon-congresso { background: #fee2e2; color: #dc2626; }
+.icon-ferias    { background: #dcfce7; color: #16a34a; }
+
+.dash-item-body, .dash-appt-body { flex: 1; min-width: 0; }
+
+.dash-item-title { font-size: 0.87rem; font-weight: 700; color: #1e293b; }
+.dash-item-sub   { font-size: 0.78rem; color: #64748b; margin-top: 1px; }
+.dash-item-date  { font-size: 0.78rem; color: #94a3b8; margin-top: 1px; }
+
+.status-badge {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.badge-congresso  { background: #fee2e2; color: #dc2626; }
+.badge-ferias     { background: #dcfce7; color: #16a34a; }
+.badge-em-curso   { background: #ccfbf1; color: #0d9488; }
+.badge-confirmada { background: #dbeafe; color: #2563eb; }
+
+.dash-date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dash-date-label { font-size: 0.9rem; font-weight: 700; color: #1e293b; }
+.dash-date-nav-controls { display: flex; align-items: center; gap: 6px; }
+
+.dash-date-nav-btn {
+  width: 30px; height: 30px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 7px;
+  color: #64748b;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.dash-date-nav-btn:hover { background: #f1f5f9; }
+
+.dash-today-btn {
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.dash-today-btn:hover { background: #f1f5f9; }
+
+.dash-time { width: 44px; flex-shrink: 0; font-size: 0.85rem; font-weight: 700; color: #1e293b; padding-top: 1px; }
+.dash-appt-type { font-size: 0.76rem; color: #64748b; font-weight: 600; }
+.dash-appt-name { font-size: 0.87rem; font-weight: 700; color: #1e293b; }
+
+.dash-contact-item { align-items: center; justify-content: space-between; }
+.dash-contact-name { font-size: 0.87rem; font-weight: 700; color: #1e293b; }
+.dash-contact-phone { font-size: 0.79rem; color: #64748b; margin-top: 1px; }
+
+.dash-phone-btn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background 0.12s;
+}
+.dash-phone-btn:hover { background: #dbeafe; color: #2563eb; }
+
+.dash-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+  margin-top: auto;
+  padding-top: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.dash-card-footer:hover { color: #1d4ed8; text-decoration: underline; }
+
+/* ── Weekly agenda (Agenda Diária / Agenda Médica Programada) ── */
+
+.dash-card-full { grid-column: 1 / -1; }
+
+.agenda-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  width: fit-content;
+  margin-bottom: 14px;
+}
+.agenda-toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.agenda-toggle-btn:hover { color: #334155; }
+.agenda-toggle-btn.active { background: white; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+.agenda-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.agenda-week-col {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8fafc;
+  min-width: 0;
+}
+.agenda-week-col.is-today { border-color: #93c5fd; background: #eff6ff; }
+
+.agenda-week-col-header {
+  padding: 8px 6px;
+  text-align: center;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+}
+.agenda-week-col-weekday { font-size: 0.68rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
+.agenda-week-col-daynum { font-size: 1.05rem; font-weight: 700; color: #1e293b; line-height: 1.3; }
+.agenda-week-col.is-today .agenda-week-col-daynum { color: #2563eb; }
+
+.agenda-week-col-body {
+  flex: 1;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.agenda-week-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: box-shadow 0.12s, border-color 0.12s;
+}
+.agenda-week-chip:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.1); border-color: #cbd5e1; }
+.agenda-week-chip-time { font-weight: 700; color: #1e293b; font-size: 0.74rem; }
+.agenda-week-chip-title { font-weight: 600; color: #1e293b; margin-top: 2px; overflow-wrap: anywhere; }
+.agenda-week-chip-sub { color: #64748b; margin-top: 1px; overflow-wrap: anywhere; }
+.agenda-week-chip .status-badge { display: inline-block; margin-top: 5px; font-size: 0.64rem; padding: 2px 8px; }
+
+.agenda-week-empty { font-size: 0.7rem; color: #cbd5e1; text-align: center; padding: 14px 0; margin: 0; }
+
+.agenda-week-col-add {
+  border: 1px dashed #cbd5e1;
+  border-top: 1px solid #e2e8f0;
+  background: transparent;
+  color: #94a3b8;
+  padding: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-radius: 0;
+}
+.agenda-week-col-add:hover { background: #eff6ff; color: #2563eb; }
+
+@media (max-width: 900px) {
+  /* Below tablet width, 7 fixed/wrapping columns get unreadably narrow or
+     jumble the day order — scroll through the week horizontally instead,
+     one column at a time, keeping Seg→Dom in a single readable row. */
+  .agenda-week-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 1fr);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 6px;
+    margin-bottom: -6px;
+  }
+  .agenda-week-col {
+    scroll-snap-align: start;
+    min-width: 150px;
+  }
+}
+
+/* ── Large modal (agenda / contacts overlays) ── */
+
+.mv-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.mv-modal-panel {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 960px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.mv-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.mv-modal-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin: 0; }
+
+.mv-modal-close {
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.mv-modal-close:hover { background: #e2e8f0; color: #334155; }
+
+.mv-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .mv-modal-overlay { padding: 0; }
+  .mv-modal-panel { max-width: 100%; max-height: 100%; height: 100%; border-radius: 0; }
+  .mv-modal-body { padding: 16px; overflow-x: auto; }
+  /* mv-modal-table has no responsive markup of its own (plain <table>) —
+     rather than squeeze every column unreadably thin, keep a sane minimum
+     width and let the modal body scroll horizontally to reveal the rest. */
+  .mv-modal-table { min-width: 560px; }
+}
+
+/* ── Modal-internal list/form styling (shared by the 3 agenda/contacts modals) ── */
+
+.mv-modal-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.mv-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.mv-modal-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #64748b;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.mv-modal-table td {
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+  color: #334155;
+}
+.mv-modal-table tr:last-child td { border-bottom: none; }
+
+.mv-modal-row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.mv-icon-btn {
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.mv-icon-btn:hover { background: #e2e8f0; }
+.mv-icon-btn.danger:hover { background: #fee2e2; color: #dc2626; }
+
+.mv-modal-form {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.mv-modal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mv-modal-form-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.mv-empty-state { text-align: center; color: #94a3b8; padding: 30px 0; }

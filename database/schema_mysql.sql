@@ -515,3 +515,189 @@ CREATE TABLE app_versions (
     environment  ENUM('dev', 'staging', 'prod') NOT NULL,
     is_current   BOOLEAN      NOT NULL DEFAULT FALSE
 );
+
+-- -------------------------------------------------------
+-- SCHEDULING & AGENDA
+-- -------------------------------------------------------
+
+CREATE TABLE schedule_event_types (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(20)  NOT NULL UNIQUE,
+    description VARCHAR(255)
+);
+
+CREATE TABLE appointment_types (
+    id          INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    code        VARCHAR(20)  NOT NULL UNIQUE,
+    description VARCHAR(255)
+);
+
+CREATE TABLE institution_contacts (
+    id             INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    institution_id CHAR(36)     NOT NULL,
+    service_name   VARCHAR(255) NOT NULL,
+    extension      VARCHAR(50)  NOT NULL,
+    is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_institution_contacts_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+
+CREATE TABLE doctor_schedule_events (
+    id            INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    doctor_id     CHAR(36)     NOT NULL,
+    event_type_id INT          NOT NULL,
+    title         VARCHAR(255) NOT NULL,
+    location      VARCHAR(255),
+    start_date    DATE         NOT NULL,
+    end_date      DATE         NOT NULL,
+    notes         TEXT,
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_doctor_schedule_events_dates CHECK (end_date >= start_date),
+    CONSTRAINT fk_doctor_schedule_events_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_doctor_schedule_events_type   FOREIGN KEY (event_type_id) REFERENCES schedule_event_types(id)
+);
+
+DELIMITER $$
+-- Prevent overlapping schedule events (congress/training/vacation) for the same doctor
+CREATE TRIGGER trg_doctor_schedule_events_no_overlap_insert
+BEFORE INSERT ON doctor_schedule_events
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND NEW.start_date <= end_date
+          AND NEW.end_date >= start_date
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'doctor_schedule_events: overlapping date range for this doctor';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_doctor_schedule_events_no_overlap_update
+BEFORE UPDATE ON doctor_schedule_events
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND id <> NEW.id
+          AND NEW.start_date <= end_date
+          AND NEW.end_date >= start_date
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'doctor_schedule_events: overlapping date range for this doctor';
+    END IF;
+END$$
+DELIMITER ;
+
+CREATE TABLE patient_appointments (
+    id                   INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id              CHAR(36)     NOT NULL,
+    doctor_id            CHAR(36)     NOT NULL,
+    appointment_type_id  INT          NOT NULL,
+    modality             ENUM('presencial', 'teleconsulta') NOT NULL,
+    scheduled_at         DATETIME     NOT NULL,
+    status               ENUM('pendente', 'confirmada', 'em_curso', 'concluida', 'cancelada') NOT NULL DEFAULT 'confirmada',
+    created_by_role      ENUM('doctor', 'staff') NOT NULL,
+    created_by_doctor_id CHAR(36),
+    notes                TEXT,
+    created_at           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_patient_appointments_created_by CHECK (
+        (created_by_role = 'doctor' AND created_by_doctor_id IS NOT NULL) OR
+        (created_by_role = 'staff'  AND created_by_doctor_id IS NULL)
+    ),
+    CONSTRAINT fk_patient_appointments_user             FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_patient_appointments_doctor           FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_patient_appointments_type             FOREIGN KEY (appointment_type_id) REFERENCES appointment_types(id),
+    CONSTRAINT fk_patient_appointments_created_by_doctor FOREIGN KEY (created_by_doctor_id) REFERENCES doctors(id)
+);
+
+DELIMITER $$
+-- Prevent double-booking: same doctor cannot have two active appointments at the same scheduled_at
+CREATE TRIGGER trg_patient_appointments_no_overlap_insert
+BEFORE INSERT ON patient_appointments
+FOR EACH ROW
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND scheduled_at = NEW.scheduled_at
+          AND status <> 'cancelada'
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'patient_appointments: doctor already has an appointment at this time';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_patient_appointments_no_overlap_update
+BEFORE UPDATE ON patient_appointments
+FOR EACH ROW
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND scheduled_at = NEW.scheduled_at
+          AND status <> 'cancelada'
+          AND id <> NEW.id
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'patient_appointments: doctor already has an appointment at this time';
+    END IF;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+-- Prevent a patient appointment on a date the doctor has a scheduled event (congress/training/vacation)
+CREATE TRIGGER trg_patient_appointments_no_schedule_conflict_insert
+BEFORE INSERT ON patient_appointments
+FOR EACH ROW
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND DATE(NEW.scheduled_at) BETWEEN start_date AND end_date
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'patient_appointments: doctor has a schedule event covering this date';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_patient_appointments_no_schedule_conflict_update
+BEFORE UPDATE ON patient_appointments
+FOR EACH ROW
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND DATE(NEW.scheduled_at) BETWEEN start_date AND end_date
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'patient_appointments: doctor has a schedule event covering this date';
+    END IF;
+END$$
+
+-- Prevent scheduling a doctor event (congress/training/vacation) over a date with an active patient appointment
+CREATE TRIGGER trg_doctor_schedule_events_no_appointment_conflict_insert
+BEFORE INSERT ON doctor_schedule_events
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND status <> 'cancelada'
+          AND DATE(scheduled_at) BETWEEN NEW.start_date AND NEW.end_date
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'doctor_schedule_events: doctor already has an appointment within this date range';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_doctor_schedule_events_no_appointment_conflict_update
+BEFORE UPDATE ON doctor_schedule_events
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND status <> 'cancelada'
+          AND DATE(scheduled_at) BETWEEN NEW.start_date AND NEW.end_date
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'doctor_schedule_events: doctor already has an appointment within this date range';
+    END IF;
+END$$
+DELIMITER ;
+

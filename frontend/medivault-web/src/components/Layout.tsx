@@ -21,6 +21,7 @@ const patientNav: NavItem[] = [
 
 const doctorNav: NavItem[] = [
   { path: '/doctor',          label: 'Dashboard',        icon: 'bi-house',              exact: true },
+  { path: '/doctor/agendas',  label: 'Agendas',          icon: 'bi-calendar-week' },
   { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
   { path: '/doctor/access',   label: 'Pedidos de Acesso', icon: 'bi-key' },
 ]
@@ -34,6 +35,7 @@ const pageInfo: Record<string, { title: string; subtitle: string; icon: string }
   '/vaccinations':    { title: 'Vacinas',             subtitle: 'Registo do seu plano vacinal',                        icon: 'bi-shield-plus' },
   '/access':          { title: 'Acessos e Partilhas', subtitle: 'Gira quem tem acesso ao seu perfil',                 icon: 'bi-key' },
   '/doctor':          { title: 'Dashboard',           subtitle: 'Visão geral e pesquisa de utentes',                   icon: 'bi-house' },
+  '/doctor/agendas':  { title: 'Agendas',             subtitle: 'Agenda diária e agenda médica programada',            icon: 'bi-calendar-week' },
   '/doctor/profile':  { title: 'Perfil do Médico',   subtitle: 'As suas informações profissionais',                   icon: 'bi-person-badge' },
   '/doctor/access':   { title: 'Pedidos de Acesso',  subtitle: 'Consulte e gira pedidos de acesso a utentes',         icon: 'bi-key' },
 }
