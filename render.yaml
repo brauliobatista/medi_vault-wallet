@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: medivault-api
+    runtime: docker
+    dockerfilePath: ./backend/MediVault.Api/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: ConnectionStrings__Postgres
+        sync: false
+      - key: Jwt__Secret
+        sync: false
+      - key: Jwt__Issuer
+        value: medivault
+      - key: Jwt__ExpiryHours
+        value: "8"
+      - key: Encryption__Key
+        sync: false
+      - key: Cors__AllowedOrigins__0
+        sync: false
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production

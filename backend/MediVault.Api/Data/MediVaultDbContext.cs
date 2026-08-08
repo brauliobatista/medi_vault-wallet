@@ -64,12 +64,15 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
         // a SQL-level DEFAULT for properties explicitly configured here — without this, every
         // "*At" timestamp column would reject seed rows that don't set it, on a fresh DB.
         var timestampProperties = new[] { "CreatedAt", "UpdatedAt", "AppliedAt", "DeployedAt" };
+        var timestampDefaultSql = Database.IsNpgsql()
+            ? "to_char(now() at time zone 'utc', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')"
+            : "(datetime('now'))";
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             foreach (var property in entityType.GetProperties())
             {
                 if (property.ClrType == typeof(string) && timestampProperties.Contains(property.Name))
-                    property.SetDefaultValueSql("(datetime('now'))");
+                    property.SetDefaultValueSql(timestampDefaultSql);
             }
         }
 
