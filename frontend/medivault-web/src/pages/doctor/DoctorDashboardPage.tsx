@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
-import { scanQrCode, getAccessStatus, grantAccessDev } from '../../api/medical'
+import { scanQrCode, getAccessStatus } from '../../api/medical'
 
 export default function DoctorDashboardPage() {
   const [utentNumber, setUtentNumber] = useState('')
@@ -54,15 +54,8 @@ export default function DoctorDashboardPage() {
     }
   }
 
-  // DEV-ONLY: auto-grants access before opening the record, so testing doesn't require a
-  // separate patient login to approve the request. See AccessControlService.GrantAccessDevAsync.
-  const handleViewData = async () => {
+  const handleViewData = () => {
     if (!found) return
-    try {
-      await grantAccessDev(found.userId)
-    } catch {
-      // ignore — PatientViewPage will show its own "Sem acesso" state if this failed
-    }
     navigate(`/doctor/patient/${found.userId}`, { state: { publicId: found.publicId, patientName: found.name } })
   }
 

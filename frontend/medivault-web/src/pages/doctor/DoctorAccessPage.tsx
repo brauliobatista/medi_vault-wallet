@@ -19,12 +19,14 @@ export default function DoctorAccessPage() {
     pending: 'warning text-dark',
     approved: 'success',
     revoked: 'secondary',
+    expired: 'secondary',
   }
 
   const statusLabel: Record<string, string> = {
     pending: 'Pendente',
     approved: 'Aprovado',
     revoked: 'Revogado',
+    expired: 'Expirado',
   }
 
   return (
