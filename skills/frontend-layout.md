@@ -1,4 +1,7 @@
-# MediVault Frontend Layout Template
+# Skill: MediVault Frontend Layout Template
+
+## Trigger
+Use this skill whenever a new page is created in `frontend/medivault-web`, or when working on the shared sidebar/topbar layout (`src/components/Layout.tsx`, `src/index.css`).
 
 ## Descrição
 Layout padrão do MediVault: sidebar azul-marinho fixo + topbar branca + área de conteúdo cinzento claro. Suporta dois roles: `Patient` (7 itens de nav) e `Doctor` (3 itens de nav), detetados automaticamente pelo JWT.
