@@ -16,8 +16,17 @@ var documentsDir = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", 
 Directory.CreateDirectory(documentsDir);
 
 // Database
+// Set ConnectionStrings:Postgres (e.g. via the ConnectionStrings__Postgres env var) to
+// deploy against a managed Postgres instance (Neon, etc.); otherwise falls back to the
+// local SQLite file used for development.
+var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres");
 builder.Services.AddDbContext<MediVaultDbContext>(opt =>
-    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (!string.IsNullOrWhiteSpace(postgresConnectionString))
+        opt.UseNpgsql(postgresConnectionString);
+    else
+        opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 // Auth
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
@@ -75,12 +84,18 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Extra origins (e.g. the deployed Vercel URL) come from config — set via the
+// Cors__AllowedOrigins__0, Cors__AllowedOrigins__1, ... env vars in production.
+var extraOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(opt => opt.AddPolicy("Frontend", policy =>
-    policy.WithOrigins("http://localhost:5173", "https://localhost:5173",
+    policy.WithOrigins([
+                       "http://localhost:5173", "https://localhost:5173",
                        "http://localhost:5174", "https://localhost:5174",
                        "http://192.168.1.77:5173",
                        "http://192.168.1.189:5173", "https://192.168.1.189:5173",
-                       "http://192.168.1.135:5173", "https://192.168.1.135:5173")
+                       "http://192.168.1.135:5173", "https://192.168.1.135:5173",
+                       .. extraOrigins,
+                       ])
           .AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
@@ -91,27 +106,32 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<MediVaultDbContext>();
     var dbJustCreated = db.Database.EnsureCreated();
 
-    // Migrations for columns added after initial schema
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
-    catch { /* column already exists */ }
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN share_code TEXT NOT NULL DEFAULT ''"); }
-    catch { /* column already exists */ }
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex_id INTEGER NOT NULL DEFAULT 0"); }
-    catch { /* column already exists */ }
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
-    catch { /* column already exists */ }
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE doctors ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
-    catch { /* column already exists */ }
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE health_habits ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0"); }
-    catch { /* column already exists */ }
-    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS countries (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, name TEXT NOT NULL)"); }
-    catch { /* table already exists */ }
-    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS genders (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
-    catch { /* table already exists */ }
-    try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS habit_types (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
-    catch { /* table already exists */ }
-    try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
-    catch { /* column already exists */ }
+    // Migrations for columns added after initial schema (SQLite dev DB only — a fresh
+    // Postgres database is always created by EnsureCreated with the current model already,
+    // and this raw SQL uses SQLite-only syntax like AUTOINCREMENT).
+    if (db.Database.IsSqlite())
+    {
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN card_active INTEGER NOT NULL DEFAULT 1"); }
+        catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN share_code TEXT NOT NULL DEFAULT ''"); }
+        catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN sex_id INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE doctors ADD COLUMN nationality_id INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE health_habits ADD COLUMN type_id INTEGER NOT NULL DEFAULT 0"); }
+        catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS countries (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, name TEXT NOT NULL)"); }
+        catch { /* table already exists */ }
+        try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS genders (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
+        catch { /* table already exists */ }
+        try { db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS habit_types (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, description TEXT)"); }
+        catch { /* table already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
+        catch { /* column already exists */ }
+    }
 
     var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));
     DatabaseSeeder.Seed(db, seedPath);
