@@ -30,7 +30,9 @@ public record UpdateUserRequest(
     string? Profession,
     string? MaritalStatus,
     bool? AcceptsTransfusion,
-    bool? AcceptsResuscitation
+    bool? AcceptsResuscitation,
+    string? BiologicalGender,
+    int? SexId
 );
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);

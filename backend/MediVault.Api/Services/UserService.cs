@@ -45,6 +45,8 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
         if (req.MaritalStatus is not null) u.MaritalStatus = req.MaritalStatus;
         if (req.AcceptsTransfusion.HasValue) u.AcceptsTransfusion = req.AcceptsTransfusion.Value ? 1 : 0;
         if (req.AcceptsResuscitation.HasValue) u.AcceptsResuscitation = req.AcceptsResuscitation.Value ? 1 : 0;
+        if (req.BiologicalGender is not null) u.BiologicalGender = req.BiologicalGender;
+        if (req.SexId.HasValue) u.SexId = req.SexId.Value;
         u.UpdatedAt = DateTime.UtcNow.ToString("o");
 
         await db.SaveChangesAsync();
