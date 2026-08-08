@@ -17,6 +17,7 @@ import {
   getAccessStatus,
   getDocuments,
   getChatMessages,
+  getFamilyCircle,
 } from '../../api/medical'
 import ContextoClinicoModal from '../../components/ContextoClinicoModal'
 import PrescricaoModal from '../../components/PrescricaoModal'
@@ -57,6 +58,15 @@ interface VitalSign {
 }
 interface MedicalFile { id: number; fileName: string; fileType: string | null; fileUrl: string; uploadedAt: string; uploadedByName: string | null }
 interface ChatMessage { id: number; authorDoctorId: string; authorName: string; message: string; createdAt: string }
+interface FamilyContact { userId: string; name: string; phone: string | null; relationshipCode: string; direction: 'guardian' | 'dependent' }
+
+const RELATIONSHIP_LABELS: Record<string, string> = {
+  parent: 'Pai / Mãe', legal_guardian: 'Tutor legal', tutor: 'Tutor de menor', other: 'Outro',
+}
+function relationshipLabel(f: FamilyContact) {
+  const base = RELATIONSHIP_LABELS[f.relationshipCode] ?? f.relationshipCode
+  return f.direction === 'guardian' ? base : `${base} (a cargo)`
+}
 
 const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 function formatDatePt(iso: string) {
@@ -113,6 +123,7 @@ export default function PatientViewPage() {
   const [vitals, setVitals] = useState<VitalSign[]>([])
   const [documents, setDocuments] = useState<MedicalFile[]>([])
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [familyCircle, setFamilyCircle] = useState<FamilyContact[]>([])
   const [deniedReason, setDeniedReason] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<CenterTab>('anamnese')
@@ -159,8 +170,9 @@ export default function PatientViewPage() {
       getVitalSigns(uid),
       getDocuments(uid),
       getChatMessages(uid),
+      getFamilyCircle(uid),
     ])
-      .then(([summaryRes, pathRes, allergyRes, medRes, analyticalRes, imagingRes, optometryRes, anamnesesRes, assessmentsRes, vitalsRes, documentsRes, chatRes]) => {
+      .then(([summaryRes, pathRes, allergyRes, medRes, analyticalRes, imagingRes, optometryRes, anamnesesRes, assessmentsRes, vitalsRes, documentsRes, chatRes, familyRes]) => {
         setSummary(summaryRes)
         setPathologies(pathRes)
         setAllergies(allergyRes)
@@ -170,6 +182,7 @@ export default function PatientViewPage() {
         setVitals(vitalsRes)
         setDocuments(documentsRes)
         setChatMessages(chatRes)
+        setFamilyCircle(familyRes)
 
         type Analytical = { id: number; examDate: string; laboratory: string | null; parameters: { isAbnormal: boolean }[] }
         type Imaging = { id: number; examType: string; examDate: string }
@@ -611,6 +624,30 @@ export default function PatientViewPage() {
               </div>
             ))}
             {documents.length === 0 && <p className="consult-context-sub mb-0">Sem documentos associados.</p>}
+          </div>
+
+          <div className="consult-panel">
+            <div className="consult-panel-header">
+              Agregado Familiar
+            </div>
+            {familyCircle.length > 0 ? (
+              familyCircle.map((f) => (
+                <div className="consult-doc-row" key={f.userId}>
+                  <i className="bi bi-person-circle consult-doc-icon" />
+                  <div className="flex-grow-1">
+                    <div className="consult-context-value">{f.name}</div>
+                    <div className="consult-context-sub">{relationshipLabel(f)}</div>
+                  </div>
+                  {f.phone ? (
+                    <a className="consult-doc-badge" href={`tel:${f.phone}`}>{f.phone}</a>
+                  ) : (
+                    <span className="consult-context-sub mb-0">—</span>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="consult-context-sub mb-0">Sem agregado familiar registado.</p>
+            )}
           </div>
 
           <div className="consult-panel">
