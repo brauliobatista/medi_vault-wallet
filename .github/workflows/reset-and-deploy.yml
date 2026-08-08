@@ -1,0 +1,35 @@
+name: Reset DB and Redeploy
+
+# Manual-only, destructive workflow: wipes the production database, then
+# redeploys the backend (which recreates the schema and reseeds test data
+# on startup, see Program.cs) and the frontend.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Escreve RESET para confirmar que queres apagar todos os dados de produção'
+        required: true
+
+jobs:
+  reset-database:
+    if: github.ref == 'refs/heads/main' && github.event.inputs.confirm == 'RESET'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wipe schema
+        env:
+          PGCONNECT: ${{ secrets.NEON_DATABASE_URL }}
+        run: psql "$PGCONNECT" -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+  deploy-backend:
+    needs: reset-database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deploy
+        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
