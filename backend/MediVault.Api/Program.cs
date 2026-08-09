@@ -157,3 +157,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Exposes the top-level Program for WebApplicationFactory<Program> in integration tests.
+public partial class Program { }
