@@ -49,7 +49,7 @@ public class UserServiceTests
         var sut = new UserService(db, env);
 
         var result = await sut.UpdateProfileAsync(user.Id,
-            new UpdateUserRequest("new@example.com", "912345678", "Enfermeiro", "Casado", true, false));
+            new UpdateUserRequest("new@example.com", "912345678", "Enfermeiro", "Casado", true, false, null, null));
 
         Assert.True(result);
         var updated = await sut.GetProfileAsync(user.Id);
@@ -68,7 +68,7 @@ public class UserServiceTests
         var sut = new UserService(db, env);
 
         var result = await sut.UpdateProfileAsync("missing-id",
-            new UpdateUserRequest(null, null, null, null, null, null));
+            new UpdateUserRequest(null, null, null, null, null, null, null, null));
 
         Assert.False(result);
     }

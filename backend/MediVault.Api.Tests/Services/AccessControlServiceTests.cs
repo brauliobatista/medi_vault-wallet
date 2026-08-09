@@ -342,7 +342,7 @@ public class AccessControlServiceTests
         var result = await sut.RespondToRequestAsync(request.Id, user.Id, "revoke");
 
         Assert.True(result);
-        Assert.Empty(db.AccessRequests);
+        Assert.Equal("revoked", db.AccessRequests.Single().Status);
     }
 
     [Fact]
@@ -356,7 +356,7 @@ public class AccessControlServiceTests
     }
 
     [Fact]
-    public async Task DeleteRequestAsync_RemovesRequest_WhenOwnedByUser()
+    public async Task DeleteRequestAsync_MarksRequestRevoked_WhenOwnedByUser()
     {
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db);
@@ -365,7 +365,7 @@ public class AccessControlServiceTests
         var sut = new AccessControlService(db);
 
         Assert.True(await sut.DeleteRequestAsync(request.Id, user.Id));
-        Assert.Empty(db.AccessRequests);
+        Assert.Equal("revoked", db.AccessRequests.Single().Status);
     }
 
     [Fact]
