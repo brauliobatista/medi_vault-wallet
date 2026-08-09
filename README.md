@@ -40,6 +40,19 @@ medi_vault-wallet/
 
 ### 1 — Iniciar o Backend
 
+**Primeira vez:** configurar os segredos locais (não ficam no repositório — ver [`skills/development-rules.md`](skills/development-rules.md)):
+
+```bash
+cd backend/MediVault.Api
+dotnet user-secrets set "Jwt:Secret" "<string aleatória com pelo menos 32 caracteres>"
+dotnet user-secrets set "Encryption:Key" "<64 caracteres hexadecimais = 32 bytes>"
+```
+
+Gerar um valor aleatório para a `Encryption:Key` (PowerShell):
+```powershell
+$b = [byte[]]::new(32); [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); ($b | ForEach-Object { $_.ToString("x2") }) -join ""
+```
+
 ```bash
 cd backend/MediVault.Api
 dotnet run
