@@ -11,8 +11,15 @@ on:
         required: true
 
 jobs:
-  reset-database:
+  # Runs the full CI suite (backend unit + API tests, frontend lint/test/build,
+  # SQLite schema check) before anything destructive happens. If any of it
+  # fails, reset-database (and everything after it) is skipped automatically.
+  run-ci:
     if: github.ref == 'refs/heads/main' && github.event.inputs.confirm == 'RESET'
+    uses: ./.github/workflows/ci.yml
+
+  reset-database:
+    needs: run-ci
     runs-on: ubuntu-latest
     steps:
       - name: Wipe schema
