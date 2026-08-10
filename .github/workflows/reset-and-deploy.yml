@@ -10,6 +10,12 @@ on:
         description: 'Escreve RESET para confirmar que queres apagar todos os dados de produção'
         required: true
 
+# ci.yml (called below via run-ci) needs checks: write for dorny/test-reporter to
+# publish test results — a reusable workflow can't request more than the caller grants.
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   # Runs the full CI suite (backend unit + API tests, frontend lint/test/build,
   # SQLite schema check) before anything destructive happens. If any of it
