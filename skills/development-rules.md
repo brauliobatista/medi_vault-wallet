@@ -28,6 +28,7 @@ Load this skill at the start of every ticket/task in this project, whenever writ
 - No direct commits to `main` — every change goes through a Pull Request.
 - A PR needs at least one reviewer approval before it can be merged.
 - Branch names follow the ticket key (`KAN##-short-description`).
+- Claude must never run `git commit` or `git push` in this repo — make the file changes only and leave committing and pushing to the developer, every time, no exceptions.
 
 ## Checklist before finishing a ticket
 

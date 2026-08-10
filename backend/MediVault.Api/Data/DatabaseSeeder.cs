@@ -17,14 +17,15 @@ public static class DatabaseSeeder
         var sql = File.ReadAllText(seedSqlPath);
         var statements = SplitStatements(sql);
 
-        using var tx = db.Database.BeginTransaction();
+        // Each statement runs in its own implicit transaction (no shared BeginTransaction):
+        // on Postgres, one failed statement poisons the rest of an explicit transaction until
+        // rollback, which would silently wipe out all the seed rows that came before it.
         foreach (var stmt in statements)
         {
             if (!HasSqlContent(stmt)) continue;
             try { db.Database.ExecuteSqlRaw(stmt); }
             catch (Exception ex) { Console.WriteLine($"[Seeder] SKIP: {ex.Message[..Math.Min(100, ex.Message.Length)]}"); }
         }
-        tx.Commit();
         Console.WriteLine("[Seeder] seed.sql aplicado.");
     }
 
