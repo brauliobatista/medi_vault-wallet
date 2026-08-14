@@ -1,5 +1,6 @@
 using MediVault.Api.Entities;
 using MediVault.Api.Services;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MediVault.Api.Tests.Services;
 
@@ -30,7 +31,7 @@ public class AccessControlServiceTests
     public async Task IsQrCardActiveAsync_ReturnsNull_ForMalformedQr()
     {
         using var db = TestDbContextFactory.Create();
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.Null(await sut.IsQrCardActiveAsync("not-a-valid-qr"));
     }
@@ -40,7 +41,7 @@ public class AccessControlServiceTests
     {
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db, shareCode: "REAL123");
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.Null(await sut.IsQrCardActiveAsync($"MV:{user.Id}:WRONGCODE"));
     }
@@ -50,7 +51,7 @@ public class AccessControlServiceTests
     {
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db, shareCode: "REAL123", cardActive: 1);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.True(await sut.IsQrCardActiveAsync($"MV:{user.Id}:REAL123"));
     }
@@ -60,7 +61,7 @@ public class AccessControlServiceTests
     {
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db, shareCode: "REAL123", cardActive: 0);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.False(await sut.IsQrCardActiveAsync($"MV:{user.Id}:REAL123"));
     }
@@ -73,7 +74,7 @@ public class AccessControlServiceTests
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db, cardActive: 0);
         var doctor = TestDataFactory.SeedDoctor(db);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var (hasAccess, reason) = await sut.GetAccessStatusAsync(doctor.Id, user.Id);
 
@@ -87,7 +88,7 @@ public class AccessControlServiceTests
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var (hasAccess, reason) = await sut.GetAccessStatusAsync(doctor.Id, user.Id);
 
@@ -102,7 +103,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         SeedAccessRequest(db, doctor.Id, user.Id, expiresAt: DateTime.UtcNow.AddDays(1).ToString("o"));
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var (hasAccess, reason) = await sut.GetAccessStatusAsync(doctor.Id, user.Id);
 
@@ -117,7 +118,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         SeedAccessRequest(db, doctor.Id, user.Id, expiresAt: DateTime.UtcNow.AddDays(-1).ToString("o"));
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var (hasAccess, reason) = await sut.GetAccessStatusAsync(doctor.Id, user.Id);
 
@@ -132,7 +133,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         SeedAccessRequest(db, doctor.Id, user.Id, status: "pending", isEmergency: 1);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.True(await sut.DoctorHasAccessAsync(doctor.Id, user.Id));
     }
@@ -144,7 +145,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db, cardActive: 0);
         var doctor = TestDataFactory.SeedDoctor(db);
         SeedAccessRequest(db, doctor.Id, user.Id);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.False(await sut.DoctorHasAccessAsync(doctor.Id, user.Id));
     }
@@ -166,7 +167,7 @@ public class AccessControlServiceTests
             RelationshipTypeId = relType.Id, Status = "approved", IsActive = 1,
         });
         db.SaveChanges();
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.True(await sut.GuardianHasAccessAsync(guardian.Id, dependent.Id));
     }
@@ -177,7 +178,7 @@ public class AccessControlServiceTests
         using var db = TestDbContextFactory.Create();
         var guardian = TestDataFactory.SeedUser(db);
         var dependent = TestDataFactory.SeedUser(db, isDependent: 1);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.False(await sut.GuardianHasAccessAsync(guardian.Id, dependent.Id));
     }
@@ -191,7 +192,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         SeedAccessRequest(db, doctor.Id, user.Id, status: "pending");
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var results = await sut.GetPatientRequestsAsync(user.Id);
 
@@ -206,7 +207,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         SeedAccessRequest(db, doctor.Id, user.Id, status: "pending");
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var results = await sut.GetDoctorRequestsAsync(doctor.Id);
 
@@ -221,7 +222,7 @@ public class AccessControlServiceTests
     {
         using var db = TestDbContextFactory.Create();
         var doctor = TestDataFactory.SeedDoctor(db);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.Null(await sut.GrantAccessByQrAsync(doctor.Id, "bad-qr"));
     }
@@ -232,7 +233,7 @@ public class AccessControlServiceTests
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db, shareCode: "REAL123");
         var doctor = TestDataFactory.SeedDoctor(db);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var result = await sut.GrantAccessByQrAsync(doctor.Id, $"MV:{user.Id}:REAL123");
 
@@ -248,7 +249,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db, shareCode: "REAL123");
         var doctor = TestDataFactory.SeedDoctor(db);
         var existing = SeedAccessRequest(db, doctor.Id, user.Id, expiresAt: DateTime.UtcNow.AddDays(-1).ToString("o"));
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var result = await sut.GrantAccessByQrAsync(doctor.Id, $"MV:{user.Id}:REAL123");
 
@@ -265,7 +266,7 @@ public class AccessControlServiceTests
     {
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db, utentNumber: "999888777");
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var result = await sut.FindPatientByUtentNumberAsync("999888777");
 
@@ -277,7 +278,7 @@ public class AccessControlServiceTests
     public async Task FindPatientByUtentNumberAsync_ReturnsNull_WhenNotFound()
     {
         using var db = TestDbContextFactory.Create();
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.Null(await sut.FindPatientByUtentNumberAsync("000000000"));
     }
@@ -290,7 +291,7 @@ public class AccessControlServiceTests
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var request = await sut.RequestAccessAsync(doctor.Id, user.Id);
 
@@ -304,7 +305,7 @@ public class AccessControlServiceTests
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var first = await sut.RequestAccessAsync(doctor.Id, user.Id);
         var second = await sut.RequestAccessAsync(doctor.Id, user.Id);
@@ -320,7 +321,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         var request = SeedAccessRequest(db, doctor.Id, user.Id, status: "pending");
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var result = await sut.RespondToRequestAsync(request.Id, user.Id, "approve");
 
@@ -337,7 +338,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         var request = SeedAccessRequest(db, doctor.Id, user.Id, status: "pending");
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         var result = await sut.RespondToRequestAsync(request.Id, user.Id, "revoke");
 
@@ -350,7 +351,7 @@ public class AccessControlServiceTests
     {
         using var db = TestDbContextFactory.Create();
         var user = TestDataFactory.SeedUser(db);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.False(await sut.RespondToRequestAsync(999, user.Id, "approve"));
     }
@@ -362,7 +363,7 @@ public class AccessControlServiceTests
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         var request = SeedAccessRequest(db, doctor.Id, user.Id);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.True(await sut.DeleteRequestAsync(request.Id, user.Id));
         Assert.Equal("revoked", db.AccessRequests.Single().Status);
@@ -376,7 +377,7 @@ public class AccessControlServiceTests
         var otherUser = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
         var request = SeedAccessRequest(db, doctor.Id, user.Id);
-        var sut = new AccessControlService(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
 
         Assert.False(await sut.DeleteRequestAsync(request.Id, otherUser.Id));
         Assert.Single(db.AccessRequests);
