@@ -12,19 +12,19 @@ interface NavItem {
 
 const patientNav: NavItem[] = [
   { path: '/dashboard',       label: 'Dashboard',        icon: 'bi-grid-1x2',          exact: true },
-  { path: '/profile',         label: 'Perfil de Saúde',  icon: 'bi-heart-pulse' },
   { path: '/medical-history', label: 'Histórico Médico', icon: 'bi-clipboard2-pulse' },
   { path: '/exams',           label: 'Exames',           icon: 'bi-activity' },
   { path: '/habits',          label: 'Hábitos de Saúde', icon: 'bi-heart' },
   { path: '/vaccinations',    label: 'Vacinas',          icon: 'bi-shield-plus' },
   { path: '/access',          label: 'Acessos',          icon: 'bi-key' },
   { path: '/family',          label: 'Agregado Familiar', icon: 'bi-people' },
+  { path: '/profile',         label: 'Perfil de Saúde',  icon: 'bi-heart-pulse' },
 ]
 
 const doctorNav: NavItem[] = [
   { path: '/doctor',          label: 'Consulta',         icon: 'bi-qr-code-scan',       exact: true },
-  { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
   { path: '/doctor/access',   label: 'Pedidos de Acesso', icon: 'bi-key' },
+  { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
 ]
 
 const pageInfo: Record<string, { title: string; subtitle: string; icon: string }> = {
