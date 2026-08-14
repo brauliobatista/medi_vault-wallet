@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import { getUser } from '../../hooks/useAuth'
+import { usePendingAccessRequests } from '../../hooks/usePendingAccessRequests'
 
 const sections = [
   { to: '/profile',         icon: 'bi-person-fill',       label: 'Perfil de Saúde',    color: 'primary' },
@@ -13,6 +14,7 @@ const sections = [
 
 export default function DashboardPage() {
   const user = getUser()
+  const { count: pendingCount } = usePendingAccessRequests()
 
   return (
     <Layout>
@@ -20,6 +22,20 @@ export default function DashboardPage() {
         <h4 className="fw-bold text-dark mb-1">Olá, {user?.name?.split(' ')[0]} 👋</h4>
         <p className="text-muted mb-0">O que pretende consultar hoje?</p>
       </div>
+      {pendingCount > 0 && (
+        <div className="alert alert-primary d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4" role="alert">
+          <div className="d-flex align-items-center gap-2">
+            <i className="bi bi-bell-fill" />
+            <span>
+              Tem <strong>{pendingCount}</strong>{' '}
+              {pendingCount === 1 ? 'pedido de acesso pendente de um médico' : 'pedidos de acesso pendentes de médicos'}.
+            </span>
+          </div>
+          <Link to="/access" className="btn btn-primary btn-sm">
+            Ver pedidos
+          </Link>
+        </div>
+      )}
       <div className="row g-3">
         {sections.map((s) => (
           <div className="col-sm-6 col-lg-4" key={s.to}>

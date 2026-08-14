@@ -77,7 +77,7 @@ public record CreateVaccinationRequest(
     string? NextDueDate, string? BatchNumber, string? Institution, string? Notes);
 
 public record AccessRequestDto(
-    int Id, string UserId, string PatientName, string PatientPublicId, string DoctorId, string DoctorName,
+    int Id, string UserId, string PatientName, string PatientPublicId, string UtentNumber, string DoctorId, string DoctorName,
     string Status, bool IsEmergency, string RequestedAt, string? ApprovedAt, string? ExpiresAt);
 
 public record RespondAccessRequest(string Action);
