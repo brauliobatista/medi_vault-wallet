@@ -27,6 +27,7 @@ builder.Services.AddDbContext<MediVaultDbContext>(opt =>
     else
         opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+builder.Services.AddMemoryCache();
 
 // Auth
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;

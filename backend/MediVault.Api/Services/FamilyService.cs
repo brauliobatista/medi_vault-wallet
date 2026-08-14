@@ -47,6 +47,29 @@ public class FamilyService(MediVaultDbContext db)
             .ToListAsync();
     }
 
+    public async Task<List<FamilyContactDto>> GetFamilyCircleAsync(string userId)
+    {
+        var asGuardian = await db.FamilyGuardianships
+            .Where(f => f.GuardianUserId == userId && f.IsActive == 1 && f.Status == "approved")
+            .Include(f => f.Dependent)
+            .Include(f => f.RelationshipType)
+            .Select(f => new FamilyContactDto(
+                f.Dependent.Id, f.Dependent.FirstName + " " + f.Dependent.LastName, f.Dependent.Phone,
+                f.RelationshipType.Code, "dependent"))
+            .ToListAsync();
+
+        var asDependent = await db.FamilyGuardianships
+            .Where(f => f.DependentUserId == userId && f.IsActive == 1 && f.Status == "approved")
+            .Include(f => f.Guardian)
+            .Include(f => f.RelationshipType)
+            .Select(f => new FamilyContactDto(
+                f.Guardian.Id, f.Guardian.FirstName + " " + f.Guardian.LastName, f.Guardian.Phone,
+                f.RelationshipType.Code, "guardian"))
+            .ToListAsync();
+
+        return asGuardian.Concat(asDependent).ToList();
+    }
+
     public async Task<SearchUserByEmailResult?> FindUserByEmailAsync(string callerUserId, string email)
     {
         var user = await db.Users

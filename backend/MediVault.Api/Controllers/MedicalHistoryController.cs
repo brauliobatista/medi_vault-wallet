@@ -181,6 +181,15 @@ public class MedicalHistoryController(
         return Ok(result);
     }
 
+    // --- Family circle (agregado familiar) ---
+
+    [HttpGet("family")]
+    public async Task<IActionResult> GetFamily(string userId, [FromServices] FamilyService familyService)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        return Ok(await familyService.GetFamilyCircleAsync(userId));
+    }
+
     // --- Health Habits ---
 
     [HttpGet("habits")]

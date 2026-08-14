@@ -1,12 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MediVault.Api.Data;
 using MediVault.Api.DTOs.Medical;
 using MediVault.Api.Entities;
 
 namespace MediVault.Api.Services;
 
-public class AccessControlService(MediVaultDbContext db)
+public class AccessControlService(MediVaultDbContext db, IMemoryCache cache)
 {
+    // A single patient page load fires ~11 independent requests that each re-check the same
+    // doctor/patient access pair; a short cache collapses those into one DB round trip without
+    // meaningfully delaying revocation (RespondToRequestAsync/DeleteRequestAsync bust it immediately).
+    private static readonly TimeSpan AccessCacheTtl = TimeSpan.FromSeconds(15);
+
+    private static string DoctorAccessCacheKey(string doctorId, string userId) => $"doctor-access:{doctorId}:{userId}";
     // Returns null = QR invalid, false = card suspended, true = card active
     public async Task<bool?> IsQrCardActiveAsync(string qrCode)
     {
@@ -45,9 +52,16 @@ public class AccessControlService(MediVaultDbContext db)
 
     public async Task<bool> DoctorHasAccessAsync(string doctorId, string userId)
     {
+        var cacheKey = DoctorAccessCacheKey(doctorId, userId);
+        if (cache.TryGetValue(cacheKey, out bool cached)) return cached;
+
         var cardActive = await db.Users
             .AnyAsync(u => u.Id == userId && u.IsActive == 1 && u.CardActive == 1);
-        if (!cardActive) return false;
+        if (!cardActive)
+        {
+            cache.Set(cacheKey, false, AccessCacheTtl);
+            return false;
+        }
 
         var now = DateTime.UtcNow.ToString("o");
 
@@ -57,7 +71,9 @@ public class AccessControlService(MediVaultDbContext db)
                         (r.Status == "approved" || r.IsEmergency == 1))
             .ToListAsync();
 
-        return candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
+        var hasAccess = candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
+        cache.Set(cacheKey, hasAccess, AccessCacheTtl);
+        return hasAccess;
     }
 
     public async Task<List<AccessRequestDto>> GetPatientRequestsAsync(string userId)
@@ -120,6 +136,7 @@ public class AccessControlService(MediVaultDbContext db)
         {
             existing.ExpiresAt = expiry;
             await db.SaveChangesAsync();
+            cache.Remove(DoctorAccessCacheKey(doctorId, userId));
             return (existing, $"{user.FirstName} {user.LastName}", user.Id);
         }
 
@@ -136,6 +153,7 @@ public class AccessControlService(MediVaultDbContext db)
         };
         db.AccessRequests.Add(request);
         await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(doctorId, userId));
         return (request, $"{user.FirstName} {user.LastName}", user.Id);
     }
 
@@ -189,6 +207,7 @@ public class AccessControlService(MediVaultDbContext db)
         }
 
         await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(request.DoctorId, request.UserId));
         return true;
     }
 
@@ -201,6 +220,7 @@ public class AccessControlService(MediVaultDbContext db)
 
         request.Status = request.Status == "pending" ? "rejected" : "revoked";
         await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(request.DoctorId, request.UserId));
         return true;
     }
 }

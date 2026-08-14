@@ -84,6 +84,9 @@ export const getFamilyHistory = (userId: string) =>
 export const upsertFamilyHistory = (userId: string, data: object) =>
   api.post(`/patients/${userId}/family-history`, data).then((r) => r.data)
 
+export const getFamilyCircle = (userId: string) =>
+  api.get(`/patients/${userId}/family`).then((r) => r.data)
+
 export const getHabits = (userId: string) =>
   api.get(`/patients/${userId}/habits`).then((r) => r.data)
 export const upsertHabit = (userId: string, data: object) =>
