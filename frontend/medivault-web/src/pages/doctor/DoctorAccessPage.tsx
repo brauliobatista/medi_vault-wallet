@@ -49,7 +49,6 @@ export default function DoctorAccessPage() {
     rejected: 'danger',
     expired: 'dark',
     revoked: 'secondary',
-    expired: 'secondary',
   }
 
   const statusLabel: Record<string, string> = {
@@ -58,7 +57,6 @@ export default function DoctorAccessPage() {
     rejected: 'Rejeitado',
     expired: 'Expirado',
     revoked: 'Revogado',
-    expired: 'Expirado',
   }
 
   const filteredRequests = useMemo(() => {

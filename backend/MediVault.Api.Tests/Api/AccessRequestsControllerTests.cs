@@ -373,51 +373,6 @@ public class AccessRequestsControllerTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // --- POST /api/access-requests/{userId}/grant-dev (GrantAccessDev) ---
-
-    [Fact]
-    public async Task GrantAccessDev_ReturnsOk_ForExistingUser()
-    {
-        using var factory = new ApiTestFactory();
-        var client = factory.CreateClient();
-        using var db = factory.CreateDbContext();
-        var user = TestDataFactory.SeedUser(db);
-        var doctor = TestDataFactory.SeedDoctor(db);
-        Authorize(client, factory.MintToken(doctor.Id, "Doctor", doctor.OrdemMedicosId));
-
-        var response = await client.PostAsync($"/api/access-requests/{user.Id}/grant-dev", content: null);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GrantAccessDev_ReturnsNotFound_ForUnknownUser()
-    {
-        using var factory = new ApiTestFactory();
-        var client = factory.CreateClient();
-        using var db = factory.CreateDbContext();
-        var doctor = TestDataFactory.SeedDoctor(db);
-        Authorize(client, factory.MintToken(doctor.Id, "Doctor", doctor.OrdemMedicosId));
-
-        var response = await client.PostAsync("/api/access-requests/missing-user-id/grant-dev", content: null);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GrantAccessDev_ReturnsForbidden_ForPatientToken()
-    {
-        using var factory = new ApiTestFactory();
-        var client = factory.CreateClient();
-        using var db = factory.CreateDbContext();
-        var user = TestDataFactory.SeedUser(db);
-        Authorize(client, factory.MintToken(user.Id, "Patient", user.UtentNumber));
-
-        var response = await client.PostAsync($"/api/access-requests/{user.Id}/grant-dev", content: null);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
     // --- PUT /api/access-requests/{requestId}/respond (Respond, self-scoped) ---
 
     [Fact]

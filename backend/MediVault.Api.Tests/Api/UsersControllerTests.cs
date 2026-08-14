@@ -151,6 +151,12 @@ public class UsersControllerTests
         using var db = factory.CreateDbContext();
         var user = TestDataFactory.SeedUser(db);
         var doctor = TestDataFactory.SeedDoctor(db);
+        db.AccessRequests.Add(new AccessRequest
+        {
+            DoctorId = doctor.Id, UserId = user.Id, Status = "approved",
+            RequestedAt = DateTime.UtcNow.ToString("o"), ApprovedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
         var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
 
         var response = await client.GetAsync($"/api/users/{user.Id}/public-info");
@@ -172,8 +178,10 @@ public class UsersControllerTests
     }
 
     [Fact]
-    public async Task GetPublicInfo_ReturnsNotFound_ForUnknownUserId()
+    public async Task GetPublicInfo_ReturnsForbidden_ForUnknownUserId()
     {
+        // No approved access request can exist for a user id that doesn't exist,
+        // so the access check rejects it before existence is even considered.
         using var factory = new ApiTestFactory();
         using var db = factory.CreateDbContext();
         var doctor = TestDataFactory.SeedDoctor(db);
@@ -181,7 +189,7 @@ public class UsersControllerTests
 
         var response = await client.GetAsync("/api/users/missing-user-id/public-info");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // --- GET /api/users/me ---
