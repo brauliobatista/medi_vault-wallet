@@ -84,6 +84,14 @@ export default function AccessPage() {
     pending: 'warning text-dark',
     approved: 'success',
     revoked: 'secondary',
+    expired: 'secondary',
+  }
+
+  const statusLabel: Record<string, string> = {
+    pending: 'Pendente',
+    approved: 'Aprovado',
+    revoked: 'Revogado',
+    expired: 'Expirado',
   }
 
   return (
@@ -189,7 +197,7 @@ export default function AccessPage() {
                   </div>
                   <div className="d-flex align-items-center gap-2">
                     <span className={`badge bg-${badgeClass[String(r.status)] ?? 'secondary'}`}>
-                      {String(r.status)}
+                      {statusLabel[String(r.status)] ?? String(r.status)}
                     </span>
                     {r.status === 'pending' && (
                       <>
@@ -204,6 +212,11 @@ export default function AccessPage() {
                     {r.status === 'approved' && (
                       <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(Number(r.id), 'Acesso revogado com sucesso.')}>
                         <i className="bi bi-x me-1" />Revogar
+                      </button>
+                    )}
+                    {r.status === 'expired' && (
+                      <button className="btn btn-outline-secondary btn-sm" onClick={() => handleDelete(Number(r.id), 'Pedido removido.')}>
+                        <i className="bi bi-trash me-1" />Remover
                       </button>
                     )}
                   </div>
