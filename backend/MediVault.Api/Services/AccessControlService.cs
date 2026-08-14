@@ -60,44 +60,43 @@ public class AccessControlService(MediVaultDbContext db)
         return candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
     }
 
-    private static string EffectiveStatus(AccessRequest r)
-    {
-        if (r.Status == "approved" && r.ExpiresAt is not null && string.Compare(r.ExpiresAt, DateTime.UtcNow.ToString("o")) <= 0)
-            return "expired";
-        return r.Status;
-    }
-
     public async Task<List<AccessRequestDto>> GetPatientRequestsAsync(string userId)
     {
-        var requests = await db.AccessRequests
+        var now = DateTime.UtcNow.ToString("o");
+        var rows = await db.AccessRequests
             .Where(r => r.UserId == userId)
             .Include(r => r.Doctor)
             .Include(r => r.User)
             .OrderByDescending(r => r.RequestedAt)
             .ToListAsync();
 
-        return requests.Select(r => new AccessRequestDto(
-                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
-                r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
-                EffectiveStatus(r), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
-            .ToList();
+        return rows.Select(r => new AccessRequestDto(
+            r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id, r.User.UtentNumber,
+            r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
+            EffectiveStatus(r, now), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt)).ToList();
     }
 
     public async Task<List<AccessRequestDto>> GetDoctorRequestsAsync(string doctorId)
     {
-        var requests = await db.AccessRequests
+        var now = DateTime.UtcNow.ToString("o");
+        var rows = await db.AccessRequests
             .Where(r => r.DoctorId == doctorId)
             .Include(r => r.User)
             .Include(r => r.Doctor)
             .OrderByDescending(r => r.RequestedAt)
             .ToListAsync();
 
-        return requests.Select(r => new AccessRequestDto(
-                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
-                r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
-                EffectiveStatus(r), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
-            .ToList();
+        return rows.Select(r => new AccessRequestDto(
+            r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id, r.User.UtentNumber,
+            r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
+            EffectiveStatus(r, now), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt)).ToList();
     }
+
+    // An "approved" request whose expiry has passed reads as "expired" without needing a stored/scheduled status flip.
+    private static string EffectiveStatus(AccessRequest r, string now) =>
+        r.Status == "approved" && r.ExpiresAt is not null && string.Compare(r.ExpiresAt, now) <= 0
+            ? "expired"
+            : r.Status;
 
     public async Task<(AccessRequest Request, string PatientName, string PublicId)?> GrantAccessByQrAsync(string doctorId, string qrCode)
     {
@@ -186,22 +185,21 @@ public class AccessControlService(MediVaultDbContext db)
         }
         else if (action == "revoke")
         {
-            db.AccessRequests.Remove(request);
-            await db.SaveChangesAsync();
-            return true;
+            request.Status = "revoked";
         }
 
         await db.SaveChangesAsync();
         return true;
     }
 
+    // Keeps the row (marked "rejected"/"revoked" instead of deleted) so the doctor's request history/filters stay accurate.
     public async Task<bool> DeleteRequestAsync(int requestId, string userId)
     {
         var request = await db.AccessRequests
             .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId);
         if (request is null) return false;
 
-        db.AccessRequests.Remove(request);
+        request.Status = request.Status == "pending" ? "rejected" : "revoked";
         await db.SaveChangesAsync();
         return true;
     }
