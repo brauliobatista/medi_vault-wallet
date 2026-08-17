@@ -103,6 +103,7 @@ export default function ProfilePage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                capture="user"
                 className="d-none"
                 onChange={handlePhotoSelect}
               />

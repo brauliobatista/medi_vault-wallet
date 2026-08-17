@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MediVault.Api.Auth;
@@ -8,12 +9,6 @@ using MediVault.Api.Data;
 using MediVault.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// wwwroot must exist before Build() runs, or IWebHostEnvironment.WebRootFileProvider
-// resolves to a NullFileProvider and UseStaticFiles() will 404 everything forever.
-Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "profile-photos"));
-var documentsDir = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "documents");
-Directory.CreateDirectory(documentsDir);
 
 // Database
 // Set ConnectionStrings:Postgres (e.g. via the ConnectionStrings__Postgres env var) to
@@ -152,7 +147,18 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Frontend");
-app.UseStaticFiles();
+
+// UseStaticFiles() with no options binds to IWebHostEnvironment.WebRootFileProvider, which
+// WebApplicationBuilder resolves once during construction — if wwwroot didn't exist on disk at
+// that moment (first run on a fresh checkout, or an isolated test host content root) it locks in
+// a NullFileProvider and every static file request 404s for the app's whole lifetime. Building
+// the FileProvider explicitly here, after Build(), sidesteps that: ContentRootPath is reliable by
+// now, and we make sure the directory exists right before handing it off.
+var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(Path.Combine(wwwrootPath, "uploads", "profile-photos"));
+Directory.CreateDirectory(Path.Combine(wwwrootPath, "uploads", "documents"));
+app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(wwwrootPath) });
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
