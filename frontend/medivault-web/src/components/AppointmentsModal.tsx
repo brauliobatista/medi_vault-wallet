@@ -161,30 +161,33 @@ export default function AppointmentsModal({ onClose, initialDate, initialAppoint
             </div>
           )}
 
-          {!editingId && (
-            <div className="mb-3">
-              <label className="mv-modal-form-label">Utente</label>
-              {form.userId ? (
-                <div className="consult-context-item context-plain">
-                  <i className="bi bi-person-circle" />
-                  <div className="consult-context-value">{form.patientName}</div>
-                  <button className="mv-icon-btn ms-auto" onClick={() => setForm({ ...form, userId: '', patientName: '' })}><i className="bi bi-x" /></button>
-                </div>
-              ) : (
-                <div className="input-group input-group-sm">
-                  <input
-                    className="form-control"
-                    placeholder="Número de utente (ex: 100000001)"
-                    value={form.utentNumber}
-                    onChange={(e) => setForm({ ...form, utentNumber: e.target.value })}
-                    onKeyDown={(e) => e.key === 'Enter' && handlePatientSearch()}
-                  />
-                  <button className="dash-toolbar-btn" onClick={handlePatientSearch}><i className="bi bi-search" /></button>
-                </div>
-              )}
-              {patientSearchStatus && <div className="consult-context-sub mt-1">{patientSearchStatus}</div>}
-            </div>
-          )}
+          <div className="mb-3">
+            <label className="mv-modal-form-label">Utente</label>
+            {editingId ? (
+              <div className="consult-context-item context-plain">
+                <i className="bi bi-person-circle" />
+                <div className="consult-context-value">{form.patientName}</div>
+              </div>
+            ) : form.userId ? (
+              <div className="consult-context-item context-plain">
+                <i className="bi bi-person-circle" />
+                <div className="consult-context-value">{form.patientName}</div>
+                <button className="mv-icon-btn ms-auto" onClick={() => setForm({ ...form, userId: '', patientName: '' })}><i className="bi bi-x" /></button>
+              </div>
+            ) : (
+              <div className="input-group input-group-sm">
+                <input
+                  className="form-control"
+                  placeholder="Número de utente (ex: 100000001)"
+                  value={form.utentNumber}
+                  onChange={(e) => setForm({ ...form, utentNumber: e.target.value })}
+                  onKeyDown={(e) => e.key === 'Enter' && handlePatientSearch()}
+                />
+                <button className="dash-toolbar-btn" onClick={handlePatientSearch}><i className="bi bi-search" /></button>
+              </div>
+            )}
+            {patientSearchStatus && <div className="consult-context-sub mt-1">{patientSearchStatus}</div>}
+          </div>
 
           <div className="mv-modal-form-grid">
             <div>
