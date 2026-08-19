@@ -71,6 +71,7 @@ export default function DoctorAgendasPage() {
   const [appointments, setAppointments] = useState<PatientAppointment[]>([])
   const [openModal, setOpenModal] = useState<OpenModal>(null)
   const [modalDate, setModalDate] = useState<string | undefined>(undefined)
+  const [modalEventId, setModalEventId] = useState<number | undefined>(undefined)
 
   const [agendaView, setAgendaView] = useState<AgendaView>('diaria')
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayIso()))
@@ -85,12 +86,19 @@ export default function DoctorAgendasPage() {
   const closeModal = () => {
     setOpenModal(null)
     setModalDate(undefined)
+    setModalEventId(undefined)
     loadAgenda()
   }
 
   const openAdd = (view: AgendaView, date: string) => {
     setModalDate(date)
+    setModalEventId(undefined)
     setOpenModal(view === 'diaria' ? 'appointments' : 'schedule')
+  }
+
+  const openEventDetails = (eventId: number) => {
+    setModalEventId(eventId)
+    setOpenModal('schedule')
   }
 
   const visibleEvents =
@@ -115,7 +123,7 @@ export default function DoctorAgendasPage() {
           </div>
           <button
             className="dash-card-footer"
-            onClick={() => setOpenModal(agendaView === 'diaria' ? 'appointments' : 'schedule')}
+            onClick={() => { setModalEventId(undefined); setOpenModal(agendaView === 'diaria' ? 'appointments' : 'schedule') }}
           >
             Gerir agenda completa <i className="bi bi-arrow-right" />
           </button>
@@ -185,7 +193,7 @@ export default function DoctorAgendasPage() {
                     dayEvents(dayIso).map((ev) => {
                       const meta = eventBadge[ev.eventTypeCode] ?? eventBadge.TRAINING
                       return (
-                        <button className="agenda-week-chip" key={ev.id} onClick={() => setOpenModal('schedule')}>
+                        <button className="agenda-week-chip" key={ev.id} onClick={() => openEventDetails(ev.id)}>
                           <div className="agenda-week-chip-title"><i className={`bi ${meta.icon} me-1`} />{ev.title}</div>
                           {ev.location && <div className="agenda-week-chip-sub">{ev.location}</div>}
                           <span className={`status-badge ${meta.badgeClass}`}>{meta.label}</span>
@@ -203,7 +211,9 @@ export default function DoctorAgendasPage() {
         </div>
       </div>
 
-      {openModal === 'schedule' && <ScheduleEventsModal onClose={closeModal} initialDate={modalDate} />}
+      {openModal === 'schedule' && (
+        <ScheduleEventsModal onClose={closeModal} initialDate={modalDate} initialEventId={modalEventId} />
+      )}
       {openModal === 'appointments' && <AppointmentsModal onClose={closeModal} initialDate={modalDate} />}
     </Layout>
   )
