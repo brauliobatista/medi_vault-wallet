@@ -10,7 +10,6 @@ import {
   getAnalyticalExams,
   getImagingExams,
   getOptometryExams,
-  getDoctorProfile,
   getAnamneses,
   getAssessments,
   getVitalSigns,
@@ -110,7 +109,6 @@ export default function PatientViewPage() {
 
   const [patientName, setPatientName] = useState(navState?.patientName ?? '')
   const [publicId, setPublicId] = useState(navState?.publicId ?? '')
-  const [doctorSpecialty, setDoctorSpecialty] = useState('')
   const [patientNationality, setPatientNationality] = useState('')
 
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -138,7 +136,6 @@ export default function PatientViewPage() {
   }, [startedAt])
 
   useEffect(() => {
-    getDoctorProfile().then((p) => setDoctorSpecialty(p.speciality ?? '')).catch(() => {})
     api.get(`/users/${uid}/public-info`).then((r) => {
       if (!navState?.patientName) {
         setPatientName(r.data.name)
@@ -285,7 +282,6 @@ export default function PatientViewPage() {
             {patientName || 'Paciente'}
             {summary && <i className={`bi ${genderIcon} consult-gender-icon`} />}
           </div>
-          <div className="consult-specialty">{doctorSpecialty}</div>
           {publicId && <div className="consult-public-id">{publicId}</div>}
         </div>
 
@@ -620,7 +616,7 @@ export default function PatientViewPage() {
                   <div className="consult-context-value">{d.fileName}</div>
                   <div className="consult-context-sub">{d.uploadedAt.slice(0, 10)}</div>
                 </div>
-                <a className="consult-doc-badge" href={d.fileUrl} target="_blank" rel="noreferrer">{(d.fileType ?? 'file').toUpperCase()}</a>
+                <a className="consult-doc-badge" href={d.fileUrl} target="_blank" rel="noreferrer"><i className="bi bi-eye" /> Abrir</a>
               </div>
             ))}
             {documents.length === 0 && <p className="consult-context-sub mb-0">Sem documentos associados.</p>}
