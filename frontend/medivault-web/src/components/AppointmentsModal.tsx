@@ -11,7 +11,7 @@ import {
   type RefType,
 } from '../api/agenda'
 
-interface Props { onClose: () => void; initialDate?: string }
+interface Props { onClose: () => void; initialDate?: string; initialAppointmentId?: number }
 
 const statusOptions = [
   { value: 'pendente', label: 'Pendente' },
@@ -44,7 +44,7 @@ function toApiDateTime(local: string) {
   return local.replace('T', ' ') + ':00'
 }
 
-export default function AppointmentsModal({ onClose, initialDate }: Props) {
+export default function AppointmentsModal({ onClose, initialDate, initialAppointmentId }: Props) {
   const [appointments, setAppointments] = useState<PatientAppointment[]>([])
   const [types, setTypes] = useState<RefType[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -53,6 +53,8 @@ export default function AppointmentsModal({ onClose, initialDate }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [patientSearchStatus, setPatientSearchStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const singleMode = initialAppointmentId !== undefined
 
   const load = () => {
     setLoading(true)
@@ -60,7 +62,11 @@ export default function AppointmentsModal({ onClose, initialDate }: Props) {
       .then(([a, t]) => {
         setAppointments(a)
         setTypes(t)
-        if (initialDate) {
+        if (initialAppointmentId !== undefined) {
+          const appt = a.find((x) => x.id === initialAppointmentId)
+          if (appt) startEdit(appt, t)
+          else setNotFound(true)
+        } else if (initialDate) {
           setForm({ ...emptyForm, appointmentTypeCode: t[0]?.code ?? '', scheduledAt: `${initialDate}T09:00` })
           setShowForm(true)
         }
@@ -78,11 +84,11 @@ export default function AppointmentsModal({ onClose, initialDate }: Props) {
     setShowForm(true)
   }
 
-  const startEdit = (a: PatientAppointment) => {
+  const startEdit = (a: PatientAppointment, typesList: RefType[] = types) => {
     setEditingId(a.id)
     setForm({
       utentNumber: '', userId: '', patientName: a.patientName,
-      appointmentTypeCode: types.find((t) => t.description === a.appointmentTypeDescription)?.code ?? types[0]?.code ?? '',
+      appointmentTypeCode: typesList.find((t) => t.description === a.appointmentTypeDescription)?.code ?? typesList[0]?.code ?? '',
       modality: a.modality, scheduledAt: toDateTimeLocal(a.scheduledAt), status: a.status, notes: '',
     })
     setError(null)
@@ -135,12 +141,16 @@ export default function AppointmentsModal({ onClose, initialDate }: Props) {
   }
 
   return (
-    <Modal title="Agenda Diária" onClose={onClose}>
-      <div className="mv-modal-toolbar">
-        <button className="consult-finish-btn" onClick={startCreate}>
-          <i className="bi bi-plus-lg" /> Adicionar consulta
-        </button>
-      </div>
+    <Modal title={singleMode ? 'Detalhes da Consulta' : 'Agenda Diária'} onClose={onClose}>
+      {!singleMode && (
+        <div className="mv-modal-toolbar">
+          <button className="consult-finish-btn" onClick={startCreate}>
+            <i className="bi bi-plus-lg" /> Adicionar consulta
+          </button>
+        </div>
+      )}
+
+      {singleMode && notFound && <p className="mv-empty-state">Consulta não encontrada.</p>}
 
       {showForm && (
         <div className="mv-modal-form">
@@ -207,12 +217,14 @@ export default function AppointmentsModal({ onClose, initialDate }: Props) {
           </div>
           <div className="d-flex gap-2">
             <button className="consult-finish-btn" onClick={handleSave}><i className="bi bi-check-lg" /> Guardar</button>
-            <button className="dash-toolbar-btn" onClick={() => setShowForm(false)}>Cancelar</button>
+            <button className="dash-toolbar-btn" onClick={() => (singleMode ? onClose() : setShowForm(false))}>
+              {singleMode ? 'Fechar' : 'Cancelar'}
+            </button>
           </div>
         </div>
       )}
 
-      {loading ? (
+      {!singleMode && (loading ? (
         <p className="text-muted">A carregar…</p>
       ) : appointments.length === 0 ? (
         <p className="mv-empty-state">Sem consultas na agenda.</p>
@@ -241,7 +253,7 @@ export default function AppointmentsModal({ onClose, initialDate }: Props) {
             ))}
           </tbody>
         </table>
-      )}
+      ))}
     </Modal>
   )
 }
