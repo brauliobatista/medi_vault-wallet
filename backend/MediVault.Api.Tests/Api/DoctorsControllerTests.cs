@@ -21,6 +21,9 @@ public class DoctorsControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<DoctorProfileDto>();
         Assert.Equal(doctor.Id, body!.Id);
+        Assert.Equal(doctor.InstitutionId, body.InstitutionId);
+        Assert.False(string.IsNullOrEmpty(body.InstitutionName));
+        Assert.False(string.IsNullOrEmpty(body.InstitutionType));
     }
 
     [Fact]
