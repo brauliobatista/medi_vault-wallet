@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link, useLocation } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
 import {
@@ -18,6 +18,8 @@ import {
   getDocuments,
   getChatMessages,
   getFamilyCircle,
+  saveConsultationDraft,
+  finishConsultation,
 } from '../../api/medical'
 import ContextoClinicoModal from '../../components/ContextoClinicoModal'
 import PrescricaoModal from '../../components/PrescricaoModal'
@@ -106,6 +108,7 @@ export default function PatientViewPage() {
   const { patientId } = useParams<{ patientId: string }>()
   const uid = patientId!
   const location = useLocation()
+  const navigate = useNavigate()
   const navState = location.state as { publicId?: string; patientName?: string } | null
 
   const [patientName, setPatientName] = useState(navState?.patientName ?? '')
@@ -131,6 +134,10 @@ export default function PatientViewPage() {
 
   const [startedAt] = useState(() => new Date())
   const [elapsedSec, setElapsedSec] = useState(0)
+  const [consultationId, setConsultationId] = useState<number | null>(null)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [finishing, setFinishing] = useState(false)
+  const [draftSavedMsg, setDraftSavedMsg] = useState(false)
 
   useEffect(() => {
     const t = setInterval(() => setElapsedSec(Math.floor((Date.now() - startedAt.getTime()) / 1000)), 1000)
@@ -215,6 +222,30 @@ export default function PatientViewPage() {
 
   const closeModalAndReload = () => { setOpenModal(null); loadAll() }
 
+  const handleSaveDraft = async () => {
+    setSavingDraft(true)
+    try {
+      const res = await saveConsultationDraft(uid, { consultationId, startedAt: startedAt.toISOString() })
+      setConsultationId(res.id)
+      setDraftSavedMsg(true)
+      setTimeout(() => setDraftSavedMsg(false), 2500)
+    } catch {
+      // ignore — doctor can retry
+    } finally {
+      setSavingDraft(false)
+    }
+  }
+
+  const handleFinishConsultation = async () => {
+    setFinishing(true)
+    try {
+      await finishConsultation(uid, { consultationId, startedAt: startedAt.toISOString() })
+      navigate('/doctor')
+    } catch {
+      setFinishing(false)
+    }
+  }
+
   const formatElapsed = (s: number) => {
     const h = Math.floor(s / 3600)
     const m = Math.floor((s % 3600) / 60)
@@ -297,8 +328,13 @@ export default function PatientViewPage() {
               <div className="consult-timer-label">Início: {startTimeLabel}</div>
             </div>
           </div>
-          <button className="consult-draft-btn"><i className="bi bi-floppy" /> Guardar rascunho</button>
-          <button className="consult-finish-btn"><i className="bi bi-check-lg" /> Finalizar consulta</button>
+          {draftSavedMsg && <span style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 600 }}>Rascunho guardado</span>}
+          <button className="consult-draft-btn" onClick={handleSaveDraft} disabled={savingDraft || finishing}>
+            <i className="bi bi-floppy" /> {savingDraft ? 'A guardar…' : 'Guardar rascunho'}
+          </button>
+          <button className="consult-finish-btn" onClick={handleFinishConsultation} disabled={savingDraft || finishing}>
+            <i className="bi bi-check-lg" /> {finishing ? 'A finalizar…' : 'Finalizar consulta'}
+          </button>
         </div>
       </div>
 

@@ -174,3 +174,10 @@ export const getChatMessages = (userId: string) =>
 export const sendChatMessage = (userId: string, message: string) =>
   api.post(`/patients/${userId}/chat-messages`, { message }).then((r) => r.data)
 
+export const saveConsultationDraft = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/consultation/draft`, data).then((r) => r.data)
+export const finishConsultation = (userId: string, data: object) =>
+  api.post(`/patients/${userId}/consultation/finish`, data).then((r) => r.data)
+export const getFinishedConsultations = () =>
+  api.get('/doctors/me/finished-consultations').then((r) => r.data)
+

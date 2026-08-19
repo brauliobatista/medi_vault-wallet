@@ -664,3 +664,10 @@ INSERT INTO patient_chat_messages (user_id, author_doctor_id, message, created_a
  'Bom dia, obrigado pelo aviso. Vou pedir um ecocardiograma e reavaliar a medicação anti-hipertensiva dele.', '2026-07-24 12:00:00'),
 ('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
  'Resultados do eco dentro da normalidade, função sistólica preservada. Reveja os resultados anexados nos documentos.', '2026-07-27 15:00:00');
+
+-- -------------------------------------------------------
+-- CONSULTATIONS
+-- -------------------------------------------------------
+INSERT INTO consultations (user_id, doctor_id, status, started_at, finished_at) VALUES
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'finished', '2026-07-24 09:30:00', '2026-07-24 09:55:00'),
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002', 'draft', '2026-08-14 10:00:00', NULL);

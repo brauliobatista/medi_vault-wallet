@@ -218,7 +218,7 @@ CREATE TABLE access_requests (
     requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
     approved_at  TIMESTAMP,
     expires_at   TIMESTAMP,
-    status       TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked')),
+    status       TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked', 'finished')),
     is_emergency BOOLEAN   NOT NULL DEFAULT FALSE,
     access_code  TEXT,
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -563,4 +563,19 @@ CREATE TABLE patient_chat_messages (
     created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
     CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          SERIAL    PRIMARY KEY,
+    user_id     UUID      NOT NULL,
+    doctor_id   UUID      NOT NULL,
+    status      TEXT      NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+    started_at  TIMESTAMP NOT NULL,
+    finished_at TIMESTAMP,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_consultations_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_consultations_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
