@@ -14,6 +14,9 @@ public class DoctorService(MediVaultDbContext db)
                 x.Id, x.OrdemMedicosId, x.Email, x.FirstName, x.LastName,
                 x.Speciality, x.InstitutionId,
                 x.Institution != null ? x.Institution.Name : string.Empty,
+                x.Institution != null ? x.Institution.Type : string.Empty,
+                x.Institution != null ? x.Institution.Address : null,
+                x.Institution != null ? x.Institution.Phone : null,
                 x.Nationality != null ? x.Nationality.Name : null))
             .FirstOrDefaultAsync();
     }

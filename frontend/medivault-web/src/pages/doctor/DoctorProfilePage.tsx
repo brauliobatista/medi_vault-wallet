@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
 import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword } from '../../api/medical'
 
+const institutionTypeLabels: Record<string, string> = {
+  hospital: 'Hospital',
+  clinic: 'Clínica',
+  lab: 'Laboratório',
+  pharmacy: 'Farmácia',
+  other: 'Outro',
+}
+
 export default function DoctorProfilePage() {
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null)
   const [editing, setEditing] = useState(false)
@@ -77,12 +85,35 @@ export default function DoctorProfilePage() {
                 <div className="text-muted small">Nome</div>
                 <div className="fw-semibold">{String(profile.firstName)} {String(profile.lastName)}</div>
               </div>
-              <div className="col-sm-6">
-                <div className="text-muted small">Instituição</div>
-                <div className="fw-semibold">
-                  <i className="bi bi-hospital me-1 text-primary" />
-                  {String(profile.institutionName)}
+              <div className="col-12">
+                <div className="text-muted small">Instituição de Saúde</div>
+                <div className="d-flex align-items-center flex-wrap gap-2">
+                  <span className="fw-semibold">
+                    <i className="bi bi-hospital me-1 text-primary" />
+                    {String(profile.institutionName)}
+                  </span>
+                  {Boolean(profile.institutionType) && (
+                    <span className="badge bg-light text-dark border">
+                      {institutionTypeLabels[String(profile.institutionType)] ?? String(profile.institutionType)}
+                    </span>
+                  )}
                 </div>
+                {(Boolean(profile.institutionAddress) || Boolean(profile.institutionPhone)) && (
+                  <div className="small text-muted mt-1">
+                    {Boolean(profile.institutionAddress) && (
+                      <span className="me-3">
+                        <i className="bi bi-geo-alt me-1" />
+                        {String(profile.institutionAddress)}
+                      </span>
+                    )}
+                    {Boolean(profile.institutionPhone) && (
+                      <span>
+                        <i className="bi bi-telephone me-1" />
+                        {String(profile.institutionPhone)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="col-sm-6">
                 <div className="text-muted small">Email</div>

@@ -9,6 +9,9 @@ public record DoctorProfileDto(
     string? Speciality,
     string InstitutionId,
     string InstitutionName,
+    string InstitutionType,
+    string? InstitutionAddress,
+    string? InstitutionPhone,
     string? NationalityName
 );
 

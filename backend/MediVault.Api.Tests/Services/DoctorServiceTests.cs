@@ -20,6 +20,23 @@ public class DoctorServiceTests
     }
 
     [Fact]
+    public async Task GetProfileAsync_ReturnsInstitutionDetails()
+    {
+        using var db = TestDbContextFactory.Create();
+        var institution = TestDataFactory.SeedInstitution(db, name: "Clínica Sul", type: "clinic", address: "Rua A, 123", phone: "212345678");
+        var doctor = TestDataFactory.SeedDoctor(db, institutionId: institution.Id);
+        var sut = new DoctorService(db);
+
+        var result = await sut.GetProfileAsync(doctor.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal("Clínica Sul", result!.InstitutionName);
+        Assert.Equal("clinic", result.InstitutionType);
+        Assert.Equal("Rua A, 123", result.InstitutionAddress);
+        Assert.Equal("212345678", result.InstitutionPhone);
+    }
+
+    [Fact]
     public async Task GetProfileAsync_ReturnsNull_WhenDoctorNotFound()
     {
         using var db = TestDbContextFactory.Create();
