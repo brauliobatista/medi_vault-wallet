@@ -8,11 +8,14 @@ import ExamsPage from './pages/patient/ExamsPage'
 import HabitsPage from './pages/patient/HabitsPage'
 import VaccinationsPage from './pages/patient/VaccinationsPage'
 import AccessPage from './pages/patient/AccessPage'
+import FamilyPage from './pages/patient/FamilyPage'
+import DependentViewPage from './pages/patient/DependentViewPage'
 import DoctorDashboardPage from './pages/doctor/DoctorDashboardPage'
 import DoctorAgendasPage from './pages/doctor/DoctorAgendasPage'
 import PatientViewPage from './pages/doctor/PatientViewPage'
 import DoctorProfilePage from './pages/doctor/DoctorProfilePage'
 import DoctorAccessPage from './pages/doctor/DoctorAccessPage'
+import FinishedConsultationPage from './pages/doctor/FinishedConsultationPage'
 
 function RequireRole({ role, children }: { role: 'Patient' | 'Doctor'; children: React.ReactNode }) {
   const user = getUser()
@@ -36,6 +39,8 @@ export default function App() {
       <Route path="/habits" element={<RequireRole role="Patient"><HabitsPage /></RequireRole>} />
       <Route path="/vaccinations" element={<RequireRole role="Patient"><VaccinationsPage /></RequireRole>} />
       <Route path="/access" element={<RequireRole role="Patient"><AccessPage /></RequireRole>} />
+      <Route path="/family" element={<RequireRole role="Patient"><FamilyPage /></RequireRole>} />
+      <Route path="/family/:dependentId" element={<RequireRole role="Patient"><DependentViewPage /></RequireRole>} />
 
       {/* Doctor routes */}
       <Route path="/doctor" element={<RequireRole role="Doctor"><DoctorDashboardPage /></RequireRole>} />
@@ -43,6 +48,7 @@ export default function App() {
       <Route path="/doctor/patient/:patientId" element={<RequireRole role="Doctor"><PatientViewPage /></RequireRole>} />
       <Route path="/doctor/profile" element={<RequireRole role="Doctor"><DoctorProfilePage /></RequireRole>} />
       <Route path="/doctor/access" element={<RequireRole role="Doctor"><DoctorAccessPage /></RequireRole>} />
+      <Route path="/doctor/finished-consultation/:consultationId" element={<RequireRole role="Doctor"><FinishedConsultationPage /></RequireRole>} />
 
       {/* Default redirect */}
       <Route path="*" element={

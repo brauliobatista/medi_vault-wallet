@@ -12,6 +12,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
+  const switchTab = (next: 'patient' | 'doctor') => {
+    setTab(next)
+    setUtentNumber('')
+    setOrdemId('')
+    setPassword('')
+    setError('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -45,7 +53,7 @@ export default function LoginPage() {
                   <li className="nav-item w-50">
                     <button
                       className={`nav-link w-100 ${tab === 'patient' ? 'active' : ''}`}
-                      onClick={() => setTab('patient')}
+                      onClick={() => switchTab('patient')}
                     >
                       <i className="bi bi-person me-1" />Paciente
                     </button>
@@ -53,7 +61,7 @@ export default function LoginPage() {
                   <li className="nav-item w-50">
                     <button
                       className={`nav-link w-100 ${tab === 'doctor' ? 'active' : ''}`}
-                      onClick={() => setTab('doctor')}
+                      onClick={() => switchTab('doctor')}
                     >
                       <i className="bi bi-hospital me-1" />Médico
                     </button>

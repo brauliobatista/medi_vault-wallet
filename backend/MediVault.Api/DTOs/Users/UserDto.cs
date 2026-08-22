@@ -8,7 +8,10 @@ public record UserProfileDto(
     string LastName,
     string Birthday,
     string BiologicalGender,
-    string Sex,
+    int SexId,
+    string? SexGenderDescription,
+    int NationalityId,
+    string? NationalityName,
     string? MaritalStatus,
     string? BloodType,
     bool AcceptsTransfusion,
@@ -28,7 +31,8 @@ public record UpdateUserRequest(
     string? MaritalStatus,
     bool? AcceptsTransfusion,
     bool? AcceptsResuscitation,
-    bool? EmergencyAccess
+    string? BiologicalGender,
+    int? SexId
 );
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);

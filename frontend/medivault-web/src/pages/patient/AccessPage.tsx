@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import Layout from '../../components/Layout'
-import { getProfile, getAccessRequests, respondToRequest, deleteRequest, getQrCode, toggleCard } from '../../api/medical'
+import { getProfile, getAccessRequests, respondToRequest, deleteRequest, getQrCode, toggleCard, getGoogleWalletUrl } from '../../api/medical'
 
 export default function AccessPage() {
   const [requests, setRequests] = useState<Record<string, unknown>[]>([])
@@ -11,6 +11,8 @@ export default function AccessPage() {
   const [cardActive, setCardActive] = useState<boolean | null>(null)
   const [confirmSuspend, setConfirmSuspend] = useState(false)
   const [cardLoading, setCardLoading] = useState(false)
+  const [walletLoading, setWalletLoading] = useState(false)
+  const [walletError, setWalletError] = useState<string | null>(null)
 
   const refresh = () => getAccessRequests().then(setRequests)
 
@@ -34,6 +36,24 @@ export default function AccessPage() {
       setCardActive(!activate)
     } finally {
       setCardLoading(false)
+    }
+  }
+
+  const handleAddToGoogleWallet = async () => {
+    setWalletLoading(true)
+    setWalletError(null)
+    try {
+      const { url } = await getGoogleWalletUrl()
+      window.location.href = url
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } }).response?.status
+      setWalletError(
+        status === 501
+          ? 'A Google Wallet ainda não está configurada neste servidor.'
+          : 'Não foi possível gerar o cartão para a Google Wallet.'
+      )
+    } finally {
+      setWalletLoading(false)
     }
   }
 
@@ -64,6 +84,14 @@ export default function AccessPage() {
     pending: 'warning text-dark',
     approved: 'success',
     revoked: 'secondary',
+    expired: 'secondary',
+  }
+
+  const statusLabel: Record<string, string> = {
+    pending: 'Pendente',
+    approved: 'Aprovado',
+    revoked: 'Revogado',
+    expired: 'Expirado',
   }
 
   return (
@@ -135,6 +163,15 @@ export default function AccessPage() {
                 <p className="text-muted" style={{ fontSize: '0.75rem' }}>
                   Se o médico não conseguir ler o QR, pode introduzir o código acima manualmente.
                 </p>
+                <button className="btn btn-outline-primary btn-sm" disabled={walletLoading} onClick={handleAddToGoogleWallet}>
+                  {walletLoading ? (
+                    <span className="spinner-border spinner-border-sm me-2" />
+                  ) : (
+                    <i className="bi bi-wallet2 me-2" />
+                  )}
+                  Adicionar à Google Wallet
+                </button>
+                {walletError && <p className="text-danger small mt-2 mb-0">{walletError}</p>}
               </>
             ) : (
               <p className="text-danger">Não foi possível gerar o QR Code.</p>
@@ -160,7 +197,7 @@ export default function AccessPage() {
                   </div>
                   <div className="d-flex align-items-center gap-2">
                     <span className={`badge bg-${badgeClass[String(r.status)] ?? 'secondary'}`}>
-                      {String(r.status)}
+                      {statusLabel[String(r.status)] ?? String(r.status)}
                     </span>
                     {r.status === 'pending' && (
                       <>
@@ -175,6 +212,11 @@ export default function AccessPage() {
                     {r.status === 'approved' && (
                       <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(Number(r.id), 'Acesso revogado com sucesso.')}>
                         <i className="bi bi-x me-1" />Revogar
+                      </button>
+                    )}
+                    {r.status === 'expired' && (
+                      <button className="btn btn-outline-secondary btn-sm" onClick={() => handleDelete(Number(r.id), 'Pedido removido.')}>
+                        <i className="bi bi-trash me-1" />Remover
                       </button>
                     )}
                   </div>

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: medivault-api
+    runtime: docker
+    dockerfilePath: ./backend/MediVault.Api/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: ConnectionStrings__Postgres
+        sync: false
+      - key: Jwt__Secret
+        sync: false
+      - key: Jwt__Issuer
+        value: medivault
+      - key: Jwt__ExpiryHours
+        value: "8"
+      - key: Encryption__Key
+        sync: false
+      - key: Cors__AllowedOrigins__0
+        sync: false
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Render's free instances have very few inotify watches available; the default
+      # config-reload file watcher can exhaust them and crash the app on startup
+      # ("configured user limit (128) on the number of inotify instances has been
+      # reached"). Not needed since config doesn't change at runtime in production.
+      - key: DOTNET_hostBuilder__reloadConfigOnChange
+        value: "false"

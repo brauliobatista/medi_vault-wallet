@@ -16,7 +16,11 @@ public class DoctorNotesController(DoctorNoteService noteService, AccessControlS
     [HttpGet("{userId}")]
     public async Task<IActionResult> GetNotes(string userId)
     {
-        if (!await accessControl.DoctorHasAccessAsync(DoctorId, userId)) return Forbid();
+        // Read-only carve-out (KAN-67): a doctor keeps access to their own notes for a patient
+        // even after the consultation that granted full access has finished.
+        if (!await accessControl.DoctorHasAccessAsync(DoctorId, userId) &&
+            !await accessControl.DoctorHadFinishedConsultationAsync(DoctorId, userId))
+            return Forbid();
         return Ok(await noteService.GetNotesForDoctorAsync(DoctorId, userId));
     }
 

@@ -96,6 +96,7 @@ CREATE TABLE users (
     phone                 TEXT,
     is_active             BOOLEAN   NOT NULL DEFAULT TRUE,
     card_active           BOOLEAN   NOT NULL DEFAULT TRUE,
+    share_code            TEXT      NOT NULL DEFAULT '',
     photo_path            TEXT,
     created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -156,6 +157,7 @@ CREATE TABLE family_guardianships (
     guardian_user_id     UUID      NOT NULL,
     dependent_user_id    UUID      NOT NULL,
     relationship_type_id INT       NOT NULL,
+    status                TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved')),
     is_active            BOOLEAN   NOT NULL DEFAULT TRUE,
     created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_family_guardianships_guardian     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
@@ -216,7 +218,7 @@ CREATE TABLE access_requests (
     requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
     approved_at  TIMESTAMP,
     expires_at   TIMESTAMP,
-    status       TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked')),
+    status       TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked', 'finished')),
     is_emergency BOOLEAN   NOT NULL DEFAULT FALSE,
     access_code  TEXT,
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -650,3 +652,78 @@ BEFORE INSERT OR UPDATE ON doctor_schedule_events
 FOR EACH ROW
 EXECUTE FUNCTION check_doctor_schedule_events_no_appointment_conflict();
 
+-- -------------------------------------------------------
+-- CLINICAL CONSULTATION RECORDS
+-- -------------------------------------------------------
+
+CREATE TABLE vital_signs (
+    id                       SERIAL    PRIMARY KEY,
+    user_id                  UUID      NOT NULL,
+    doctor_id                UUID      NOT NULL,
+    recorded_at              TIMESTAMP NOT NULL,
+    blood_pressure_systolic  INT,
+    blood_pressure_diastolic INT,
+    heart_rate               INT,
+    respiratory_rate         INT,
+    temperature              DECIMAL(4,1),
+    spo2                     INT,
+    weight                   DECIMAL(5,2),
+    height                   DECIMAL(5,2),
+    notes                    TEXT,
+    created_at               TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_vital_signs_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_vital_signs_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+CREATE TABLE clinical_assessments (
+    id         SERIAL    PRIMARY KEY,
+    user_id    UUID      NOT NULL,
+    doctor_id  UUID      NOT NULL,
+    hypothesis TEXT      NOT NULL,
+    plan       TEXT      NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_clinical_assessments_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_clinical_assessments_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- Anamnesis is historical: every save creates a new row. Editing an existing row
+-- is only allowed application-side for the SAME doctor_id, within 24h of created_at.
+CREATE TABLE anamneses (
+    id                SERIAL    PRIMARY KEY,
+    user_id           UUID      NOT NULL,
+    doctor_id         UUID      NOT NULL,
+    chief_complaint   TEXT,
+    illness_history   TEXT,
+    personal_history  TEXT,
+    created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_anamneses_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_anamneses_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- Team chat: doctors discussing a patient's case amongst themselves.
+CREATE TABLE patient_chat_messages (
+    id                SERIAL    PRIMARY KEY,
+    user_id           UUID      NOT NULL,
+    author_doctor_id  UUID      NOT NULL,
+    message           TEXT      NOT NULL,
+    created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
+    CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          SERIAL    PRIMARY KEY,
+    user_id     UUID      NOT NULL,
+    doctor_id   UUID      NOT NULL,
+    status      TEXT      NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+    started_at  TIMESTAMP NOT NULL,
+    finished_at TIMESTAMP,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_consultations_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_consultations_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);

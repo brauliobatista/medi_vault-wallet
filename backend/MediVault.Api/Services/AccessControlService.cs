@@ -1,12 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MediVault.Api.Data;
 using MediVault.Api.DTOs.Medical;
 using MediVault.Api.Entities;
 
 namespace MediVault.Api.Services;
 
-public class AccessControlService(MediVaultDbContext db)
+public class AccessControlService(MediVaultDbContext db, IMemoryCache cache)
 {
+    // A single patient page load fires ~11 independent requests that each re-check the same
+    // doctor/patient access pair; a short cache collapses those into one DB round trip without
+    // meaningfully delaying revocation (RespondToRequestAsync/DeleteRequestAsync bust it immediately).
+    private static readonly TimeSpan AccessCacheTtl = TimeSpan.FromSeconds(15);
+
+    private static string DoctorAccessCacheKey(string doctorId, string userId) => $"doctor-access:{doctorId}:{userId}";
     // Returns null = QR invalid, false = card suspended, true = card active
     public async Task<bool?> IsQrCardActiveAsync(string qrCode)
     {
@@ -36,11 +43,50 @@ public class AccessControlService(MediVaultDbContext db)
         return has ? (true, "granted") : (false, "no_access");
     }
 
+    // Called when a doctor finishes a consultation (KAN-67): the approved access request for
+    // this doctor/patient pair is closed out. ExpiresAt is also set to now so that an
+    // is_emergency-granted row (which DoctorHasAccessAsync treats as always-on regardless of
+    // status) stops granting access too.
+    public async Task FinishAccessForConsultationAsync(string doctorId, string userId)
+    {
+        var now = DateTime.UtcNow.ToString("o");
+        var requests = await db.AccessRequests
+            .Where(r => r.DoctorId == doctorId && r.UserId == userId && r.Status == "approved")
+            .ToListAsync();
+
+        foreach (var r in requests)
+        {
+            r.Status = "finished";
+            r.ExpiresAt = now;
+        }
+        if (requests.Count > 0) await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(doctorId, userId));
+    }
+
+    // Carve-out for read-only doctor notes / team chat (KAN-67): a doctor who no longer has
+    // full access can still read those for a patient they had a finished consultation with.
+    public async Task<bool> DoctorHadFinishedConsultationAsync(string doctorId, string userId) =>
+        await db.Consultations.AnyAsync(c => c.DoctorId == doctorId && c.UserId == userId && c.Status == "finished");
+
+    public async Task<bool> GuardianHasAccessAsync(string guardianUserId, string dependentUserId)
+    {
+        return await db.FamilyGuardianships.AnyAsync(f =>
+            f.GuardianUserId == guardianUserId && f.DependentUserId == dependentUserId &&
+            f.IsActive == 1 && f.Status == "approved");
+    }
+
     public async Task<bool> DoctorHasAccessAsync(string doctorId, string userId)
     {
+        var cacheKey = DoctorAccessCacheKey(doctorId, userId);
+        if (cache.TryGetValue(cacheKey, out bool cached)) return cached;
+
         var cardActive = await db.Users
             .AnyAsync(u => u.Id == userId && u.IsActive == 1 && u.CardActive == 1);
-        if (!cardActive) return false;
+        if (!cardActive)
+        {
+            cache.Set(cacheKey, false, AccessCacheTtl);
+            return false;
+        }
 
         var now = DateTime.UtcNow.ToString("o");
 
@@ -50,36 +96,48 @@ public class AccessControlService(MediVaultDbContext db)
                         (r.Status == "approved" || r.IsEmergency == 1))
             .ToListAsync();
 
-        return candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
+        var hasAccess = candidates.Any(r => r.ExpiresAt == null || string.Compare(r.ExpiresAt, now) > 0);
+        cache.Set(cacheKey, hasAccess, AccessCacheTtl);
+        return hasAccess;
     }
 
     public async Task<List<AccessRequestDto>> GetPatientRequestsAsync(string userId)
     {
-        return await db.AccessRequests
+        var now = DateTime.UtcNow.ToString("o");
+        var rows = await db.AccessRequests
             .Where(r => r.UserId == userId)
             .Include(r => r.Doctor)
             .Include(r => r.User)
             .OrderByDescending(r => r.RequestedAt)
-            .Select(r => new AccessRequestDto(
-                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
-                r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
-                r.Status, r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
             .ToListAsync();
+
+        return rows.Select(r => new AccessRequestDto(
+            r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id, r.User.UtentNumber,
+            r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
+            EffectiveStatus(r, now), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt)).ToList();
     }
 
     public async Task<List<AccessRequestDto>> GetDoctorRequestsAsync(string doctorId)
     {
-        return await db.AccessRequests
+        var now = DateTime.UtcNow.ToString("o");
+        var rows = await db.AccessRequests
             .Where(r => r.DoctorId == doctorId)
             .Include(r => r.User)
             .Include(r => r.Doctor)
             .OrderByDescending(r => r.RequestedAt)
-            .Select(r => new AccessRequestDto(
-                r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id,
-                r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
-                r.Status, r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt))
             .ToListAsync();
+
+        return rows.Select(r => new AccessRequestDto(
+            r.Id, r.UserId, $"{r.User.FirstName} {r.User.LastName}", r.User.Id, r.User.UtentNumber,
+            r.DoctorId, $"{r.Doctor.FirstName} {r.Doctor.LastName}",
+            EffectiveStatus(r, now), r.IsEmergency == 1, r.RequestedAt, r.ApprovedAt, r.ExpiresAt)).ToList();
     }
+
+    // An "approved" request whose expiry has passed reads as "expired" without needing a stored/scheduled status flip.
+    private static string EffectiveStatus(AccessRequest r, string now) =>
+        r.Status == "approved" && r.ExpiresAt is not null && string.Compare(r.ExpiresAt, now) <= 0
+            ? "expired"
+            : r.Status;
 
     public async Task<(AccessRequest Request, string PatientName, string PublicId)?> GrantAccessByQrAsync(string doctorId, string qrCode)
     {
@@ -103,6 +161,7 @@ public class AccessControlService(MediVaultDbContext db)
         {
             existing.ExpiresAt = expiry;
             await db.SaveChangesAsync();
+            cache.Remove(DoctorAccessCacheKey(doctorId, userId));
             return (existing, $"{user.FirstName} {user.LastName}", user.Id);
         }
 
@@ -119,6 +178,7 @@ public class AccessControlService(MediVaultDbContext db)
         };
         db.AccessRequests.Add(request);
         await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(doctorId, userId));
         return (request, $"{user.FirstName} {user.LastName}", user.Id);
     }
 
@@ -164,27 +224,28 @@ public class AccessControlService(MediVaultDbContext db)
         {
             request.Status = "approved";
             request.ApprovedAt = DateTime.UtcNow.ToString("o");
-            request.ExpiresAt = DateTime.UtcNow.AddDays(30).ToString("o");
+            request.ExpiresAt = DateTime.UtcNow.AddDays(7).ToString("o");
         }
         else if (action == "revoke")
         {
-            db.AccessRequests.Remove(request);
-            await db.SaveChangesAsync();
-            return true;
+            request.Status = "revoked";
         }
 
         await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(request.DoctorId, request.UserId));
         return true;
     }
 
+    // Keeps the row (marked "rejected"/"revoked" instead of deleted) so the doctor's request history/filters stay accurate.
     public async Task<bool> DeleteRequestAsync(int requestId, string userId)
     {
         var request = await db.AccessRequests
             .FirstOrDefaultAsync(r => r.Id == requestId && r.UserId == userId);
         if (request is null) return false;
 
-        db.AccessRequests.Remove(request);
+        request.Status = request.Status == "pending" ? "rejected" : "revoked";
         await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(request.DoctorId, request.UserId));
         return true;
     }
 }

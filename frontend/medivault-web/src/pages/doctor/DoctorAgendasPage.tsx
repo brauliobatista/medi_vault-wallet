@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
 import ScheduleEventsModal from '../../components/ScheduleEventsModal'
 import AppointmentsModal from '../../components/AppointmentsModal'
+import ContactsModal from '../../components/ContactsModal'
 import {
   getAllAppointments,
   getScheduleEvents,
@@ -9,7 +10,7 @@ import {
   type ScheduleEvent,
 } from '../../api/agenda'
 
-type OpenModal = 'schedule' | 'appointments' | null
+type OpenModal = 'schedule' | 'appointments' | 'contacts' | null
 type AgendaView = 'diaria' | 'programada'
 
 const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -71,6 +72,7 @@ export default function DoctorAgendasPage() {
   const [appointments, setAppointments] = useState<PatientAppointment[]>([])
   const [openModal, setOpenModal] = useState<OpenModal>(null)
   const [modalDate, setModalDate] = useState<string | undefined>(undefined)
+  const [modalEventId, setModalEventId] = useState<number | undefined>(undefined)
   const [modalAppointmentId, setModalAppointmentId] = useState<number | undefined>(undefined)
 
   const [agendaView, setAgendaView] = useState<AgendaView>('diaria')
@@ -86,14 +88,21 @@ export default function DoctorAgendasPage() {
   const closeModal = () => {
     setOpenModal(null)
     setModalDate(undefined)
+    setModalEventId(undefined)
     setModalAppointmentId(undefined)
     loadAgenda()
   }
 
   const openAdd = (view: AgendaView, date: string) => {
     setModalDate(date)
+    setModalEventId(undefined)
     setModalAppointmentId(undefined)
     setOpenModal(view === 'diaria' ? 'appointments' : 'schedule')
+  }
+
+  const openEventDetails = (eventId: number) => {
+    setModalEventId(eventId)
+    setOpenModal('schedule')
   }
 
   const openAppointmentDetails = (appointmentId: number) => {
@@ -123,7 +132,7 @@ export default function DoctorAgendasPage() {
           </div>
           <button
             className="dash-card-footer"
-            onClick={() => { setModalAppointmentId(undefined); setOpenModal(agendaView === 'diaria' ? 'appointments' : 'schedule') }}
+            onClick={() => { setModalEventId(undefined); setModalAppointmentId(undefined); setOpenModal(agendaView === 'diaria' ? 'appointments' : 'schedule') }}
           >
             Gerir agenda completa <i className="bi bi-arrow-right" />
           </button>
@@ -193,7 +202,7 @@ export default function DoctorAgendasPage() {
                     dayEvents(dayIso).map((ev) => {
                       const meta = eventBadge[ev.eventTypeCode] ?? eventBadge.TRAINING
                       return (
-                        <button className="agenda-week-chip" key={ev.id} onClick={() => setOpenModal('schedule')}>
+                        <button className="agenda-week-chip" key={ev.id} onClick={() => openEventDetails(ev.id)}>
                           <div className="agenda-week-chip-title"><i className={`bi ${meta.icon} me-1`} />{ev.title}</div>
                           {ev.location && <div className="agenda-week-chip-sub">{ev.location}</div>}
                           <span className={`status-badge ${meta.badgeClass}`}>{meta.label}</span>
@@ -211,10 +220,26 @@ export default function DoctorAgendasPage() {
         </div>
       </div>
 
-      {openModal === 'schedule' && <ScheduleEventsModal onClose={closeModal} initialDate={modalDate} />}
+      <div className="dash-card">
+        <div className="dash-card-header">
+          <div className="dash-card-heading">
+            <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-telephone" /></span>
+            <span className="dash-card-title">Contactos de Extensão</span>
+          </div>
+        </div>
+        <p className="dash-card-subtitle">Contactos rápidos da instituição</p>
+        <button className="dash-card-footer" onClick={() => setOpenModal('contacts')}>
+          Ver todos os contactos <i className="bi bi-arrow-right" />
+        </button>
+      </div>
+
+      {openModal === 'schedule' && (
+        <ScheduleEventsModal onClose={closeModal} initialDate={modalDate} initialEventId={modalEventId} />
+      )}
       {openModal === 'appointments' && (
         <AppointmentsModal onClose={closeModal} initialDate={modalDate} initialAppointmentId={modalAppointmentId} />
       )}
+      {openModal === 'contacts' && <ContactsModal onClose={closeModal} />}
     </Layout>
   )
 }

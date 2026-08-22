@@ -1,233 +1,336 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import jsQR from 'jsqr'
 import Layout from '../../components/Layout'
-import ScheduleEventsModal from '../../components/ScheduleEventsModal'
-import AppointmentsModal from '../../components/AppointmentsModal'
-import ContactsModal from '../../components/ContactsModal'
-import {
-  getDailyAppointments,
-  getInstitutionContacts,
-  getScheduleEvents,
-  type InstitutionContact,
-  type PatientAppointment,
-  type ScheduleEvent,
-} from '../../api/agenda'
+import api from '../../api/client'
+import { scanQrCode, getAccessStatus, getFinishedConsultations } from '../../api/medical'
 
-type OpenModal = 'schedule' | 'appointments' | 'contacts' | null
-
-const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
-
-function formatDatePt(iso: string) {
-  const [y, m, d] = iso.split('-').map(Number)
-  return `${String(d).padStart(2, '0')} ${MONTHS_PT[m - 1]} ${y}`
-}
-
-function formatDateRange(startIso: string, endIso: string) {
-  if (startIso === endIso) return formatDatePt(startIso)
-  const [, sm, sd] = startIso.split('-').map(Number)
-  const [ey, em, ed] = endIso.split('-').map(Number)
-  if (sm === em) return `${String(sd).padStart(2, '0')} – ${String(ed).padStart(2, '0')} ${MONTHS_PT[em - 1]} ${ey}`
-  return `${formatDatePt(startIso)} – ${formatDatePt(endIso)}`
-}
-
-function addDays(iso: string, days: number) {
-  const [y, m, d] = iso.split('-').map(Number)
-  const dt = new Date(Date.UTC(y, m - 1, d))
-  dt.setUTCDate(dt.getUTCDate() + days)
-  return dt.toISOString().slice(0, 10)
-}
-
-function todayIso() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-const eventBadge: Record<string, { label: string; badgeClass: string; iconClass: string; icon: string }> = {
-  CONGRESS: { label: 'Congresso', badgeClass: 'badge-congresso', iconClass: 'icon-congresso', icon: 'bi-calendar-event' },
-  VACATION: { label: 'Férias', badgeClass: 'badge-ferias', iconClass: 'icon-ferias', icon: 'bi-suitcase' },
-  TRAINING: { label: 'Formação', badgeClass: 'badge-confirmada', iconClass: 'icon-congresso', icon: 'bi-mortarboard' },
-}
-
-const statusBadge: Record<string, { label: string; badgeClass: string }> = {
-  em_curso: { label: 'Em curso', badgeClass: 'badge-em-curso' },
-  confirmada: { label: 'Confirmada', badgeClass: 'badge-confirmada' },
-  pendente: { label: 'Pendente', badgeClass: 'badge-ferias' },
-  concluida: { label: 'Concluída', badgeClass: 'badge-em-curso' },
-  cancelada: { label: 'Cancelada', badgeClass: 'badge-congresso' },
+interface FinishedConsultation {
+  id: number
+  userId: string
+  patientName: string
+  patientPublicId: string
+  utentNumber: string
+  startedAt: string
+  finishedAt: string
+  durationMinutes: number
 }
 
 export default function DoctorDashboardPage() {
-  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([])
-  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'CONGRESS' | 'VACATION'>('all')
+  const [utentNumber, setUtentNumber] = useState('')
+  const [found, setFound] = useState<{ userId: string; name: string; publicId: string } | null>(null)
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  const [selectedDate, setSelectedDate] = useState(() => todayIso())
-  const [appointments, setAppointments] = useState<PatientAppointment[]>([])
+  // QR scan state
+  const [scanning, setScanning] = useState(false)
+  const [manualCode, setManualCode] = useState('')
+  const [scanResult, setScanResult] = useState<{ patientName: string; userId: string; publicId: string; expiresAt: string } | null>(null)
+  const [scanError, setScanError] = useState<string | null>(null)
+  const [scanCardSuspended, setScanCardSuspended] = useState(false)
+  const [foundCardSuspended, setFoundCardSuspended] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const rafRef = useRef<number>(0)
 
-  const [contacts, setContacts] = useState<InstitutionContact[]>([])
-  const [openModal, setOpenModal] = useState<OpenModal>(null)
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    getScheduleEvents().then(setScheduleEvents).catch(() => setScheduleEvents([]))
-    getInstitutionContacts().then(setContacts).catch(() => setContacts([]))
-  }, [])
+  const [finishedConsultations, setFinishedConsultations] = useState<FinishedConsultation[]>([])
+  useEffect(() => { getFinishedConsultations().then(setFinishedConsultations).catch(() => {}) }, [])
 
-  useEffect(() => {
-    getDailyAppointments(selectedDate).then(setAppointments).catch(() => setAppointments([]))
-  }, [selectedDate])
+  // ── Patient search ────────────────────────────────────────────
+  const handleSearch = async () => {
+    if (!utentNumber.trim()) return
+    setLoading(true)
+    setStatus(null)
+    setFound(null)
+    setFoundCardSuspended(false)
+    try {
+      const r = await api.get(`/access-requests/search?utentNumber=${utentNumber}`)
+      setFound(r.data)
+      const s = await getAccessStatus(r.data.userId).catch(() => ({ reason: 'granted' }))
+      setFoundCardSuspended(s.reason === 'card_suspended')
+    } catch {
+      setStatus({ type: 'error', msg: 'Utente não encontrado. Verifique o número.' })
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const visibleEvents =
-    scheduleFilter === 'all' ? scheduleEvents : scheduleEvents.filter((e) => e.eventTypeCode === scheduleFilter)
+  const handleRequestAccess = async () => {
+    if (!found) return
+    try {
+      await api.post(`/access-requests/${found.userId}`)
+      setStatus({ type: 'success', msg: `Pedido enviado a ${found.name}. Aguarde aprovação.` })
+    } catch {
+      setStatus({ type: 'error', msg: 'Não foi possível enviar o pedido.' })
+    }
+  }
+
+  const handleViewData = () => {
+    if (!found) return
+    navigate(`/doctor/patient/${found.userId}`, { state: { publicId: found.publicId, patientName: found.name } })
+  }
+
+  // ── QR scan (camera) ──────────────────────────────────────────
+  const startCamera = async () => {
+    setScanResult(null)
+    setScanError(null)
+    setScanning(true)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.play()
+        rafRef.current = requestAnimationFrame(tick)
+      }
+    } catch {
+      setScanError('Não foi possível aceder à câmara.')
+      setScanning(false)
+    }
+  }
+
+  const stopCamera = () => {
+    cancelAnimationFrame(rafRef.current)
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+    setScanning(false)
+  }
+
+  const tick = () => {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    if (!video || !canvas || video.readyState < 2) {
+      rafRef.current = requestAnimationFrame(tick)
+      return
+    }
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(video, 0, 0)
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const code = jsQR(img.data, img.width, img.height)
+    if (code) {
+      stopCamera()
+      submitQrCode(code.data)
+    } else {
+      rafRef.current = requestAnimationFrame(tick)
+    }
+  }
+
+  const submitQrCode = async (code: string) => {
+    setScanError(null)
+    setScanCardSuspended(false)
+    try {
+      const r = await scanQrCode(code)
+      setScanResult({ patientName: r.patientName, userId: r.userId, publicId: r.publicId ?? '', expiresAt: r.expiresAt })
+    } catch (err: unknown) {
+      const httpStatus = (err as { response?: { status?: number } })?.response?.status
+      if (httpStatus === 423) {
+        setScanCardSuspended(true)
+      } else {
+        setScanError('QR Code inválido ou sem correspondência.')
+      }
+    }
+  }
+
+  const handleManualScan = () => {
+    if (!manualCode.trim()) return
+    submitQrCode(manualCode.trim())
+  }
 
   return (
     <Layout>
-      <div className="dash-toolbar">
-        <span className="dash-toolbar-link">
-          <i className="bi bi-sliders" />
-          Personalizar Dashboard
-        </span>
-        <button className="dash-toolbar-btn">
-          <i className="bi bi-plus-lg" />
-          Adicionar Módulo
-        </button>
-      </div>
-
-      <div className="dash-grid">
-        {/* Agenda Médica Programada */}
-        <div className="dash-card">
+      <div style={{ maxWidth: 720 }}>
+        {/* QR Code scanner */}
+        <div className="dash-card mb-4">
           <div className="dash-card-header">
             <div className="dash-card-heading">
-              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-calendar-event" /></span>
-              <span className="dash-card-title">Agenda Médica Programada</span>
+              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-qr-code-scan" /></span>
+              <span className="dash-card-title">Ler QR Code do Utente</span>
             </div>
-            <button className="dash-card-menu-btn" aria-label="Mais opções">
-              <i className="bi bi-three-dots" />
-            </button>
           </div>
 
-          <div className="dash-select">
-            <span>Próximos 30 dias</span>
-            <i className="bi bi-chevron-down" />
-          </div>
-
-          <div className="dash-filter-row">
-            <button className={`dash-pill${scheduleFilter === 'all' ? ' active' : ''}`} onClick={() => setScheduleFilter('all')}>Todos</button>
-            <button className={`dash-pill${scheduleFilter === 'CONGRESS' ? ' active' : ''}`} onClick={() => setScheduleFilter('CONGRESS')}>Congressos</button>
-            <button className={`dash-pill${scheduleFilter === 'VACATION' ? ' active' : ''}`} onClick={() => setScheduleFilter('VACATION')}>Férias</button>
-          </div>
-
-          <div className="dash-list">
-            {visibleEvents.length === 0 && <p className="dash-item-sub mb-0">Sem eventos agendados.</p>}
-            {visibleEvents.map((ev) => {
-              const meta = eventBadge[ev.eventTypeCode] ?? eventBadge.TRAINING
-              return (
-                <div className="dash-item" key={ev.id}>
-                  <span className={`dash-item-icon ${meta.iconClass}`}>
-                    <i className={`bi ${meta.icon}`} />
-                  </span>
-                  <div className="dash-item-body">
-                    <div className="dash-item-title">{ev.title}</div>
-                    {ev.location && <div className="dash-item-sub">{ev.location}</div>}
-                    <div className="dash-item-date">{formatDateRange(ev.startDate, ev.endDate)}</div>
-                  </div>
-                  <span className={`status-badge ${meta.badgeClass}`}>{meta.label}</span>
+          {scanResult ? (
+            <div className="consult-context-item context-teal">
+              <i className="bi bi-check-circle-fill" />
+              <div className="flex-grow-1">
+                <div className="consult-context-title">Acesso concedido</div>
+                <div className="consult-context-value">{scanResult.patientName}</div>
+                <div className="consult-context-sub">Expira: {scanResult.expiresAt.slice(0, 10)}</div>
+                <div className="mt-2 d-flex gap-2">
+                  <button
+                    className="consult-finish-btn"
+                    onClick={() => navigate(`/doctor/patient/${scanResult.userId}`, { state: { publicId: scanResult.publicId, patientName: scanResult.patientName } })}
+                  >
+                    <i className="bi bi-eye" />Ver dados
+                  </button>
+                  <button className="dash-toolbar-btn" onClick={() => { setScanResult(null); setManualCode('') }}>
+                    Novo scan
+                  </button>
                 </div>
-              )
-            })}
-          </div>
-
-          <button className="dash-card-footer" onClick={() => setOpenModal('schedule')}>
-            Ver agenda completa <i className="bi bi-arrow-right" />
-          </button>
+              </div>
+            </div>
+          ) : scanCardSuspended ? (
+            <div className="consult-context-item context-danger">
+              <i className="bi bi-shield-x" />
+              <div className="flex-grow-1">
+                <div className="consult-context-title">MediCard suspenso</div>
+                <div className="consult-context-value">O utente suspendeu o seu cartão.</div>
+                <div className="consult-context-sub">Não é possível aceder aos dados enquanto o cartão estiver inativo.</div>
+                <div className="mt-2">
+                  <button className="dash-toolbar-btn" onClick={() => { setScanCardSuspended(false); setManualCode('') }}>
+                    Novo scan
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {scanError && (
+                <div className="consult-context-item context-danger mb-3">
+                  <i className="bi bi-exclamation-triangle-fill" />
+                  <div className="consult-context-value">{scanError}</div>
+                </div>
+              )}
+              {scanning ? (
+                <div className="text-center">
+                  <video ref={videoRef} className="w-100 rounded mb-2" style={{ maxHeight: 260 }} muted playsInline />
+                  <canvas ref={canvasRef} className="d-none" />
+                  <p className="consult-context-sub mb-2">A detetar QR code…</p>
+                  <button className="dash-toolbar-btn" onClick={stopCamera}>
+                    <i className="bi bi-x-circle" />Cancelar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <canvas ref={canvasRef} className="d-none" />
+                  <button className="consult-finish-btn mb-3" onClick={startCamera}>
+                    <i className="bi bi-camera-video" />Abrir câmara
+                  </button>
+                  <div className="consult-context-sub mb-2">ou introduza o código manualmente:</div>
+                  <div className="input-group">
+                    <input
+                      className="form-control font-monospace"
+                      placeholder="MV:uuid:ABCDEF123456"
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualScan()}
+                    />
+                    <button className="dash-toolbar-btn" onClick={handleManualScan}>
+                      <i className="bi bi-check-lg" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Agenda Diária */}
+        {/* Search by utent number */}
         <div className="dash-card">
           <div className="dash-card-header">
             <div className="dash-card-heading">
-              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-calendar-event" /></span>
-              <span className="dash-card-title">Agenda Diária</span>
+              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-search" /></span>
+              <span className="dash-card-title">Pesquisar utente por número</span>
             </div>
-            <button className="dash-card-menu-btn" aria-label="Mais opções">
-              <i className="bi bi-three-dots" />
+          </div>
+
+          <div className="input-group mb-3">
+            <input
+              className="form-control"
+              placeholder="Número de utente (ex: 100000001)"
+              value={utentNumber}
+              onChange={(e) => { setUtentNumber(e.target.value); setFound(null); setStatus(null) }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <button className="consult-finish-btn" onClick={handleSearch} disabled={loading}>
+              {loading
+                ? <span className="spinner-border spinner-border-sm" />
+                : <><i className="bi bi-search" />Pesquisar</>}
             </button>
           </div>
 
-          <div className="dash-date-nav">
-            <span className="dash-date-label">{formatDatePt(selectedDate)}</span>
-            <div className="dash-date-nav-controls">
-              <button className="dash-date-nav-btn" aria-label="Dia anterior" onClick={() => setSelectedDate((d) => addDays(d, -1))}>
-                <i className="bi bi-chevron-left" />
-              </button>
-              <button className="dash-today-btn" onClick={() => setSelectedDate(todayIso())}>Hoje</button>
-              <button className="dash-date-nav-btn" aria-label="Dia seguinte" onClick={() => setSelectedDate((d) => addDays(d, 1))}>
-                <i className="bi bi-chevron-right" />
-              </button>
+          {status && (
+            <div className={`consult-context-item ${status.type === 'success' ? 'context-teal' : status.type === 'info' ? 'context-primary' : 'context-danger'}`}>
+              <i className={`bi ${status.type === 'success' ? 'bi-check-circle-fill' : status.type === 'info' ? 'bi-info-circle-fill' : 'bi-exclamation-triangle-fill'}`} />
+              <div className="consult-context-value">{status.msg}</div>
             </div>
-          </div>
+          )}
 
-          <div className="dash-list">
-            {appointments.length === 0 && <p className="dash-item-sub mb-0">Sem consultas agendadas para este dia.</p>}
-            {appointments.map((appt) => {
-              const time = appt.scheduledAt.slice(11, 16)
-              const typeLabel = appt.modality === 'teleconsulta' ? 'Teleconsulta' : appt.appointmentTypeDescription
-              const modalityLabel = appt.modality === 'teleconsulta' ? 'Teleconsulta' : 'Presencial'
-              const meta = statusBadge[appt.status] ?? statusBadge.confirmada
-              return (
-                <div className="dash-time-slot" key={appt.id}>
-                  <span className="dash-time">{time}</span>
-                  <div className="dash-appt-body">
-                    <div className="dash-appt-type">{typeLabel}</div>
-                    <div className="dash-appt-name">{appt.patientName}</div>
-                    <div className="dash-item-sub">Cardiologia • {modalityLabel}</div>
+          {found && (
+            <>
+              {foundCardSuspended && (
+                <div className="consult-context-item context-danger mb-2">
+                  <i className="bi bi-shield-x" />
+                  <div className="consult-context-value">
+                    <strong>MediCard suspenso.</strong> O utente suspendeu o seu cartão — não é possível aceder aos dados enquanto estiver inativo.
                   </div>
-                  <span className={`status-badge ${meta.badgeClass}`}>{meta.label}</span>
                 </div>
-              )
-            })}
-          </div>
-
-          <button className="dash-card-footer" onClick={() => setOpenModal('appointments')}>
-            Ver toda a agenda <i className="bi bi-arrow-right" />
-          </button>
+              )}
+              <div className="consult-context-item context-plain">
+                <i className="bi bi-person-circle" />
+                <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <div className="consult-context-value fw-semibold">{found.name}</div>
+                    <div className="consult-context-sub font-monospace">{found.publicId}</div>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button className="dash-toolbar-btn" onClick={handleRequestAccess}>
+                      <i className="bi bi-send" />Pedir acesso
+                    </button>
+                    {!foundCardSuspended && (
+                      <button className="consult-finish-btn" onClick={handleViewData}>
+                        <i className="bi bi-eye" />Ver dados
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Contactos de Extensão */}
-        <div className="dash-card">
-          <div className="dash-card-header">
-            <div className="dash-card-heading">
-              <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-telephone" /></span>
-              <span className="dash-card-title">Contactos de Extensão</span>
+        {/* Finished consultations */}
+        {finishedConsultations.length > 0 && (
+          <div className="dash-card mt-4">
+            <div className="dash-card-header">
+              <div className="dash-card-heading">
+                <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-clipboard2-check" /></span>
+                <span className="dash-card-title">Consultas Finalizadas</span>
+              </div>
             </div>
-            <button className="dash-card-menu-btn" aria-label="Mais opções">
-              <i className="bi bi-three-dots" />
-            </button>
-          </div>
 
-          <p className="dash-card-subtitle">Contactos rápidos da instituição</p>
-
-          <div className="dash-list">
-            {contacts.length === 0 && <p className="dash-item-sub mb-0">Sem contactos registados.</p>}
-            {contacts.map((c) => (
-              <div className="dash-contact-item" key={c.id}>
-                <div>
-                  <div className="dash-contact-name">{c.serviceName}</div>
-                  <div className="dash-contact-phone">{c.extension}</div>
+            {finishedConsultations.map((c) => (
+              <div className="consult-context-item context-plain" key={c.id}>
+                <i className="bi bi-person-circle" />
+                <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <div className="consult-context-value fw-semibold">{c.patientName}</div>
+                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · Nº utente: {c.utentNumber}</div>
+                    <div className="consult-context-sub">
+                      {c.finishedAt.slice(0, 10)} · {c.durationMinutes} min
+                    </div>
+                  </div>
+                  <button
+                    className="dash-toolbar-btn"
+                    onClick={() => navigate(`/doctor/finished-consultation/${c.id}`, {
+                      state: {
+                        patientName: c.patientName, userId: c.userId, patientPublicId: c.patientPublicId,
+                        utentNumber: c.utentNumber, durationMinutes: c.durationMinutes, finishedAt: c.finishedAt,
+                      },
+                    })}
+                  >
+                    <i className="bi bi-eye" />Ver
+                  </button>
                 </div>
-                <a className="dash-phone-btn" href={`tel:${c.extension.replace(/\s/g, '')}`} aria-label={`Ligar para ${c.serviceName}`}>
-                  <i className="bi bi-telephone-fill" />
-                </a>
               </div>
             ))}
           </div>
-
-          <button className="dash-card-footer" onClick={() => setOpenModal('contacts')}>
-            Ver todos os contactos <i className="bi bi-arrow-right" />
-          </button>
-        </div>
+        )}
       </div>
-
-      {openModal === 'schedule' && <ScheduleEventsModal onClose={() => setOpenModal(null)} />}
-      {openModal === 'appointments' && <AppointmentsModal onClose={() => setOpenModal(null)} />}
-      {openModal === 'contacts' && <ContactsModal onClose={() => setOpenModal(null)} />}
     </Layout>
   )
 }

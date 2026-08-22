@@ -28,11 +28,11 @@ public record UpsertFamilyHistoryRequest(
     string Condition, bool HasCondition, string? KinshipDegree, string? Notes);
 
 public record HealthHabitDto(
-    int Id, string Type, string? Name, bool? Consumes, string? Frequency,
+    int Id, int TypeId, string? Name, bool? Consumes, string? Frequency,
     string? Quantity, string? StartDate, string? Details, string UpdatedAt);
 
 public record UpsertHealthHabitRequest(
-    string Type, string? Name, bool? Consumes, string? Frequency,
+    int TypeId, string? Name, bool? Consumes, string? Frequency,
     string? Quantity, string? StartDate, string? Details);
 
 public record AnalyticalExamDto(
@@ -77,7 +77,7 @@ public record CreateVaccinationRequest(
     string? NextDueDate, string? BatchNumber, string? Institution, string? Notes);
 
 public record AccessRequestDto(
-    int Id, string UserId, string PatientName, string PatientPublicId, string DoctorId, string DoctorName,
+    int Id, string UserId, string PatientName, string PatientPublicId, string UtentNumber, string DoctorId, string DoctorName,
     string Status, bool IsEmergency, string RequestedAt, string? ApprovedAt, string? ExpiresAt);
 
 public record RespondAccessRequest(string Action);
@@ -92,3 +92,53 @@ public record CreateDoctorNoteRequest(string UserId, string Section, string Note
 
 public record PendingReviewFlagDto(
     int Id, string UserId, string Section, string CreatedAt, string? ReviewedAt);
+
+public record PatientSummaryDto(
+    string UserId, string FirstName, string LastName, string BiologicalGender,
+    string? BloodType, bool AcceptsTransfusion,
+    string Sex, string Birthday, string UtentNumber, string? PhotoUrl);
+
+public record UpdateBloodTypeRequest(string? BloodType);
+
+public record MedicalFileDto(
+    int Id, string FileName, string? FileType, string FileUrl, string UploadedAt, string? UploadedByName);
+
+public record ChatMessageDto(
+    int Id, string AuthorDoctorId, string AuthorName, string Message, string CreatedAt);
+
+public record CreateChatMessageRequest(string Message);
+
+public record PathologyDto(
+    int Id, string Icpc2Description, string Type, string? DiagnosedAt, string? Notes);
+
+public record Icpc2CodeDto(int Id, string Code, string Description);
+
+public record CreatePathologyRequest(int Icpc2Id, string Type, string? DiagnosedAt, string? Notes);
+
+public record VitalSignDto(
+    int Id, string RecordedAt, int? BloodPressureSystolic, int? BloodPressureDiastolic,
+    int? HeartRate, int? RespiratoryRate, decimal? Temperature, int? Spo2,
+    decimal? Weight, decimal? Height, string? Notes);
+
+public record CreateVitalSignRequest(
+    string RecordedAt, int? BloodPressureSystolic, int? BloodPressureDiastolic,
+    int? HeartRate, int? RespiratoryRate, decimal? Temperature, int? Spo2,
+    decimal? Weight, decimal? Height, string? Notes);
+
+public record ClinicalAssessmentDto(int Id, string Hypothesis, string Plan, string CreatedAt, string UpdatedAt);
+
+public record CreateAssessmentRequest(string Hypothesis, string Plan);
+
+public record AnamnesisDto(
+    int Id, string DoctorId, string DoctorName, string? ChiefComplaint, string? IllnessHistory,
+    string? PersonalHistory, string CreatedAt, string UpdatedAt, bool CanEdit);
+
+public record UpsertAnamnesisRequest(string? ChiefComplaint, string? IllnessHistory, string? PersonalHistory);
+
+public record ConsultationDto(int Id, string Status, string StartedAt, string? FinishedAt, string UpdatedAt);
+
+public record SaveConsultationRequest(int? ConsultationId, string StartedAt);
+
+public record FinishedConsultationDto(
+    int Id, string UserId, string PatientName, string PatientPublicId, string UtentNumber,
+    string StartedAt, string FinishedAt, int DurationMinutes);

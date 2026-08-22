@@ -10,17 +10,61 @@ namespace MediVault.Api.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize]
-public class UsersController(UserService userService) : ControllerBase
+public class UsersController(UserService userService, GoogleWalletService googleWalletService, AccessControlService accessControl) : ControllerBase
 {
     private string CurrentUserId => (User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"))!;
+
+    private async Task<bool> CanAccessUserAsync(string userId)
+        => CurrentUserId == userId || await accessControl.GuardianHasAccessAsync(CurrentUserId, userId);
+
+    [HttpGet("{userId}/profile")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> GetProfileFor(string userId)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        var profile = await userService.GetProfileAsync(userId);
+        if (profile is null) return NotFound();
+        return Ok(profile);
+    }
+
+    [HttpGet("{userId}/qr")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> GetQrCodeFor(string userId)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        var payload = await userService.GetQrPayloadAsync(userId);
+        if (payload is null) return NotFound();
+        return Ok(new { payload });
+    }
+
+    [HttpPut("{userId}/card")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> ToggleCardFor(string userId, ToggleCardRequest req)
+    {
+        if (!await CanAccessUserAsync(userId)) return Forbid();
+        var success = await userService.ToggleCardAsync(userId, req.Active);
+        if (!success) return NotFound();
+        return NoContent();
+    }
 
     [HttpGet("{userId}/public-info")]
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> GetPublicInfo(string userId)
     {
+        if (!await accessControl.DoctorHasAccessAsync(CurrentUserId, userId)) return Forbid();
+
         var info = await userService.GetPublicInfoAsync(userId);
         if (info is null) return NotFound();
-        return Ok(new { name = info.Value.Name, publicId = info.Value.Id, photoUrl = info.Value.PhotoUrl });
+        return Ok(new
+        {
+            name = info.Value.Name,
+            publicId = info.Value.Id,
+            sexGenderDescription = info.Value.SexGenderDescription,
+            bloodType = info.Value.BloodType,
+            birthday = info.Value.Birthday,
+            nationalityName = info.Value.NationalityName,
+            photoUrl = info.Value.PhotoUrl
+        });
     }
 
     [HttpGet("me")]
@@ -66,6 +110,18 @@ public class UsersController(UserService userService) : ControllerBase
         var payload = await userService.GetQrPayloadAsync(CurrentUserId);
         if (payload is null) return NotFound();
         return Ok(new { payload });
+    }
+
+    [HttpGet("me/wallet/google")]
+    [Authorize(Roles = "Patient")]
+    public async Task<IActionResult> GetGoogleWalletLink()
+    {
+        if (!googleWalletService.IsConfigured)
+            return StatusCode(501, new { message = "Google Wallet ainda não está configurado no servidor." });
+
+        var url = await googleWalletService.GetSaveUrlAsync(CurrentUserId);
+        if (url is null) return NotFound();
+        return Ok(new { url });
     }
 
     [HttpPost("me/photo")]

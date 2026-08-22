@@ -96,6 +96,7 @@ CREATE TABLE users (
     phone                 NVARCHAR(50),
     is_active             BIT           NOT NULL DEFAULT 1,
     card_active           BIT           NOT NULL DEFAULT 1,
+    share_code            NVARCHAR(50)  NOT NULL DEFAULT '',
     photo_path            NVARCHAR(255),
     created_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
     updated_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
@@ -156,6 +157,7 @@ CREATE TABLE family_guardianships (
     guardian_user_id     UNIQUEIDENTIFIER NOT NULL,
     dependent_user_id    UNIQUEIDENTIFIER NOT NULL,
     relationship_type_id INT           NOT NULL,
+    status                NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved')),
     is_active            BIT           NOT NULL DEFAULT 1,
     created_at           DATETIME2     NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_family_guardianships_guardian     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
@@ -216,7 +218,7 @@ CREATE TABLE access_requests (
     requested_at DATETIME2     NOT NULL DEFAULT GETDATE(),
     approved_at  DATETIME2,
     expires_at   DATETIME2,
-    status       NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked')),
+    status       NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked', 'finished')),
     is_emergency BIT           NOT NULL DEFAULT 0,
     access_code  NVARCHAR(100),
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -665,3 +667,83 @@ BEGIN
 END;
 GO
 
+-- -------------------------------------------------------
+-- CLINICAL CONSULTATION RECORDS
+-- -------------------------------------------------------
+
+CREATE TABLE vital_signs (
+    id                       INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id                  UNIQUEIDENTIFIER NOT NULL,
+    doctor_id                UNIQUEIDENTIFIER NOT NULL,
+    recorded_at              DATETIME2        NOT NULL,
+    blood_pressure_systolic  INT,
+    blood_pressure_diastolic INT,
+    heart_rate               INT,
+    respiratory_rate         INT,
+    temperature              DECIMAL(4,1),
+    spo2                     INT,
+    weight                   DECIMAL(5,2),
+    height                   DECIMAL(5,2),
+    notes                    NVARCHAR(MAX),
+    created_at               DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_vital_signs_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_vital_signs_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+GO
+
+CREATE TABLE clinical_assessments (
+    id         INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id    UNIQUEIDENTIFIER NOT NULL,
+    doctor_id  UNIQUEIDENTIFIER NOT NULL,
+    hypothesis NVARCHAR(MAX)    NOT NULL,
+    plan       NVARCHAR(MAX)    NOT NULL,
+    created_at DATETIME2        NOT NULL DEFAULT GETDATE(),
+    updated_at DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_clinical_assessments_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_clinical_assessments_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+GO
+
+-- Anamnesis is historical: every save creates a new row. Editing an existing row
+-- is only allowed application-side for the SAME doctor_id, within 24h of created_at.
+CREATE TABLE anamneses (
+    id               INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id          UNIQUEIDENTIFIER NOT NULL,
+    doctor_id        UNIQUEIDENTIFIER NOT NULL,
+    chief_complaint  NVARCHAR(MAX),
+    illness_history  NVARCHAR(MAX),
+    personal_history NVARCHAR(MAX),
+    created_at       DATETIME2        NOT NULL DEFAULT GETDATE(),
+    updated_at       DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_anamneses_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_anamneses_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+GO
+
+-- Team chat: doctors discussing a patient's case amongst themselves.
+CREATE TABLE patient_chat_messages (
+    id                INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id           UNIQUEIDENTIFIER NOT NULL,
+    author_doctor_id  UNIQUEIDENTIFIER NOT NULL,
+    message           NVARCHAR(MAX)    NOT NULL,
+    created_at        DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
+    CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+GO
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id     UNIQUEIDENTIFIER NOT NULL,
+    doctor_id   UNIQUEIDENTIFIER NOT NULL,
+    status      NVARCHAR(20)     NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+    started_at  DATETIME2        NOT NULL,
+    finished_at DATETIME2,
+    created_at  DATETIME2        NOT NULL DEFAULT GETDATE(),
+    updated_at  DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_consultations_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_consultations_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+GO

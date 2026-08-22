@@ -10,7 +10,7 @@ import {
   type RefType,
 } from '../api/agenda'
 
-interface Props { onClose: () => void; initialDate?: string }
+interface Props { onClose: () => void; initialDate?: string; initialEventId?: number }
 
 interface FormState {
   eventTypeCode: string
@@ -23,7 +23,7 @@ interface FormState {
 
 const emptyForm: FormState = { eventTypeCode: '', title: '', location: '', startDate: '', endDate: '', notes: '' }
 
-export default function ScheduleEventsModal({ onClose, initialDate }: Props) {
+export default function ScheduleEventsModal({ onClose, initialDate, initialEventId }: Props) {
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [types, setTypes] = useState<RefType[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -31,6 +31,8 @@ export default function ScheduleEventsModal({ onClose, initialDate }: Props) {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const singleMode = initialEventId !== undefined
 
   const load = () => {
     setLoading(true)
@@ -38,7 +40,11 @@ export default function ScheduleEventsModal({ onClose, initialDate }: Props) {
       .then(([ev, ty]) => {
         setEvents(ev)
         setTypes(ty)
-        if (initialDate) {
+        if (initialEventId !== undefined) {
+          const found = ev.find((x) => x.id === initialEventId)
+          if (found) startEdit(found)
+          else setNotFound(true)
+        } else if (initialDate) {
           setForm({ ...emptyForm, eventTypeCode: ty[0]?.code ?? '', startDate: initialDate, endDate: initialDate })
           setShowForm(true)
         }
@@ -96,12 +102,16 @@ export default function ScheduleEventsModal({ onClose, initialDate }: Props) {
   }
 
   return (
-    <Modal title="Agenda Médica Programada" onClose={onClose}>
-      <div className="mv-modal-toolbar">
-        <button className="consult-finish-btn" onClick={startCreate}>
-          <i className="bi bi-plus-lg" /> Adicionar evento
-        </button>
-      </div>
+    <Modal title={singleMode ? 'Detalhes do Evento' : 'Agenda Médica Programada'} onClose={onClose}>
+      {!singleMode && (
+        <div className="mv-modal-toolbar">
+          <button className="consult-finish-btn" onClick={startCreate}>
+            <i className="bi bi-plus-lg" /> Adicionar evento
+          </button>
+        </div>
+      )}
+
+      {singleMode && notFound && <p className="mv-empty-state">Evento não encontrado.</p>}
 
       {showForm && (
         <div className="mv-modal-form">
@@ -141,12 +151,14 @@ export default function ScheduleEventsModal({ onClose, initialDate }: Props) {
           </div>
           <div className="d-flex gap-2">
             <button className="consult-finish-btn" onClick={handleSave}><i className="bi bi-check-lg" /> Guardar</button>
-            <button className="dash-toolbar-btn" onClick={() => setShowForm(false)}>Cancelar</button>
+            <button className="dash-toolbar-btn" onClick={() => (singleMode ? onClose() : setShowForm(false))}>
+              {singleMode ? 'Fechar' : 'Cancelar'}
+            </button>
           </div>
         </div>
       )}
 
-      {loading ? (
+      {!singleMode && (loading ? (
         <p className="text-muted">A carregar…</p>
       ) : events.length === 0 ? (
         <p className="mv-empty-state">Sem eventos na agenda.</p>
@@ -175,7 +187,7 @@ export default function ScheduleEventsModal({ onClose, initialDate }: Props) {
             ))}
           </tbody>
         </table>
-      )}
+      ))}
     </Modal>
   )
 }

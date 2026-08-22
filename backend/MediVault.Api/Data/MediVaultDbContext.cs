@@ -10,6 +10,11 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<Vaccine> Vaccines => Set<Vaccine>();
     public DbSet<Icpc2Code> Icpc2Codes => Set<Icpc2Code>();
     public DbSet<MedicalSpecialty> MedicalSpecialties => Set<MedicalSpecialty>();
+    public DbSet<Gender> Genders => Set<Gender>();
+    public DbSet<HabitType> HabitTypes => Set<HabitType>();
+    public DbSet<RelationshipType> RelationshipTypes => Set<RelationshipType>();
+    public DbSet<Country> Countries => Set<Country>();
+    public DbSet<FamilyGuardianship> FamilyGuardianships => Set<FamilyGuardianship>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Doctor> Doctors => Set<Doctor>();
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
@@ -40,6 +45,11 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<InstitutionContact> InstitutionContacts => Set<InstitutionContact>();
     public DbSet<DoctorScheduleEvent> DoctorScheduleEvents => Set<DoctorScheduleEvent>();
     public DbSet<PatientAppointment> PatientAppointments => Set<PatientAppointment>();
+    public DbSet<VitalSign> VitalSigns => Set<VitalSign>();
+    public DbSet<ClinicalAssessment> ClinicalAssessments => Set<ClinicalAssessment>();
+    public DbSet<Anamnesis> Anamneses => Set<Anamnesis>();
+    public DbSet<TeamChatMessage> TeamChatMessages => Set<TeamChatMessage>();
+    public DbSet<Consultation> Consultations => Set<Consultation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +61,26 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .HasIndex(u => u.CitizenNumber).IsUnique();
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email).IsUnique();
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.ShareCode).HasDefaultValue("");
+
+        // seed.sql's raw INSERT statements omit timestamp columns (relying on the DB-level
+        // default documented in database/schema_sqlite.sql), but EnsureCreated() only builds
+        // a SQL-level DEFAULT for properties explicitly configured here — without this, every
+        // "*At" timestamp column would reject seed rows that don't set it, on a fresh DB.
+        var timestampProperties = new[] { "CreatedAt", "UpdatedAt", "AppliedAt", "DeployedAt" };
+        var timestampDefaultSql = Database.IsNpgsql()
+            ? "to_char(now() at time zone 'utc', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')"
+            : "(datetime('now'))";
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(string) && timestampProperties.Contains(property.Name))
+                    property.SetDefaultValueSql(timestampDefaultSql);
+            }
+        }
 
         modelBuilder.Entity<Doctor>()
             .HasIndex(d => d.OrdemMedicosId).IsUnique();
@@ -122,5 +152,53 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .WithMany()
             .HasForeignKey(a => a.CreatedByDoctorId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<RelationshipType>()
+            .HasIndex(r => r.Code).IsUnique();
+
+        modelBuilder.Entity<Gender>()
+            .HasIndex(g => g.Code).IsUnique();
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(f => f.Guardian)
+            .WithMany()
+            .HasForeignKey(f => f.GuardianUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(f => f.Dependent)
+            .WithMany()
+            .HasForeignKey(f => f.DependentUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<FamilyGuardianship>()
+            .HasOne(f => f.RelationshipType)
+            .WithMany()
+            .HasForeignKey(f => f.RelationshipTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.SexGender)
+            .WithMany()
+            .HasForeignKey(u => u.SexId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.Nationality)
+            .WithMany()
+            .HasForeignKey(u => u.NationalityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Doctor>()
+            .HasOne(d => d.Nationality)
+            .WithMany()
+            .HasForeignKey(d => d.NationalityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<HealthHabit>()
+            .HasOne(h => h.HabitType)
+            .WithMany()
+            .HasForeignKey(h => h.TypeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
