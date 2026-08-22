@@ -23,6 +23,7 @@ const patientNav: NavItem[] = [
 
 const doctorNav: NavItem[] = [
   { path: '/doctor',          label: 'Consulta',         icon: 'bi-qr-code-scan',       exact: true },
+  { path: '/doctor/agendas',  label: 'Agendas',          icon: 'bi-calendar-week' },
   { path: '/doctor/access',   label: 'Pedidos de Acesso', icon: 'bi-key' },
   { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
 ]
@@ -37,6 +38,7 @@ const pageInfo: Record<string, { title: string; subtitle: string; icon: string }
   '/access':          { title: 'Acessos e Partilhas', subtitle: 'Gira quem tem acesso ao seu perfil',                 icon: 'bi-key' },
   '/family':          { title: 'Agregado Familiar',   subtitle: 'Gira os membros do seu agregado familiar',           icon: 'bi-people' },
   '/doctor':          { title: 'Consulta',            subtitle: 'Leia o QR code ou pesquise um utente por número',    icon: 'bi-qr-code-scan' },
+  '/doctor/agendas':  { title: 'Agendas',             subtitle: 'Agenda diária e agenda médica programada',            icon: 'bi-calendar-week' },
   '/doctor/profile':  { title: 'Perfil do Médico',   subtitle: 'As suas informações profissionais',                   icon: 'bi-person-badge' },
   '/doctor/access':   { title: 'Pedidos de Acesso',  subtitle: 'Consulte e gira pedidos de acesso a utentes',         icon: 'bi-key' },
 }
