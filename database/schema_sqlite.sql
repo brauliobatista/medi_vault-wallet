@@ -96,6 +96,7 @@ CREATE TABLE users (
     is_dependent          INTEGER NOT NULL DEFAULT 0,
     profession            TEXT,
     phone                 TEXT,
+    phone_country_code    TEXT,
     is_active             INTEGER NOT NULL DEFAULT 1,
     card_active           INTEGER NOT NULL DEFAULT 1,
     share_code            TEXT    NOT NULL DEFAULT '',

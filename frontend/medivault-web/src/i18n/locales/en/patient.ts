@@ -17,6 +17,7 @@ export default {
   'profile.genderFemale': 'Female',
   'profile.genderOther': 'Other',
   'profile.email': 'Email',
+  'profile.phoneCountryCode': 'Country Code',
   'profile.phone': 'Phone',
   'profile.profession': 'Occupation',
   'profile.acceptsTransfusion': 'Accepts blood transfusion',

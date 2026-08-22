@@ -26,6 +26,7 @@ public class User
     [Column("is_dependent")] public int IsDependent { get; set; } = 0;
     [Column("profession")] public string? Profession { get; set; }
     [Column("phone")] public string? Phone { get; set; }
+    [Column("phone_country_code")] public string? PhoneCountryCode { get; set; }
     [Column("share_code")] public string ShareCode { get; set; } = string.Empty;
     [Column("is_active")] public int IsActive { get; set; } = 1;
     [Column("card_active")] public int CardActive { get; set; } = 1;

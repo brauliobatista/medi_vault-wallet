@@ -146,6 +146,8 @@ using (var scope = app.Services.CreateScope())
         catch { /* column already exists */ }
         try { db.Database.ExecuteSqlRaw("ALTER TABLE doctors ADD COLUMN language TEXT NOT NULL DEFAULT 'pt'"); }
         catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN phone_country_code TEXT"); }
+        catch { /* column already exists */ }
         try
         {
             db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS consultations (

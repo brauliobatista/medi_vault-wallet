@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
+import CountryCodeSelect from '../../components/CountryCodeSelect'
 import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto } from '../../api/medical'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
+import { COUNTRY_CALLING_CODES } from '../../data/countryCallingCodes'
 
 export default function ProfilePage() {
   const { t } = useTranslation()
@@ -20,6 +22,7 @@ export default function ProfilePage() {
       setProfile(p)
       setForm({
         email: p.email,
+        phoneCountryCode: p.phoneCountryCode ?? '',
         phone: p.phone ?? '',
         profession: p.profession ?? '',
         maritalStatus: p.maritalStatus ?? '',
@@ -171,6 +174,7 @@ export default function ProfilePage() {
                 ]}
               />
               <EditableField label={t('profile.email')} field="email" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
+              <PhoneCountryCodeField label={t('profile.phoneCountryCode')} form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.phone')} field="phone" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.profession')} field="profession" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
@@ -217,6 +221,32 @@ function EditableField({ label, field, form, setForm, editing, naLabel }: {
         />
       ) : (
         <div className="fw-semibold">{String(form[field] || naLabel)}</div>
+      )}
+    </div>
+  )
+}
+
+function PhoneCountryCodeField({ label, form, setForm, editing, naLabel }: {
+  label: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean; naLabel: string
+}) {
+  const { language } = useTranslation()
+  const value = String(form.phoneCountryCode ?? '')
+
+  const displayValue = () => {
+    if (!value) return naLabel
+    const match = COUNTRY_CALLING_CODES.find((c) => c.callingCode === value)
+    if (!match) return `+${value}`
+    const name = new Intl.DisplayNames([language], { type: 'region' }).of(match.iso2)
+    return `+${value}${name ? ` ${name}` : ''}`
+  }
+
+  return (
+    <div className="col-sm-6">
+      <label className="form-label text-muted small mb-0">{label}</label>
+      {editing ? (
+        <CountryCodeSelect value={value} onChange={(code) => setForm({ ...form, phoneCountryCode: code })} />
+      ) : (
+        <div className="fw-semibold">{displayValue()}</div>
       )}
     </div>
   )

@@ -117,4 +117,38 @@ describe('ProfilePage', () => {
     await waitFor(() => expect(mockedDelete).toHaveBeenCalled())
     expect(await screen.findByRole('button', { name: /Adicionar foto/ })).toBeInTheDocument()
   })
+
+  it('shows the phone country code as "+code Country" when not editing', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile, phoneCountryCode: '351' })
+
+    renderPage()
+
+    expect(await screen.findByText('+351 Portugal')).toBeInTheDocument()
+  })
+
+  it('shows the placeholder when no phone country code is set', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+
+    await screen.findByText('Indicativo do País')
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  })
+
+  it('lets the patient search for and select a phone country code, then saves it', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: /Editar/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Selecionar…' }))
+    fireEvent.change(screen.getByPlaceholderText('Pesquisar'), { target: { value: 'Espanha' } })
+    fireEvent.click(await screen.findByText('Espanha'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(mockedUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ phoneCountryCode: '34' }),
+    ))
+  })
 })
