@@ -9,6 +9,12 @@ using MediVault.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load locally-set `dotnet user-secrets` unconditionally, instead of relying on
+// ASPNETCORE_ENVIRONMENT=Development being threaded through correctly by every
+// launch method (Visual Studio's launch-profile selection, `dotnet run`, etc.).
+// No-ops harmlessly if no secrets file exists for this project's UserSecretsId.
+builder.Configuration.AddUserSecrets<Program>(optional: true);
+
 // wwwroot must exist before Build() runs, or IWebHostEnvironment.WebRootFileProvider
 // resolves to a NullFileProvider and UseStaticFiles() will 404 everything forever.
 Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "profile-photos"));
@@ -30,7 +36,10 @@ builder.Services.AddDbContext<MediVaultDbContext>(opt =>
 builder.Services.AddMemoryCache();
 
 // Auth
-var jwtSecret = builder.Configuration["Jwt:Secret"]!;
+var jwtSecret = builder.Configuration["Jwt:Secret"]
+    ?? throw new InvalidOperationException(
+        "Jwt:Secret not configured. Run: dotnet user-secrets set \"Jwt:Secret\" \"<random string>\" in backend/MediVault.Api " +
+        "(if running from Visual Studio, make sure ASPNETCORE_ENVIRONMENT=Development and the selected launch profile is \"MediVault.Api\", not IIS Express).");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
     {
@@ -133,6 +142,22 @@ using (var scope = app.Services.CreateScope())
         catch { /* table already exists */ }
         try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
         catch { /* column already exists */ }
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS consultations (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     TEXT    NOT NULL,
+                doctor_id   TEXT    NOT NULL,
+                status      TEXT    NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+                started_at  TEXT    NOT NULL,
+                finished_at TEXT,
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+            )");
+        }
+        catch { /* table already exists */ }
     }
 
     var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));

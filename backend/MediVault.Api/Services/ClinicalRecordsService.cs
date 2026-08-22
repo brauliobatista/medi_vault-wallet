@@ -5,7 +5,7 @@ using MediVault.Api.Entities;
 
 namespace MediVault.Api.Services;
 
-public class ClinicalRecordsService(MediVaultDbContext db)
+public class ClinicalRecordsService(MediVaultDbContext db, AccessControlService accessControl)
 {
     // --- Vital signs ---
 
@@ -146,5 +146,66 @@ public class ClinicalRecordsService(MediVaultDbContext db)
         entry.UpdatedAt = DateTime.UtcNow.ToString("o");
         await db.SaveChangesAsync();
         return (true, null);
+    }
+
+    // --- Consultation (draft / finish) ---
+
+    public async Task<ConsultationDto> SaveConsultationDraftAsync(string userId, string doctorId, SaveConsultationRequest req)
+    {
+        var entry = req.ConsultationId is int id
+            ? await db.Consultations.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId && c.DoctorId == doctorId)
+            : null;
+
+        var now = DateTime.UtcNow.ToString("o");
+        if (entry is null)
+        {
+            entry = new Consultation { UserId = userId, DoctorId = doctorId, Status = "draft", StartedAt = req.StartedAt, CreatedAt = now, UpdatedAt = now };
+            db.Consultations.Add(entry);
+        }
+        else
+        {
+            entry.UpdatedAt = now;
+        }
+        await db.SaveChangesAsync();
+        return new ConsultationDto(entry.Id, entry.Status, entry.StartedAt, entry.FinishedAt, entry.UpdatedAt);
+    }
+
+    public async Task<ConsultationDto> FinishConsultationAsync(string userId, string doctorId, SaveConsultationRequest req)
+    {
+        var entry = req.ConsultationId is int id
+            ? await db.Consultations.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId && c.DoctorId == doctorId)
+            : null;
+
+        var now = DateTime.UtcNow.ToString("o");
+        if (entry is null)
+        {
+            entry = new Consultation { UserId = userId, DoctorId = doctorId, StartedAt = req.StartedAt, CreatedAt = now };
+            db.Consultations.Add(entry);
+        }
+        entry.Status = "finished";
+        entry.FinishedAt = now;
+        entry.UpdatedAt = now;
+        await db.SaveChangesAsync();
+        await accessControl.FinishAccessForConsultationAsync(doctorId, userId);
+        return new ConsultationDto(entry.Id, entry.Status, entry.StartedAt, entry.FinishedAt, entry.UpdatedAt);
+    }
+
+    public async Task<List<FinishedConsultationDto>> GetFinishedConsultationsForDoctorAsync(string doctorId)
+    {
+        var rows = await db.Consultations
+            .Include(c => c.User)
+            .Where(c => c.DoctorId == doctorId && c.Status == "finished")
+            .OrderByDescending(c => c.FinishedAt)
+            .ToListAsync();
+
+        return rows.Select(c =>
+        {
+            var started = DateTime.Parse(c.StartedAt).ToUniversalTime();
+            var finished = DateTime.Parse(c.FinishedAt!).ToUniversalTime();
+            var minutes = (int)Math.Round((finished - started).TotalMinutes);
+            return new FinishedConsultationDto(
+                c.Id, c.UserId, $"{c.User.FirstName} {c.User.LastName}", c.User.Id, c.User.UtentNumber,
+                c.StartedAt, c.FinishedAt!, minutes);
+        }).ToList();
     }
 }

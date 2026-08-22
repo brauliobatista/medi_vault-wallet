@@ -15,6 +15,7 @@ import DoctorAgendasPage from './pages/doctor/DoctorAgendasPage'
 import PatientViewPage from './pages/doctor/PatientViewPage'
 import DoctorProfilePage from './pages/doctor/DoctorProfilePage'
 import DoctorAccessPage from './pages/doctor/DoctorAccessPage'
+import FinishedConsultationPage from './pages/doctor/FinishedConsultationPage'
 
 function RequireRole({ role, children }: { role: 'Patient' | 'Doctor'; children: React.ReactNode }) {
   const user = getUser()
@@ -47,6 +48,7 @@ export default function App() {
       <Route path="/doctor/patient/:patientId" element={<RequireRole role="Doctor"><PatientViewPage /></RequireRole>} />
       <Route path="/doctor/profile" element={<RequireRole role="Doctor"><DoctorProfilePage /></RequireRole>} />
       <Route path="/doctor/access" element={<RequireRole role="Doctor"><DoctorAccessPage /></RequireRole>} />
+      <Route path="/doctor/finished-consultation/:consultationId" element={<RequireRole role="Doctor"><FinishedConsultationPage /></RequireRole>} />
 
       {/* Default redirect */}
       <Route path="*" element={

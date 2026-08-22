@@ -302,6 +302,67 @@ public class ClinicalRecordsControllerTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // --- Consultation (draft / finish) ---
+
+    [Fact]
+    public async Task SaveConsultationDraft_ReturnsOk_ForDoctorWithAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        GrantDoctorAccess(db, doctor.Id, user.Id);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SaveConsultationDraft_ReturnsForbidden_ForDoctorWithoutAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task FinishConsultation_ReturnsOk_ForDoctorWithAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        GrantDoctorAccess(db, doctor.Id, user.Id);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/finish", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<ConsultationDto>();
+        Assert.Equal("finished", dto!.Status);
+    }
+
+    [Fact]
+    public async Task SaveConsultationDraft_ReturnsForbidden_ForPatientRole()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var client = factory.CreateAuthorizedClient(user.Id, "Patient", user.UtentNumber);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     // --- Documents ---
 
     [Fact]
@@ -383,6 +444,42 @@ public class ClinicalRecordsControllerTests
         var response = await client.GetAsync($"/api/patients/{user.Id}/chat-messages");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetChatMessages_ReturnsOk_ForDoctorWithFinishedConsultation_ButNoActiveAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/chat-messages");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetChatMessages_ReturnsForbidden_ForDoctorWithOnlyDraftConsultation()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation { UserId = user.Id, DoctorId = doctor.Id, Status = "draft", StartedAt = DateTime.UtcNow.ToString("o") });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/chat-messages");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

@@ -221,7 +221,7 @@ CREATE TABLE access_requests (
     requested_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     approved_at  DATETIME,
     expires_at   DATETIME,
-    status       ENUM('pending', 'approved', 'revoked') NOT NULL DEFAULT 'pending',
+    status       ENUM('pending', 'approved', 'revoked', 'finished') NOT NULL DEFAULT 'pending',
     is_emergency BOOLEAN      NOT NULL DEFAULT FALSE,
     access_code  VARCHAR(100),
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -762,4 +762,19 @@ CREATE TABLE patient_chat_messages (
     created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
     CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          INT      NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id     CHAR(36) NOT NULL,
+    doctor_id   CHAR(36) NOT NULL,
+    status      ENUM('draft', 'finished') NOT NULL DEFAULT 'draft',
+    started_at  DATETIME NOT NULL,
+    finished_at DATETIME,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_consultations_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_consultations_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );

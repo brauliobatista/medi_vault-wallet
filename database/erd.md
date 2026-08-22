@@ -313,6 +313,19 @@ erDiagram
         datetime created_at
     }
 
+    %% A doctor's visit to a patient: saved as a draft while in progress,
+    %% closed by finishing it (status -> finished, finished_at set).
+    CONSULTATIONS {
+        int id PK
+        guid user_id FK
+        guid doctor_id FK
+        string status
+        datetime started_at
+        datetime finished_at
+        datetime created_at
+        datetime updated_at
+    }
+
     %% -------------------------------------------------------
     %% FILES
     %% -------------------------------------------------------
@@ -551,6 +564,8 @@ erDiagram
     DOCTORS                     ||--o{ ANAMNESES                  : "records"
     USERS                       ||--o{ PATIENT_CHAT_MESSAGES      : "concerns"
     DOCTORS                     ||--o{ PATIENT_CHAT_MESSAGES      : "authors"
+    USERS                       ||--o{ CONSULTATIONS              : "has"
+    DOCTORS                     ||--o{ CONSULTATIONS              : "conducts"
 
     %% Users — files
     USERS                       ||--o{ MEDICAL_FILES              : "owns"

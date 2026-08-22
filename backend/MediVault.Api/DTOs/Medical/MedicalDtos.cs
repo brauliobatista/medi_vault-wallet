@@ -134,3 +134,11 @@ public record AnamnesisDto(
     string? PersonalHistory, string CreatedAt, string UpdatedAt, bool CanEdit);
 
 public record UpsertAnamnesisRequest(string? ChiefComplaint, string? IllnessHistory, string? PersonalHistory);
+
+public record ConsultationDto(int Id, string Status, string StartedAt, string? FinishedAt, string UpdatedAt);
+
+public record SaveConsultationRequest(int? ConsultationId, string StartedAt);
+
+public record FinishedConsultationDto(
+    int Id, string UserId, string PatientName, string PatientPublicId, string UtentNumber,
+    string StartedAt, string FinishedAt, int DurationMinutes);

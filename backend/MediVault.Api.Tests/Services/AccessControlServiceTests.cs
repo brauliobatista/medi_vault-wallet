@@ -150,6 +150,96 @@ public class AccessControlServiceTests
         Assert.False(await sut.DoctorHasAccessAsync(doctor.Id, user.Id));
     }
 
+    // --- Finish consultation access revocation (KAN-67) ---
+
+    [Fact]
+    public async Task FinishAccessForConsultationAsync_FlipsApprovedRequestToFinished()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        SeedAccessRequest(db, doctor.Id, user.Id, status: "approved", expiresAt: DateTime.UtcNow.AddDays(7).ToString("o"));
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
+
+        await sut.FinishAccessForConsultationAsync(doctor.Id, user.Id);
+
+        Assert.Equal("finished", db.AccessRequests.First().Status);
+    }
+
+    [Fact]
+    public async Task FinishAccessForConsultationAsync_RevokesAccess_EvenForEmergencyRequest()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        SeedAccessRequest(db, doctor.Id, user.Id, status: "approved", isEmergency: 1);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
+
+        await sut.FinishAccessForConsultationAsync(doctor.Id, user.Id);
+
+        Assert.False(await sut.DoctorHasAccessAsync(doctor.Id, user.Id));
+    }
+
+    [Fact]
+    public async Task DoctorHasAccessAsync_ReturnsFalse_AfterConsultationFinished()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        SeedAccessRequest(db, doctor.Id, user.Id, status: "approved", expiresAt: DateTime.UtcNow.AddDays(7).ToString("o"));
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
+        Assert.True(await sut.DoctorHasAccessAsync(doctor.Id, user.Id));
+
+        await sut.FinishAccessForConsultationAsync(doctor.Id, user.Id);
+
+        Assert.False(await sut.DoctorHasAccessAsync(doctor.Id, user.Id));
+    }
+
+    [Fact]
+    public async Task DoctorHadFinishedConsultationAsync_ReturnsFalse_WhenNoConsultations()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
+
+        Assert.False(await sut.DoctorHadFinishedConsultationAsync(doctor.Id, user.Id));
+    }
+
+    [Fact]
+    public async Task DoctorHadFinishedConsultationAsync_ReturnsTrue_ForFinishedConsultation()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-20).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
+
+        Assert.True(await sut.DoctorHadFinishedConsultationAsync(doctor.Id, user.Id));
+    }
+
+    [Fact]
+    public async Task DoctorHadFinishedConsultationAsync_ReturnsFalse_ForDraftConsultation()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "draft",
+            StartedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
+        var sut = new AccessControlService(db, new MemoryCache(new MemoryCacheOptions()));
+
+        Assert.False(await sut.DoctorHadFinishedConsultationAsync(doctor.Id, user.Id));
+    }
+
     // --- Guardian access ---
 
     [Fact]

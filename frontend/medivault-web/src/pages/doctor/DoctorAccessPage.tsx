@@ -16,7 +16,7 @@ interface AccessRequest {
   expiresAt: string | null
 }
 
-type StatusFilter = 'approved' | 'rejected' | 'expired' | 'pending' | 'revoked' | 'all'
+type StatusFilter = 'approved' | 'rejected' | 'expired' | 'pending' | 'revoked' | 'finished' | 'all'
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'approved', label: 'Aprovados' },
@@ -24,6 +24,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'expired', label: 'Expirados' },
   { value: 'pending', label: 'Pendentes' },
   { value: 'revoked', label: 'Revogados' },
+  { value: 'finished', label: 'Consultas finalizadas' },
   { value: 'all', label: 'Todos os estados' },
 ]
 
@@ -49,6 +50,7 @@ export default function DoctorAccessPage() {
     rejected: 'danger',
     expired: 'dark',
     revoked: 'secondary',
+    finished: 'info text-dark',
   }
 
   const statusLabel: Record<string, string> = {
@@ -57,6 +59,7 @@ export default function DoctorAccessPage() {
     rejected: 'Rejeitado',
     expired: 'Expirado',
     revoked: 'Revogado',
+    finished: 'Consulta finalizada',
   }
 
   const filteredRequests = useMemo(() => {
