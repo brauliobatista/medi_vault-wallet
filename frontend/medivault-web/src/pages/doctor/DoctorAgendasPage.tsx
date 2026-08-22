@@ -73,6 +73,7 @@ export default function DoctorAgendasPage() {
   const [openModal, setOpenModal] = useState<OpenModal>(null)
   const [modalDate, setModalDate] = useState<string | undefined>(undefined)
   const [modalEventId, setModalEventId] = useState<number | undefined>(undefined)
+  const [modalAppointmentId, setModalAppointmentId] = useState<number | undefined>(undefined)
 
   const [agendaView, setAgendaView] = useState<AgendaView>('diaria')
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayIso()))
@@ -88,18 +89,25 @@ export default function DoctorAgendasPage() {
     setOpenModal(null)
     setModalDate(undefined)
     setModalEventId(undefined)
+    setModalAppointmentId(undefined)
     loadAgenda()
   }
 
   const openAdd = (view: AgendaView, date: string) => {
     setModalDate(date)
     setModalEventId(undefined)
+    setModalAppointmentId(undefined)
     setOpenModal(view === 'diaria' ? 'appointments' : 'schedule')
   }
 
   const openEventDetails = (eventId: number) => {
     setModalEventId(eventId)
     setOpenModal('schedule')
+  }
+
+  const openAppointmentDetails = (appointmentId: number) => {
+    setModalAppointmentId(appointmentId)
+    setOpenModal('appointments')
   }
 
   const visibleEvents =
@@ -124,7 +132,7 @@ export default function DoctorAgendasPage() {
           </div>
           <button
             className="dash-card-footer"
-            onClick={() => { setModalEventId(undefined); setOpenModal(agendaView === 'diaria' ? 'appointments' : 'schedule') }}
+            onClick={() => { setModalEventId(undefined); setModalAppointmentId(undefined); setOpenModal(agendaView === 'diaria' ? 'appointments' : 'schedule') }}
           >
             Gerir agenda completa <i className="bi bi-arrow-right" />
           </button>
@@ -179,7 +187,7 @@ export default function DoctorAgendasPage() {
                         const meta = statusBadge[appt.status] ?? statusBadge.confirmada
                         const modalityLabel = appt.modality === 'teleconsulta' ? 'Teleconsulta' : 'Presencial'
                         return (
-                          <button className="agenda-week-chip" key={appt.id} onClick={() => setOpenModal('appointments')}>
+                          <button className="agenda-week-chip" key={appt.id} onClick={() => openAppointmentDetails(appt.id)}>
                             <div className="agenda-week-chip-time">{appt.scheduledAt.slice(11, 16)}</div>
                             <div className="agenda-week-chip-title">{appt.patientName}</div>
                             <div className="agenda-week-chip-sub">{appt.appointmentTypeDescription} · {modalityLabel}</div>
@@ -228,7 +236,9 @@ export default function DoctorAgendasPage() {
       {openModal === 'schedule' && (
         <ScheduleEventsModal onClose={closeModal} initialDate={modalDate} initialEventId={modalEventId} />
       )}
-      {openModal === 'appointments' && <AppointmentsModal onClose={closeModal} initialDate={modalDate} />}
+      {openModal === 'appointments' && (
+        <AppointmentsModal onClose={closeModal} initialDate={modalDate} initialAppointmentId={modalAppointmentId} />
+      )}
       {openModal === 'contacts' && <ContactsModal onClose={closeModal} />}
     </Layout>
   )
