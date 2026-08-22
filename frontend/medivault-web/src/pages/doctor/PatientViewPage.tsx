@@ -28,6 +28,7 @@ import AssessmentsModal from '../../components/AssessmentsModal'
 import AnamneseModal from '../../components/AnamneseModal'
 import DocumentsModal from '../../components/DocumentsModal'
 import ChatModal from '../../components/ChatModal'
+import { useTranslation } from '../../i18n/LanguageContext'
 
 type CenterTab = 'anamnese' | 'exame' | 'diagnostico' | 'plano' | 'prescricao' | 'documentos'
 type OpenModal = 'contexto' | 'prescricao' | 'exames' | 'vitais' | 'avaliacoes' | 'anamnese' | 'documentos' | 'chat' | null
@@ -61,19 +62,23 @@ interface MedicalFile { id: number; fileName: string; fileType: string | null; f
 interface ChatMessage { id: number; authorDoctorId: string; authorName: string; message: string; createdAt: string }
 interface FamilyContact { userId: string; name: string; phone: string | null; relationshipCode: string; direction: 'guardian' | 'dependent' }
 
-const RELATIONSHIP_LABELS: Record<string, string> = {
-  parent: 'Pai / Mãe', legal_guardian: 'Tutor legal', tutor: 'Tutor de menor', other: 'Outro',
-}
-function relationshipLabel(f: FamilyContact) {
+type TFunc = (key: string, vars?: Record<string, string | number>) => string
+
+function relationshipLabel(f: FamilyContact, t: TFunc) {
+  const RELATIONSHIP_LABELS: Record<string, string> = {
+    parent: t('patientRecord.relationshipParent'),
+    legal_guardian: t('patientRecord.relationshipLegalGuardian'),
+    tutor: t('patientRecord.relationshipTutor'),
+    other: t('patientRecord.relationshipOther'),
+  }
   const base = RELATIONSHIP_LABELS[f.relationshipCode] ?? f.relationshipCode
-  return f.direction === 'guardian' ? base : `${base} (a cargo)`
+  return f.direction === 'guardian' ? base : `${base} (${t('patientRecord.dependentSuffix')})`
 }
 
-const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
-function formatDatePt(iso: string) {
+function formatDatePt(iso: string, t: TFunc) {
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
-  return `${String(d).padStart(2, '0')} ${MONTHS_PT[m - 1]} ${y}`
+  return `${String(d).padStart(2, '0')} ${t(`common.month${m}`)} ${y}`
 }
 
 function calculateAge(birthday: string) {
@@ -85,25 +90,26 @@ function calculateAge(birthday: string) {
   return age
 }
 
-const GENDER_LABELS: Record<string, string> = { M: 'Masculino', F: 'Feminino' }
-function genderLabel(code: string) {
+function genderLabel(code: string, t: TFunc) {
+  const GENDER_LABELS: Record<string, string> = { M: t('profile.genderMale'), F: t('profile.genderFemale') }
   return GENDER_LABELS[code] ?? code
 }
-
-const centerTabs: { key: CenterTab; label: string; icon: string }[] = [
-  { key: 'anamnese', label: 'Anamnese', icon: 'bi-person-lines-fill' },
-  { key: 'exame', label: 'Exame Objetivo', icon: 'bi-clipboard2-pulse' },
-  { key: 'diagnostico', label: 'Diagnóstico', icon: 'bi-clipboard2-check' },
-  { key: 'plano', label: 'Plano', icon: 'bi-list-check' },
-  { key: 'prescricao', label: 'Prescrição', icon: 'bi-capsule' },
-  { key: 'documentos', label: 'Documentos', icon: 'bi-file-earmark-text' },
-]
 
 function bmi(w?: number | null, h?: number | null) {
   return w && h ? (w / ((h / 100) ** 2)).toFixed(1) : '—'
 }
 
 export default function PatientViewPage() {
+  const { t } = useTranslation()
+  const centerTabs: { key: CenterTab; label: string; icon: string }[] = [
+    { key: 'anamnese', label: t('patientRecord.tabAnamnesis'), icon: 'bi-person-lines-fill' },
+    { key: 'exame', label: t('patientRecord.tabObjectiveExam'), icon: 'bi-clipboard2-pulse' },
+    { key: 'diagnostico', label: t('patientRecord.tabDiagnosis'), icon: 'bi-clipboard2-check' },
+    { key: 'plano', label: t('patientRecord.tabPlan'), icon: 'bi-list-check' },
+    { key: 'prescricao', label: t('patientRecord.tabPrescription'), icon: 'bi-capsule' },
+    { key: 'documentos', label: t('patientRecord.tabDocuments'), icon: 'bi-file-earmark-text' },
+  ]
+
   const { patientId } = useParams<{ patientId: string }>()
   const uid = patientId!
   const location = useLocation()
@@ -138,8 +144,8 @@ export default function PatientViewPage() {
   const [draftSavedMsg, setDraftSavedMsg] = useState(false)
 
   useEffect(() => {
-    const t = setInterval(() => setElapsedSec(Math.floor((Date.now() - startedAt.getTime()) / 1000)), 1000)
-    return () => clearInterval(t)
+    const timerId = setInterval(() => setElapsedSec(Math.floor((Date.now() - startedAt.getTime()) / 1000)), 1000)
+    return () => clearInterval(timerId)
   }, [startedAt])
 
   useEffect(() => {
@@ -195,12 +201,12 @@ export default function PatientViewPage() {
         const combined: ExamItem[] = [
           ...(analyticalRes as Analytical[]).map((e) => ({
             id: `a${e.id}`,
-            label: e.laboratory ? `Análise · ${e.laboratory}` : 'Análise',
+            label: e.laboratory ? `${t('patientRecord.examTypeAnalysis')} · ${e.laboratory}` : t('patientRecord.examTypeAnalysis'),
             date: e.examDate,
             status: (e.parameters?.some((p) => p.isAbnormal) ? 'Atenção' : 'Normal') as 'Normal' | 'Atenção',
           })),
           ...(imagingRes as Imaging[]).map((e) => ({ id: `i${e.id}`, label: e.examType, date: e.examDate, status: null })),
-          ...(optometryRes as Optometry[]).map((e) => ({ id: `o${e.id}`, label: 'Optometria', date: e.examDate, status: null })),
+          ...(optometryRes as Optometry[]).map((e) => ({ id: `o${e.id}`, label: t('patientRecord.examTypeOptometry'), date: e.examDate, status: null })),
         ]
         combined.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
         setLatestExams(combined.slice(0, 3))
@@ -259,20 +265,20 @@ export default function PatientViewPage() {
             {deniedReason === 'card_suspended' ? (
               <>
                 <i className="bi bi-shield-x text-warning" style={{ fontSize: '2.5rem' }} />
-                <h5 className="fw-bold mt-3 mb-2">MediCard Suspenso</h5>
+                <h5 className="fw-bold mt-3 mb-2">{t('patientRecord.cardSuspendedTitle')}</h5>
                 <p className="text-muted mb-4">
-                  Este utente suspendeu o seu MediCard. O acesso aos dados está bloqueado até que o utente reative o cartão.
+                  {t('patientRecord.cardSuspendedMessage')}
                 </p>
               </>
             ) : (
               <>
                 <i className="bi bi-lock-fill text-danger" style={{ fontSize: '2.5rem' }} />
-                <h5 className="fw-bold mt-3 mb-2">Sem acesso</h5>
-                <p className="text-muted mb-4">Este utente ainda não aprovou o seu pedido de acesso.</p>
+                <h5 className="fw-bold mt-3 mb-2">{t('patientRecord.noAccessTitle')}</h5>
+                <p className="text-muted mb-4">{t('patientRecord.noAccessMessage')}</p>
               </>
             )}
             <Link to="/doctor" className="btn btn-primary">
-              Continuar para o dashboard
+              {t('patientRecord.continueToDashboard')}
             </Link>
           </div>
         </div>
@@ -283,7 +289,7 @@ export default function PatientViewPage() {
   if (loading) {
     return (
       <Layout>
-        <p className="text-muted">A carregar ficha do utente…</p>
+        <p className="text-muted">{t('patientRecord.loadingRecord')}</p>
       </Layout>
     )
   }
@@ -297,11 +303,11 @@ export default function PatientViewPage() {
     <Layout>
       <div className="consult-header">
         <Link to="/doctor" className="consult-back">
-          <i className="bi bi-arrow-left" /> Voltar
+          <i className="bi bi-arrow-left" /> {t('common.back')}
         </Link>
 
         {summary?.photoUrl ? (
-          <img src={summary.photoUrl} alt={patientName || 'Paciente'} className="consult-patient-photo" />
+          <img src={summary.photoUrl} alt={patientName || t('patientRecord.patientFallback')} className="consult-patient-photo" />
         ) : (
           <div className="consult-patient-photo consult-patient-photo-placeholder">
             {(patientName || 'U').charAt(0).toUpperCase()}
@@ -310,7 +316,7 @@ export default function PatientViewPage() {
 
         <div className="consult-header-main">
           <div className="consult-patient-name">
-            {patientName || 'Paciente'}
+            {patientName || t('patientRecord.patientFallback')}
             {summary && <i className={`bi ${genderIcon} consult-gender-icon`} />}
           </div>
           {publicId && <div className="consult-public-id">{publicId}</div>}
@@ -321,15 +327,15 @@ export default function PatientViewPage() {
             <span className="consult-timer-dot" />
             <div>
               <div className="consult-timer-value">{formatElapsed(elapsedSec)}</div>
-              <div className="consult-timer-label">Início: {startTimeLabel}</div>
+              <div className="consult-timer-label">{t('patientRecord.startedAt')}: {startTimeLabel}</div>
             </div>
           </div>
-          {draftSavedMsg && <span style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 600 }}>Rascunho guardado</span>}
+          {draftSavedMsg && <span style={{ color: '#16a34a', fontSize: '0.85rem', fontWeight: 600 }}>{t('patientRecord.draftSaved')}</span>}
           <button className="consult-draft-btn" onClick={handleSaveDraft} disabled={savingDraft || finishing}>
-            <i className="bi bi-floppy" /> {savingDraft ? 'A guardar…' : 'Guardar rascunho'}
+            <i className="bi bi-floppy" /> {savingDraft ? t('patientRecord.savingDraft') : t('patientRecord.saveDraft')}
           </button>
           <button className="consult-finish-btn" onClick={handleFinishConsultation} disabled={savingDraft || finishing}>
-            <i className="bi bi-check-lg" /> {finishing ? 'A finalizar…' : 'Finalizar consulta'}
+            <i className="bi bi-check-lg" /> {finishing ? t('patientRecord.finishingConsultation') : t('patientRecord.finishConsultation')}
           </button>
         </div>
       </div>
@@ -338,56 +344,56 @@ export default function PatientViewPage() {
         <div className="consult-chip">
           <i className="bi bi-calendar3" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Idade</div>
-            <div className="consult-chip-value">{summary ? `${calculateAge(summary.birthday) ?? '—'} anos` : '—'}</div>
+            <div className="consult-chip-label">{t('patientRecord.age')}</div>
+            <div className="consult-chip-value">{summary ? `${calculateAge(summary.birthday) ?? '—'} ${t('patientRecord.years')}` : '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
           <i className="bi bi-calendar-event" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Data de Nascimento</div>
-            <div className="consult-chip-value">{summary ? formatDatePt(summary.birthday) : '—'}</div>
+            <div className="consult-chip-label">{t('profile.birthday')}</div>
+            <div className="consult-chip-value">{summary ? formatDatePt(summary.birthday, t) : '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
           <i className="bi bi-person-vcard" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Número de Utente</div>
+            <div className="consult-chip-label">{t('patientRecord.utentNumber')}</div>
             <div className="consult-chip-value">{summary?.utentNumber ?? '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
           <i className="bi bi-credit-card-2-front" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Número do Cartão</div>
+            <div className="consult-chip-label">{t('patientRecord.cardNumber')}</div>
             <div className="consult-chip-value font-monospace" style={{ fontSize: '0.8rem' }}>{publicId || '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
           <i className="bi bi-gender-ambiguous" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Sexo</div>
-            <div className="consult-chip-value">{summary ? genderLabel(summary.biologicalGender) : '—'}</div>
+            <div className="consult-chip-label">{t('profile.biologicalGender')}</div>
+            <div className="consult-chip-value">{summary ? genderLabel(summary.biologicalGender, t) : '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
           <i className="bi bi-gender-trans" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Género</div>
-            <div className="consult-chip-value">{summary ? genderLabel(summary.sex) : '—'}</div>
+            <div className="consult-chip-label">{t('profile.gender')}</div>
+            <div className="consult-chip-value">{summary ? genderLabel(summary.sex, t) : '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
           <i className="bi bi-droplet" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Tipo Sanguíneo</div>
+            <div className="consult-chip-label">{t('profile.bloodType')}</div>
             <div className="consult-chip-value">{summary?.bloodType ?? '—'}</div>
           </div>
         </div>
         <div className="consult-chip">
           <i className="bi bi-globe" style={{ color: '#2563eb' }} />
           <div>
-            <div className="consult-chip-label">Nacionalidade</div>
+            <div className="consult-chip-label">{t('profile.nationality')}</div>
             <div className="consult-chip-value">{patientNationality || '—'}</div>
           </div>
         </div>
@@ -398,17 +404,17 @@ export default function PatientViewPage() {
         <div className="consult-col-left">
           <div className="consult-panel">
             <div className="consult-panel-header">
-              Contexto Clínico
-              <button className="consult-link-btn" onClick={() => setOpenModal('contexto')}>Editar</button>
+              {t('patientRecord.clinicalContext')}
+              <button className="consult-link-btn" onClick={() => setOpenModal('contexto')}>{t('common.edit')}</button>
             </div>
 
             {allergies.length > 0 && (
               <div className="consult-context-item context-danger">
                 <i className="bi bi-exclamation-triangle-fill" />
                 <div>
-                  <div className="consult-context-title">Alergias</div>
+                  <div className="consult-context-title">{t('patientRecord.allergies')}</div>
                   <div className="consult-context-value">{allergies.map((a) => a.activeSubstance).join(', ')}</div>
-                  {allergyReactions && <div className="consult-context-sub">Reação: {allergyReactions}</div>}
+                  {allergyReactions && <div className="consult-context-sub">{t('patientRecord.reaction')}: {allergyReactions}</div>}
                 </div>
               </div>
             )}
@@ -417,7 +423,7 @@ export default function PatientViewPage() {
               <div className="consult-context-item context-primary">
                 <i className="bi bi-heart-pulse" />
                 <div>
-                  <div className="consult-context-title">Problemas Ativos</div>
+                  <div className="consult-context-title">{t('patientRecord.activeProblems')}</div>
                   {pathologies.map((p) => <div className="consult-context-value" key={p.id}>{p.icpc2Description}</div>)}
                 </div>
               </div>
@@ -427,7 +433,7 @@ export default function PatientViewPage() {
               <div className="consult-context-item context-teal">
                 <i className="bi bi-capsule" />
                 <div className="flex-grow-1">
-                  <div className="consult-context-title">Medicação Ativa ({medications.length})</div>
+                  <div className="consult-context-title">{t('patientRecord.activeMedication')} ({medications.length})</div>
                   {medications.slice(0, 3).map((m) => (
                     <div key={m.id} className="consult-med-row">
                       <div className="consult-context-value">{m.activeSubstance}{m.dose ? ` ${m.dose}` : ''}</div>
@@ -435,7 +441,7 @@ export default function PatientViewPage() {
                     </div>
                   ))}
                   <button className="consult-link-btn consult-link-btn-block" onClick={() => setOpenModal('prescricao')}>
-                    Ver prescrição completa <i className="bi bi-arrow-right" />
+                    {t('patientRecord.viewFullPrescription')} <i className="bi bi-arrow-right" />
                   </button>
                 </div>
               </div>
@@ -444,8 +450,8 @@ export default function PatientViewPage() {
             <div className="consult-context-item context-danger">
               <i className="bi bi-droplet-fill" />
               <div>
-                <div className="consult-context-title">Transfusão de Sangue</div>
-                <div className="consult-context-value">{summary?.acceptsTransfusion ? 'Sim' : 'Não'}</div>
+                <div className="consult-context-title">{t('patientRecord.bloodTransfusion')}</div>
+                <div className="consult-context-value">{summary?.acceptsTransfusion ? t('common.yes') : t('common.no')}</div>
               </div>
             </div>
 
@@ -453,21 +459,23 @@ export default function PatientViewPage() {
               <i className="bi bi-clipboard2-pulse" />
               <div className="flex-grow-1">
                 <div className="consult-panel-subheader">
-                  Últimos Exames
-                  <button className="consult-link-btn" onClick={() => setOpenModal('exames')}>Ver todos <i className="bi bi-arrow-right" /></button>
+                  {t('patientRecord.latestExams')}
+                  <button className="consult-link-btn" onClick={() => setOpenModal('exames')}>{t('common.viewAll')} <i className="bi bi-arrow-right" /></button>
                 </div>
                 {latestExams.map((e) => (
                   <div key={e.id} className="consult-exam-row">
                     <div>
                       <div className="consult-context-value">{e.label}</div>
-                      <div className="consult-context-sub">{formatDatePt(e.date)}</div>
+                      <div className="consult-context-sub">{formatDatePt(e.date, t)}</div>
                     </div>
                     {e.status && (
-                      <span className={`status-badge ${e.status === 'Normal' ? 'badge-em-curso' : 'badge-ferias'}`}>{e.status}</span>
+                      <span className={`status-badge ${e.status === 'Normal' ? 'badge-em-curso' : 'badge-ferias'}`}>
+                        {e.status === 'Normal' ? t('patientRecord.examStatusNormal') : t('patientRecord.examStatusAttention')}
+                      </span>
                     )}
                   </div>
                 ))}
-                {latestExams.length === 0 && <p className="consult-context-sub mb-0">Sem exames registados.</p>}
+                {latestExams.length === 0 && <p className="consult-context-sub mb-0">{t('patientRecord.noExams')}</p>}
               </div>
             </div>
           </div>
@@ -477,9 +485,9 @@ export default function PatientViewPage() {
         <div className="consult-col-center">
           <div className="consult-panel">
             <div className="consult-tabs">
-              {centerTabs.map((t) => (
-                <button key={t.key} className={`consult-tab${tab === t.key ? ' active' : ''}`} onClick={() => setTab(t.key)}>
-                  <i className={`bi ${t.icon}`} /> {t.label}
+              {centerTabs.map((ct) => (
+                <button key={ct.key} className={`consult-tab${tab === ct.key ? ' active' : ''}`} onClick={() => setTab(ct.key)}>
+                  <i className={`bi ${ct.icon}`} /> {ct.label}
                 </button>
               ))}
             </div>
@@ -488,68 +496,68 @@ export default function PatientViewPage() {
               {tab === 'anamnese' ? (
                 <>
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h6 className="consult-section-title mb-0">Anamnese</h6>
+                    <h6 className="consult-section-title mb-0">{t('patientRecord.tabAnamnesis')}</h6>
                     <button className="consult-link-btn" onClick={() => setOpenModal('anamnese')}>
-                      <i className="bi bi-clock-history" /> Editar / Histórico
+                      <i className="bi bi-clock-history" /> {t('patientRecord.editHistory')}
                     </button>
                   </div>
                   {currentAnamnesis ? (
                     <>
-                      {currentAnamnesis.chiefComplaint && <><p className="consult-field-label mb-1">Queixa principal</p><p>{currentAnamnesis.chiefComplaint}</p></>}
-                      {currentAnamnesis.illnessHistory && <><p className="consult-field-label mb-1">História da doença atual</p><p>{currentAnamnesis.illnessHistory}</p></>}
-                      {currentAnamnesis.personalHistory && <><p className="consult-field-label mb-1">História pessoal relevante</p><p className="mb-0">{currentAnamnesis.personalHistory}</p></>}
+                      {currentAnamnesis.chiefComplaint && <><p className="consult-field-label mb-1">{t('patientRecord.chiefComplaint')}</p><p>{currentAnamnesis.chiefComplaint}</p></>}
+                      {currentAnamnesis.illnessHistory && <><p className="consult-field-label mb-1">{t('patientRecord.illnessHistory')}</p><p>{currentAnamnesis.illnessHistory}</p></>}
+                      {currentAnamnesis.personalHistory && <><p className="consult-field-label mb-1">{t('patientRecord.personalHistory')}</p><p className="mb-0">{currentAnamnesis.personalHistory}</p></>}
                     </>
                   ) : (
-                    <p className="text-muted mb-0">Sem anamnese registada.</p>
+                    <p className="text-muted mb-0">{t('patientRecord.noAnamnesis')}</p>
                   )}
                 </>
               ) : tab === 'exame' ? (
                 <>
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h6 className="consult-section-title mb-0">Exame Objetivo</h6>
+                    <h6 className="consult-section-title mb-0">{t('patientRecord.tabObjectiveExam')}</h6>
                     <button className="consult-link-btn" onClick={() => setOpenModal('vitais')}>
-                      <i className="bi bi-pencil" /> Editar
+                      <i className="bi bi-pencil" /> {t('common.edit')}
                     </button>
                   </div>
                   {latestVital?.notes ? (
                     <p className="mb-0">{latestVital.notes}</p>
                   ) : (
-                    <p className="text-muted mb-0">Sem registo de exame objetivo.</p>
+                    <p className="text-muted mb-0">{t('patientRecord.noObjectiveExam')}</p>
                   )}
                 </>
               ) : tab === 'diagnostico' ? (
                 <>
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h6 className="consult-section-title mb-0">Diagnóstico</h6>
+                    <h6 className="consult-section-title mb-0">{t('patientRecord.tabDiagnosis')}</h6>
                     <button className="consult-link-btn" onClick={() => setOpenModal('avaliacoes')}>
-                      <i className="bi bi-plus-lg" /> Adicionar / Editar
+                      <i className="bi bi-plus-lg" /> {t('patientRecord.addEdit')}
                     </button>
                   </div>
                   {assessments.length > 0 ? (
                     assessments.map((a) => <p key={a.id} className="consult-context-value mb-2">{a.hypothesis}</p>)
                   ) : (
-                    <p className="text-muted mb-0">Sem hipóteses diagnósticas registadas.</p>
+                    <p className="text-muted mb-0">{t('patientRecord.noDiagnosticHypotheses')}</p>
                   )}
                 </>
               ) : tab === 'plano' ? (
                 <>
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h6 className="consult-section-title mb-0">Plano</h6>
+                    <h6 className="consult-section-title mb-0">{t('patientRecord.tabPlan')}</h6>
                     <button className="consult-link-btn" onClick={() => setOpenModal('avaliacoes')}>
-                      <i className="bi bi-plus-lg" /> Adicionar / Editar
+                      <i className="bi bi-plus-lg" /> {t('patientRecord.addEdit')}
                     </button>
                   </div>
                   {assessments.length > 0 ? (
                     assessments.map((a) => <p key={a.id} className="consult-context-value mb-2">{a.plan}</p>)
                   ) : (
-                    <p className="text-muted mb-0">Sem plano registado.</p>
+                    <p className="text-muted mb-0">{t('patientRecord.noPlan')}</p>
                   )}
                 </>
               ) : tab === 'prescricao' ? (
                 <>
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h6 className="consult-section-title mb-0">Prescrição</h6>
-                    <button className="consult-link-btn" onClick={() => setOpenModal('prescricao')}>Ver prescrição completa</button>
+                    <h6 className="consult-section-title mb-0">{t('patientRecord.tabPrescription')}</h6>
+                    <button className="consult-link-btn" onClick={() => setOpenModal('prescricao')}>{t('patientRecord.viewFullPrescription')}</button>
                   </div>
                   {medications.length > 0 ? (
                     medications.map((m) => (
@@ -559,15 +567,15 @@ export default function PatientViewPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted mb-0">Sem medicação ativa.</p>
+                    <p className="text-muted mb-0">{t('patientRecord.noActiveMedication')}</p>
                   )}
                 </>
               ) : (
                 <>
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <h6 className="consult-section-title mb-0">Documentos</h6>
+                    <h6 className="consult-section-title mb-0">{t('patientRecord.tabDocuments')}</h6>
                     <button className="consult-link-btn" onClick={() => setOpenModal('documentos')}>
-                      <i className="bi bi-upload" /> Adicionar documento
+                      <i className="bi bi-upload" /> {t('patientRecord.addDocument')}
                     </button>
                   </div>
                   {documents.length > 0 ? (
@@ -578,11 +586,11 @@ export default function PatientViewPage() {
                           <div className="consult-context-value">{d.fileName}</div>
                           <div className="consult-context-sub">{d.uploadedAt.slice(0, 10)}{d.uploadedByName ? ` · ${d.uploadedByName}` : ''}</div>
                         </div>
-                        <a className="dash-toolbar-btn" href={d.fileUrl} target="_blank" rel="noreferrer"><i className="bi bi-eye" /> Abrir</a>
+                        <a className="dash-toolbar-btn" href={d.fileUrl} target="_blank" rel="noreferrer"><i className="bi bi-eye" /> {t('patientRecord.openDocument')}</a>
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted mb-0">Sem documentos associados.</p>
+                    <p className="text-muted mb-0">{t('patientRecord.noAssociatedDocuments')}</p>
                   )}
                 </>
               )}
@@ -591,27 +599,27 @@ export default function PatientViewPage() {
             {tab === 'anamnese' && (
               <div className="consult-avaliacoes">
                 <div className="consult-panel-subheader">
-                  Avaliações ({assessments.length})
-                  <button className="consult-add-avaliacao-btn" onClick={() => setOpenModal('avaliacoes')}><i className="bi bi-plus-lg" /> Adicionar avaliação</button>
+                  {t('patientRecord.assessments')} ({assessments.length})
+                  <button className="consult-add-avaliacao-btn" onClick={() => setOpenModal('avaliacoes')}><i className="bi bi-plus-lg" /> {t('patientRecord.addAssessment')}</button>
                 </div>
                 {assessments.slice(0, 3).map((a, idx) => (
                   <div className="consult-avaliacao-card" key={a.id}>
                     <div className="consult-avaliacao-header">
                       <span className={`consult-avaliacao-dot ${idx % 2 === 0 ? 'dot-blue' : 'dot-purple'}`} />
-                      <span className="consult-avaliacao-title">Avaliação {assessments.length - idx}</span>
-                      <button className="consult-link-btn consult-avaliacao-edit" onClick={() => setOpenModal('avaliacoes')}>Editar</button>
+                      <span className="consult-avaliacao-title">{t('patientRecord.assessment')} {assessments.length - idx}</span>
+                      <button className="consult-link-btn consult-avaliacao-edit" onClick={() => setOpenModal('avaliacoes')}>{t('common.edit')}</button>
                     </div>
                     <div className="consult-avaliacao-field">
-                      <div className="consult-field-label">Hipótese diagnóstica</div>
+                      <div className="consult-field-label">{t('patientRecord.diagnosticHypothesis')}</div>
                       <div>{a.hypothesis}</div>
                     </div>
                     <div className="consult-avaliacao-field">
-                      <div className="consult-field-label">Plano diagnóstico</div>
+                      <div className="consult-field-label">{t('patientRecord.diagnosticPlan')}</div>
                       <div>{a.plan}</div>
                     </div>
                   </div>
                 ))}
-                {assessments.length === 0 && <p className="consult-context-sub">Sem avaliações registadas.</p>}
+                {assessments.length === 0 && <p className="consult-context-sub">{t('patientRecord.noAssessments')}</p>}
               </div>
             )}
           </div>
@@ -621,29 +629,29 @@ export default function PatientViewPage() {
         <div className="consult-col-right">
           <div className="consult-panel">
             <div className="consult-panel-header">
-              Sinais Vitais
-              <button className="consult-link-btn" onClick={() => setOpenModal('vitais')}>Editar</button>
+              {t('patientRecord.vitalSigns')}
+              <button className="consult-link-btn" onClick={() => setOpenModal('vitais')}>{t('common.edit')}</button>
             </div>
             {latestVital ? (
               <div className="consult-vitals-grid">
-                <div className="consult-vital-tile"><i className="bi bi-heart-pulse consult-vital-icon" /><div className="consult-vital-label">TA</div><div className="consult-vital-value">{latestVital.bloodPressureSystolic && latestVital.bloodPressureDiastolic ? `${latestVital.bloodPressureSystolic}/${latestVital.bloodPressureDiastolic}` : '—'}</div><div className="consult-vital-unit">mmHg</div></div>
-                <div className="consult-vital-tile"><i className="bi bi-heart consult-vital-icon" /><div className="consult-vital-label">FC</div><div className="consult-vital-value">{latestVital.heartRate ?? '—'}</div><div className="consult-vital-unit">bpm</div></div>
-                <div className="consult-vital-tile"><i className="bi bi-lungs consult-vital-icon" /><div className="consult-vital-label">FR</div><div className="consult-vital-value">{latestVital.respiratoryRate ?? '—'}</div><div className="consult-vital-unit">irpm</div></div>
-                <div className="consult-vital-tile"><i className="bi bi-thermometer-half consult-vital-icon" /><div className="consult-vital-label">Temp.</div><div className="consult-vital-value">{latestVital.temperature ?? '—'}</div><div className="consult-vital-unit">°C</div></div>
+                <div className="consult-vital-tile"><i className="bi bi-heart-pulse consult-vital-icon" /><div className="consult-vital-label">{t('patientRecord.vitalBP')}</div><div className="consult-vital-value">{latestVital.bloodPressureSystolic && latestVital.bloodPressureDiastolic ? `${latestVital.bloodPressureSystolic}/${latestVital.bloodPressureDiastolic}` : '—'}</div><div className="consult-vital-unit">mmHg</div></div>
+                <div className="consult-vital-tile"><i className="bi bi-heart consult-vital-icon" /><div className="consult-vital-label">{t('patientRecord.vitalHR')}</div><div className="consult-vital-value">{latestVital.heartRate ?? '—'}</div><div className="consult-vital-unit">bpm</div></div>
+                <div className="consult-vital-tile"><i className="bi bi-lungs consult-vital-icon" /><div className="consult-vital-label">{t('patientRecord.vitalRR')}</div><div className="consult-vital-value">{latestVital.respiratoryRate ?? '—'}</div><div className="consult-vital-unit">irpm</div></div>
+                <div className="consult-vital-tile"><i className="bi bi-thermometer-half consult-vital-icon" /><div className="consult-vital-label">{t('patientRecord.vitalTemp')}</div><div className="consult-vital-value">{latestVital.temperature ?? '—'}</div><div className="consult-vital-unit">°C</div></div>
                 <div className="consult-vital-tile"><i className="bi bi-droplet-half consult-vital-icon" /><div className="consult-vital-label">SpO2</div><div className="consult-vital-value">{latestVital.spo2 ?? '—'}</div><div className="consult-vital-unit">%</div></div>
-                <div className="consult-vital-tile"><i className="bi bi-speedometer2 consult-vital-icon" /><div className="consult-vital-label">Peso</div><div className="consult-vital-value">{latestVital.weight ?? '—'}</div><div className="consult-vital-unit">kg</div></div>
-                <div className="consult-vital-tile"><i className="bi bi-arrows-vertical consult-vital-icon" /><div className="consult-vital-label">Altura</div><div className="consult-vital-value">{latestVital.height ?? '—'}</div><div className="consult-vital-unit">cm</div></div>
-                <div className="consult-vital-tile"><i className="bi bi-graph-up consult-vital-icon" /><div className="consult-vital-label">IMC</div><div className="consult-vital-value">{bmi(latestVital.weight, latestVital.height)}</div><div className="consult-vital-unit">kg/m²</div></div>
+                <div className="consult-vital-tile"><i className="bi bi-speedometer2 consult-vital-icon" /><div className="consult-vital-label">{t('patientRecord.vitalWeight')}</div><div className="consult-vital-value">{latestVital.weight ?? '—'}</div><div className="consult-vital-unit">kg</div></div>
+                <div className="consult-vital-tile"><i className="bi bi-arrows-vertical consult-vital-icon" /><div className="consult-vital-label">{t('patientRecord.vitalHeight')}</div><div className="consult-vital-value">{latestVital.height ?? '—'}</div><div className="consult-vital-unit">cm</div></div>
+                <div className="consult-vital-tile"><i className="bi bi-graph-up consult-vital-icon" /><div className="consult-vital-label">{t('patientRecord.vitalBMI')}</div><div className="consult-vital-value">{bmi(latestVital.weight, latestVital.height)}</div><div className="consult-vital-unit">kg/m²</div></div>
               </div>
             ) : (
-              <p className="consult-context-sub mb-0">Sem sinais vitais registados.</p>
+              <p className="consult-context-sub mb-0">{t('patientRecord.noVitalSigns')}</p>
             )}
           </div>
 
           <div className="consult-panel">
             <div className="consult-panel-header">
-              Documentos
-              <button className="consult-link-btn" onClick={() => setOpenModal('documentos')}>Ver todos</button>
+              {t('patientRecord.tabDocuments')}
+              <button className="consult-link-btn" onClick={() => setOpenModal('documentos')}>{t('common.viewAll')}</button>
             </div>
             {documents.slice(0, 3).map((d) => (
               <div className="consult-doc-row" key={d.id}>
@@ -652,15 +660,15 @@ export default function PatientViewPage() {
                   <div className="consult-context-value">{d.fileName}</div>
                   <div className="consult-context-sub">{d.uploadedAt.slice(0, 10)}</div>
                 </div>
-                <a className="consult-doc-badge" href={d.fileUrl} target="_blank" rel="noreferrer"><i className="bi bi-eye" /> Abrir</a>
+                <a className="consult-doc-badge" href={d.fileUrl} target="_blank" rel="noreferrer"><i className="bi bi-eye" /> {t('patientRecord.openDocument')}</a>
               </div>
             ))}
-            {documents.length === 0 && <p className="consult-context-sub mb-0">Sem documentos associados.</p>}
+            {documents.length === 0 && <p className="consult-context-sub mb-0">{t('patientRecord.noAssociatedDocuments')}</p>}
           </div>
 
           <div className="consult-panel">
             <div className="consult-panel-header">
-              Agregado Familiar
+              {t('nav.family')}
             </div>
             {familyCircle.length > 0 ? (
               familyCircle.map((f) => (
@@ -668,7 +676,7 @@ export default function PatientViewPage() {
                   <i className="bi bi-person-circle consult-doc-icon" />
                   <div className="flex-grow-1">
                     <div className="consult-context-value">{f.name}</div>
-                    <div className="consult-context-sub">{relationshipLabel(f)}</div>
+                    <div className="consult-context-sub">{relationshipLabel(f, t)}</div>
                   </div>
                   {f.phone ? (
                     <a className="consult-doc-badge" href={`tel:${f.phone}`}>{f.phone}</a>
@@ -678,14 +686,14 @@ export default function PatientViewPage() {
                 </div>
               ))
             ) : (
-              <p className="consult-context-sub mb-0">Sem agregado familiar registado.</p>
+              <p className="consult-context-sub mb-0">{t('patientRecord.noFamilyCircle')}</p>
             )}
           </div>
 
           <div className="consult-panel">
             <div className="consult-panel-header">
-              Chat da Equipa
-              <button className="consult-link-btn" onClick={() => setOpenModal('chat')}>Ver conversas</button>
+              {t('patientRecord.teamChat')}
+              <button className="consult-link-btn" onClick={() => setOpenModal('chat')}>{t('patientRecord.viewConversations')}</button>
             </div>
             {chatMessages.length > 0 ? (
               <div className="consult-chat-row">
@@ -701,7 +709,7 @@ export default function PatientViewPage() {
                 </div>
               </div>
             ) : (
-              <p className="consult-context-sub mb-0">Sem mensagens ainda.</p>
+              <p className="consult-context-sub mb-0">{t('patientRecord.noMessagesYet')}</p>
             )}
           </div>
         </div>

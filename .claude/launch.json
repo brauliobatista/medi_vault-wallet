@@ -1,18 +1,3 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "medivault-api",
-      "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "backend/MediVault.Api/MediVault.Api.csproj", "--urls", "http://localhost:50970"],
-      "port": 50970
-    },
-    {
-      "name": "medivault-frontend",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "frontend/medivault-web"],
-      "port": 5173,
-      "url": "http://localhost:5173"
-    }
-  ]
-}
+fatal: ambiguous argument 'origin\main;.claude\launch.json': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'

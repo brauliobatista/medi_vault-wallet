@@ -231,7 +231,7 @@ public class UsersControllerTests
         var client = factory.CreateAuthorizedClient(user.Id, "Patient", user.UtentNumber);
 
         var response = await client.PutAsJsonAsync("/api/users/me",
-            new UpdateUserRequest("new@example.com", "912345678", null, null, null, null, null, null));
+            new UpdateUserRequest("new@example.com", "912345678", null, null, null, null, null, null, null));
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         using var verifyDb = factory.CreateDbContext();

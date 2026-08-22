@@ -3,6 +3,7 @@ import Layout from '../../components/Layout'
 import ScheduleEventsModal from '../../components/ScheduleEventsModal'
 import AppointmentsModal from '../../components/AppointmentsModal'
 import ContactsModal from '../../components/ContactsModal'
+import { useTranslation } from '../../i18n/LanguageContext'
 import {
   getAllAppointments,
   getScheduleEvents,
@@ -12,22 +13,20 @@ import {
 
 type OpenModal = 'schedule' | 'appointments' | 'contacts' | null
 type AgendaView = 'diaria' | 'programada'
+type TFunc = (key: string, vars?: Record<string, string | number>) => string
 
-const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
-const WEEKDAY_LABELS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
-
-function formatDatePt(iso: string) {
+function formatDatePt(iso: string, t: TFunc) {
   const [y, m, d] = iso.split('-').map(Number)
-  return `${String(d).padStart(2, '0')} ${MONTHS_PT[m - 1]} ${y}`
+  return `${String(d).padStart(2, '0')} ${t(`common.month${m}`)} ${y}`
 }
 
-function formatDateRange(startIso: string, endIso: string) {
-  if (startIso === endIso) return formatDatePt(startIso)
+function formatDateRange(startIso: string, endIso: string, t: TFunc) {
+  if (startIso === endIso) return formatDatePt(startIso, t)
   const [sy, sm, sd] = startIso.split('-').map(Number)
   const [ey, em, ed] = endIso.split('-').map(Number)
-  if (sy === ey && sm === em) return `${String(sd).padStart(2, '0')} – ${String(ed).padStart(2, '0')} ${MONTHS_PT[em - 1]} ${ey}`
-  if (sy === ey) return `${String(sd).padStart(2, '0')} ${MONTHS_PT[sm - 1]} – ${String(ed).padStart(2, '0')} ${MONTHS_PT[em - 1]} ${ey}`
-  return `${formatDatePt(startIso)} – ${formatDatePt(endIso)}`
+  if (sy === ey && sm === em) return `${String(sd).padStart(2, '0')} – ${String(ed).padStart(2, '0')} ${t(`common.month${em}`)} ${ey}`
+  if (sy === ey) return `${String(sd).padStart(2, '0')} ${t(`common.month${sm}`)} – ${String(ed).padStart(2, '0')} ${t(`common.month${em}`)} ${ey}`
+  return `${formatDatePt(startIso, t)} – ${formatDatePt(endIso, t)}`
 }
 
 function addDays(iso: string, days: number) {
@@ -52,21 +51,26 @@ function mondayOf(iso: string) {
   return dt.toISOString().slice(0, 10)
 }
 
-const eventBadge: Record<string, { label: string; badgeClass: string; icon: string }> = {
-  CONGRESS: { label: 'Congresso', badgeClass: 'badge-congresso', icon: 'bi-calendar-event' },
-  VACATION: { label: 'Férias', badgeClass: 'badge-ferias', icon: 'bi-suitcase' },
-  TRAINING: { label: 'Formação', badgeClass: 'badge-confirmada', icon: 'bi-mortarboard' },
+function eventBadgeMeta(code: string, t: TFunc): { label: string; badgeClass: string; icon: string } {
+  switch (code) {
+    case 'CONGRESS': return { label: t('agendas.eventCongress'), badgeClass: 'badge-congresso', icon: 'bi-calendar-event' }
+    case 'VACATION': return { label: t('agendas.eventVacation'), badgeClass: 'badge-ferias', icon: 'bi-suitcase' }
+    default: return { label: t('agendas.eventTraining'), badgeClass: 'badge-confirmada', icon: 'bi-mortarboard' }
+  }
 }
 
-const statusBadge: Record<string, { label: string; badgeClass: string }> = {
-  em_curso: { label: 'Em curso', badgeClass: 'badge-em-curso' },
-  confirmada: { label: 'Confirmada', badgeClass: 'badge-confirmada' },
-  pendente: { label: 'Pendente', badgeClass: 'badge-ferias' },
-  concluida: { label: 'Concluída', badgeClass: 'badge-em-curso' },
-  cancelada: { label: 'Cancelada', badgeClass: 'badge-congresso' },
+function statusBadgeMeta(status: string, t: TFunc): { label: string; badgeClass: string } {
+  switch (status) {
+    case 'em_curso': return { label: t('agendas.statusInProgress'), badgeClass: 'badge-em-curso' }
+    case 'pendente': return { label: t('agendas.statusPending'), badgeClass: 'badge-ferias' }
+    case 'concluida': return { label: t('agendas.statusCompleted'), badgeClass: 'badge-em-curso' }
+    case 'cancelada': return { label: t('agendas.statusCancelled'), badgeClass: 'badge-congresso' }
+    default: return { label: t('agendas.statusConfirmed'), badgeClass: 'badge-confirmada' }
+  }
 }
 
 export default function DoctorAgendasPage() {
+  const { t } = useTranslation()
   const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([])
   const [scheduleFilter, setScheduleFilter] = useState<'all' | 'CONGRESS' | 'VACATION'>('all')
   const [appointments, setAppointments] = useState<PatientAppointment[]>([])
@@ -128,41 +132,41 @@ export default function DoctorAgendasPage() {
         <div className="dash-card-header">
           <div className="dash-card-heading">
             <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-calendar-week" /></span>
-            <span className="dash-card-title">Agenda</span>
+            <span className="dash-card-title">{t('agendas.title')}</span>
           </div>
           <button
             className="dash-card-footer"
             onClick={() => { setModalEventId(undefined); setModalAppointmentId(undefined); setOpenModal(agendaView === 'diaria' ? 'appointments' : 'schedule') }}
           >
-            Gerir agenda completa <i className="bi bi-arrow-right" />
+            {t('agendas.manageFullAgenda')} <i className="bi bi-arrow-right" />
           </button>
         </div>
 
         <div className="agenda-toggle">
           <button className={`agenda-toggle-btn${agendaView === 'diaria' ? ' active' : ''}`} onClick={() => setAgendaView('diaria')}>
-            <i className="bi bi-calendar-event" /> Agenda Diária
+            <i className="bi bi-calendar-event" /> {t('agendas.dailyAgenda')}
           </button>
           <button className={`agenda-toggle-btn${agendaView === 'programada' ? ' active' : ''}`} onClick={() => setAgendaView('programada')}>
-            <i className="bi bi-calendar-range" /> Agenda Médica Programada
+            <i className="bi bi-calendar-range" /> {t('agendas.scheduledAgenda')}
           </button>
         </div>
 
         {agendaView === 'programada' && (
           <div className="dash-filter-row">
-            <button className={`dash-pill${scheduleFilter === 'all' ? ' active' : ''}`} onClick={() => setScheduleFilter('all')}>Todos</button>
-            <button className={`dash-pill${scheduleFilter === 'CONGRESS' ? ' active' : ''}`} onClick={() => setScheduleFilter('CONGRESS')}>Congressos</button>
-            <button className={`dash-pill${scheduleFilter === 'VACATION' ? ' active' : ''}`} onClick={() => setScheduleFilter('VACATION')}>Férias</button>
+            <button className={`dash-pill${scheduleFilter === 'all' ? ' active' : ''}`} onClick={() => setScheduleFilter('all')}>{t('agendas.filterAll')}</button>
+            <button className={`dash-pill${scheduleFilter === 'CONGRESS' ? ' active' : ''}`} onClick={() => setScheduleFilter('CONGRESS')}>{t('agendas.filterCongresses')}</button>
+            <button className={`dash-pill${scheduleFilter === 'VACATION' ? ' active' : ''}`} onClick={() => setScheduleFilter('VACATION')}>{t('agendas.filterVacations')}</button>
           </div>
         )}
 
         <div className="dash-date-nav">
-          <span className="dash-date-label">{formatDateRange(weekDates[0], weekDates[6])}</span>
+          <span className="dash-date-label">{formatDateRange(weekDates[0], weekDates[6], t)}</span>
           <div className="dash-date-nav-controls">
-            <button className="dash-date-nav-btn" aria-label="Semana anterior" onClick={() => setWeekStart((d) => addDays(d, -7))}>
+            <button className="dash-date-nav-btn" aria-label={t('agendas.previousWeek')} onClick={() => setWeekStart((d) => addDays(d, -7))}>
               <i className="bi bi-chevron-left" />
             </button>
-            <button className="dash-today-btn" onClick={() => setWeekStart(mondayOf(today))}>Hoje</button>
-            <button className="dash-date-nav-btn" aria-label="Semana seguinte" onClick={() => setWeekStart((d) => addDays(d, 7))}>
+            <button className="dash-today-btn" onClick={() => setWeekStart(mondayOf(today))}>{t('agendas.today')}</button>
+            <button className="dash-date-nav-btn" aria-label={t('agendas.nextWeek')} onClick={() => setWeekStart((d) => addDays(d, 7))}>
               <i className="bi bi-chevron-right" />
             </button>
           </div>
@@ -175,17 +179,17 @@ export default function DoctorAgendasPage() {
             return (
               <div className={`agenda-week-col${isToday ? ' is-today' : ''}`} key={dayIso}>
                 <div className="agenda-week-col-header">
-                  <div className="agenda-week-col-weekday">{WEEKDAY_LABELS[idx].slice(0, 3)}</div>
+                  <div className="agenda-week-col-weekday">{t(`common.weekday${idx + 1}`)}</div>
                   <div className="agenda-week-col-daynum">{dayNum}</div>
                 </div>
                 <div className="agenda-week-col-body">
                   {agendaView === 'diaria' ? (
                     dayAppointments(dayIso).length === 0 ? (
-                      <p className="agenda-week-empty">Sem consultas</p>
+                      <p className="agenda-week-empty">{t('agendas.noAppointments')}</p>
                     ) : (
                       dayAppointments(dayIso).map((appt) => {
-                        const meta = statusBadge[appt.status] ?? statusBadge.confirmada
-                        const modalityLabel = appt.modality === 'teleconsulta' ? 'Teleconsulta' : 'Presencial'
+                        const meta = statusBadgeMeta(appt.status, t)
+                        const modalityLabel = appt.modality === 'teleconsulta' ? t('agendas.modalityTeleconsultation') : t('agendas.modalityInPerson')
                         return (
                           <button className="agenda-week-chip" key={appt.id} onClick={() => openAppointmentDetails(appt.id)}>
                             <div className="agenda-week-chip-time">{appt.scheduledAt.slice(11, 16)}</div>
@@ -197,10 +201,10 @@ export default function DoctorAgendasPage() {
                       })
                     )
                   ) : dayEvents(dayIso).length === 0 ? (
-                    <p className="agenda-week-empty">Sem eventos</p>
+                    <p className="agenda-week-empty">{t('agendas.noEvents')}</p>
                   ) : (
                     dayEvents(dayIso).map((ev) => {
-                      const meta = eventBadge[ev.eventTypeCode] ?? eventBadge.TRAINING
+                      const meta = eventBadgeMeta(ev.eventTypeCode, t)
                       return (
                         <button className="agenda-week-chip" key={ev.id} onClick={() => openEventDetails(ev.id)}>
                           <div className="agenda-week-chip-title"><i className={`bi ${meta.icon} me-1`} />{ev.title}</div>
@@ -224,12 +228,12 @@ export default function DoctorAgendasPage() {
         <div className="dash-card-header">
           <div className="dash-card-heading">
             <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-telephone" /></span>
-            <span className="dash-card-title">Contactos de Extensão</span>
+            <span className="dash-card-title">{t('agendas.extensionContactsTitle')}</span>
           </div>
         </div>
-        <p className="dash-card-subtitle">Contactos rápidos da instituição</p>
+        <p className="dash-card-subtitle">{t('agendas.extensionContactsSubtitle')}</p>
         <button className="dash-card-footer" onClick={() => setOpenModal('contacts')}>
-          Ver todos os contactos <i className="bi bi-arrow-right" />
+          {t('agendas.viewAllContacts')} <i className="bi bi-arrow-right" />
         </button>
       </div>
 

@@ -8,6 +8,7 @@ import {
   getMedications,
   getPatientSummary, updateBloodType,
 } from '../api/medical'
+import { LanguageProvider } from '../i18n/LanguageContext'
 
 vi.mock('../api/medical', () => ({
   getAllergies: vi.fn(),
@@ -49,7 +50,7 @@ describe('ContextoClinicoModal', () => {
   it('shows loading state while fetching, then empty states for every section', async () => {
     mockAllEmpty()
 
-    render(<ContextoClinicoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ContextoClinicoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(screen.getByText('A carregar…')).toBeInTheDocument()
     expect(await screen.findByText('Sem alergias registadas.')).toBeInTheDocument()
@@ -61,7 +62,7 @@ describe('ContextoClinicoModal', () => {
   it('shows the recorded blood type', async () => {
     mockAllEmpty('O+')
 
-    render(<ContextoClinicoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ContextoClinicoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('O+')).toBeInTheDocument()
   })
@@ -70,7 +71,7 @@ describe('ContextoClinicoModal', () => {
     mockAllEmpty('O+')
     mockedUpdateBloodType.mockResolvedValue(fakeAxiosResponse)
 
-    render(<ContextoClinicoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ContextoClinicoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('O+')
 
     fireEvent.click(screen.getByRole('button', { name: '' }))
@@ -84,7 +85,7 @@ describe('ContextoClinicoModal', () => {
     mockAllEmpty()
     mockedAddAllergy.mockResolvedValue({})
 
-    render(<ContextoClinicoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ContextoClinicoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem alergias registadas.')
 
     fireEvent.click(screen.getByText('Adicionar alergia'))
@@ -104,7 +105,7 @@ describe('ContextoClinicoModal', () => {
     mockedGetIcpc2.mockResolvedValue([])
     mockedGetSummary.mockResolvedValue({ bloodType: null })
 
-    render(<ContextoClinicoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ContextoClinicoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Penicilina')).toBeInTheDocument()
     expect(screen.getByText('Hipertensão')).toBeInTheDocument()

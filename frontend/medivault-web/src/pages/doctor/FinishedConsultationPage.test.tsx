@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import FinishedConsultationPage from './FinishedConsultationPage'
 import { getDoctorNotes, getChatMessages } from '../../api/medical'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../api/medical', () => ({
   getDoctorNotes: vi.fn(),
@@ -19,12 +20,14 @@ const navState = {
 
 function renderPage(state: object | null = navState) {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: '/doctor/finished-consultation/1', state }]}>
-      <Routes>
-        <Route path="/doctor/finished-consultation/:consultationId" element={<FinishedConsultationPage />} />
-        <Route path="/doctor" element={<div>Dashboard do médico</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter initialEntries={[{ pathname: '/doctor/finished-consultation/1', state }]}>
+        <Routes>
+          <Route path="/doctor/finished-consultation/:consultationId" element={<FinishedConsultationPage />} />
+          <Route path="/doctor" element={<div>Dashboard do médico</div>} />
+        </Routes>
+      </MemoryRouter>
+    </LanguageProvider>,
   )
 }
 

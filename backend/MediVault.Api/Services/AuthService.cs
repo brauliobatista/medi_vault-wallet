@@ -15,7 +15,7 @@ public class AuthService(MediVaultDbContext db, JwtService jwt)
             return null;
 
         var token = jwt.GenerateToken(user.Id, "Patient", user.UtentNumber);
-        return new LoginResponse(token, "Patient", user.Id, $"{user.FirstName} {user.LastName}");
+        return new LoginResponse(token, "Patient", user.Id, $"{user.FirstName} {user.LastName}", user.Language);
     }
 
     public async Task<LoginResponse?> LoginDoctorAsync(DoctorLoginRequest req)
@@ -26,6 +26,6 @@ public class AuthService(MediVaultDbContext db, JwtService jwt)
             return null;
 
         var token = jwt.GenerateToken(doctor.Id, "Doctor", doctor.OrdemMedicosId);
-        return new LoginResponse(token, "Doctor", doctor.Id, $"{doctor.FirstName} {doctor.LastName}");
+        return new LoginResponse(token, "Doctor", doctor.Id, $"{doctor.FirstName} {doctor.LastName}", doctor.Language);
     }
 }

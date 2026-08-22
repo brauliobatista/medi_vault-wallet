@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import PatientViewPage from './PatientViewPage'
 import { saveUser } from '../../hooks/useAuth'
 import api from '../../api/client'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 import {
   getPatientSummary,
   getPathologies,
@@ -63,12 +64,14 @@ const summary = {
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/doctor/patient/u1']}>
-      <Routes>
-        <Route path="/doctor/patient/:patientId" element={<PatientViewPage />} />
-        <Route path="/doctor" element={<div>Dashboard do médico</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter initialEntries={['/doctor/patient/u1']}>
+        <Routes>
+          <Route path="/doctor/patient/:patientId" element={<PatientViewPage />} />
+          <Route path="/doctor" element={<div>Dashboard do médico</div>} />
+        </Routes>
+      </MemoryRouter>
+    </LanguageProvider>,
   )
 }
 

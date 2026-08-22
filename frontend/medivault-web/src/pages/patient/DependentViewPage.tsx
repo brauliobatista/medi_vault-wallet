@@ -12,12 +12,14 @@ import {
   getProfileFor, getQrCodeFor, toggleCardFor,
   getAccessRequestsFor, respondToRequestFor, deleteRequestFor,
 } from '../../api/medical'
+import { useTranslation } from '../../i18n/LanguageContext'
 
 type TabKey = 'profile' | 'history' | 'medications' | 'allergies' | 'exams' | 'vaccinations' | 'habits' | 'access'
 
 const badgeClass: Record<string, string> = { pending: 'warning text-dark', approved: 'success', revoked: 'secondary' }
 
 export default function DependentViewPage() {
+  const { t } = useTranslation()
   const { dependentId } = useParams<{ dependentId: string }>()
   const uid = dependentId!
 
@@ -67,7 +69,7 @@ export default function DependentViewPage() {
     setCardActive(activate)
     try {
       await toggleCardFor(uid, activate)
-      flash(activate ? 'MediCard ativado. Os médicos aprovados voltaram a ter acesso.' : 'MediCard suspenso. Todos os médicos perderam acesso.')
+      flash(activate ? t('access.cardActivated') : t('access.cardSuspended'))
     } catch {
       setCardActive(!activate)
     } finally {
@@ -79,7 +81,7 @@ export default function DependentViewPage() {
     setRequests((prev) => prev.map((r) => Number(r.id) === id ? { ...r, status: 'approved' } : r))
     try {
       await respondToRequestFor(uid, id, 'approve')
-      flash('Acesso aprovado com sucesso.')
+      flash(t('access.approvedSuccess'))
       refreshAccess()
     } catch {
       refreshAccess()
@@ -97,23 +99,23 @@ export default function DependentViewPage() {
   }
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: 'profile',      label: 'Perfil' },
-    { key: 'history',      label: 'Cirurgias' },
-    { key: 'medications',  label: 'Medicação' },
-    { key: 'allergies',    label: 'Alergias' },
-    { key: 'exams',        label: 'Análises' },
-    { key: 'vaccinations', label: 'Vacinação' },
-    { key: 'habits',       label: 'Hábitos' },
-    { key: 'access',       label: 'Acesso' },
+    { key: 'profile',      label: t('dependentView.tabProfile') },
+    { key: 'history',      label: t('medicalHistory.tabSurgeries') },
+    { key: 'medications',  label: t('medicalHistory.tabMedications') },
+    { key: 'allergies',    label: t('medicalHistory.tabAllergies') },
+    { key: 'exams',        label: t('exams.tabAnalytical') },
+    { key: 'vaccinations', label: t('dashboard.vaccinationLabel') },
+    { key: 'habits',       label: t('dependentView.tabHabits') },
+    { key: 'access',       label: t('dependentView.tabAccess') },
   ]
 
   if (accessDenied) return (
     <Layout>
       <div className="d-flex flex-column align-items-center py-5 text-center">
         <i className="bi bi-lock-fill text-danger mb-3" style={{ fontSize: '2.5rem' }} />
-        <h5 className="fw-bold mb-2">Sem acesso</h5>
-        <p className="text-muted mb-3">Não é guardião deste familiar ou o vínculo já não está ativo.</p>
-        <Link to="/family" className="btn btn-primary btn-sm">Voltar ao Agregado Familiar</Link>
+        <h5 className="fw-bold mb-2">{t('dependentView.noAccess')}</h5>
+        <p className="text-muted mb-3">{t('dependentView.noAccessDesc')}</p>
+        <Link to="/family" className="btn btn-primary btn-sm">{t('dependentView.backToFamily')}</Link>
       </div>
     </Layout>
   )
@@ -131,12 +133,12 @@ export default function DependentViewPage() {
       {/* Header */}
       <div className="d-flex align-items-center gap-3 mb-4 flex-wrap">
         <Link to="/family" className="btn btn-outline-secondary btn-sm">
-          <i className="bi bi-arrow-left me-1" />Voltar
+          <i className="bi bi-arrow-left me-1" />{t('dependentView.back')}
         </Link>
         {profile.photoUrl ? (
           <img
             src={String(profile.photoUrl)}
-            alt={String(profile.firstName ?? 'Familiar')}
+            alt={String(profile.firstName ?? t('dependentView.familyMemberAlt'))}
             className="rounded-circle"
             style={{ width: 44, height: 44, objectFit: 'cover' }}
           />
@@ -146,7 +148,7 @@ export default function DependentViewPage() {
         <div>
           <h5 className="mb-0 fw-semibold">
             {String(profile.firstName)} {String(profile.lastName)}
-            {Boolean(profile.isDependent) && <span className="badge bg-light text-muted border ms-2">Sem login próprio</span>}
+            {Boolean(profile.isDependent) && <span className="badge bg-light text-muted border ms-2">{t('family.noOwnLogin')}</span>}
           </h5>
           <small className="text-muted font-monospace">{uid}</small>
         </div>
@@ -155,10 +157,10 @@ export default function DependentViewPage() {
       {successMsg && <div className="alert alert-success py-2 mb-3">{successMsg}</div>}
 
       <ul className="nav nav-tabs mb-3 flex-wrap">
-        {tabs.map((t) => (
-          <li className="nav-item" key={t.key}>
-            <button className={`nav-link ${tab === t.key ? 'active' : ''}`} onClick={() => loadTab(t.key)}>
-              {t.label}
+        {tabs.map((tabItem) => (
+          <li className="nav-item" key={tabItem.key}>
+            <button className={`nav-link ${tab === tabItem.key ? 'active' : ''}`} onClick={() => loadTab(tabItem.key)}>
+              {tabItem.label}
             </button>
           </li>
         ))}
@@ -168,14 +170,14 @@ export default function DependentViewPage() {
         <div className="card border-0 shadow-sm" style={{ maxWidth: 700 }}>
           <div className="card-body">
             <div className="row g-3">
-              <Field label="Nº Utente" value={String(profile.utentNumber)} />
-              <Field label="Data de Nascimento" value={String(profile.birthday)} />
-              <Field label="Grupo Sanguíneo" value={String(profile.bloodType ?? '-')} />
-              <Field label="Email" value={String(profile.email ?? '-')} />
-              <Field label="Telefone" value={String(profile.phone ?? '-')} />
-              <Field label="Profissão" value={String(profile.profession ?? '-')} />
-              <Field label="Aceita transfusão" value={profile.acceptsTransfusion ? 'Sim' : 'Não'} />
-              <Field label="Manobras de reanimação" value={profile.acceptsResuscitation ? 'Sim' : 'Não'} />
+              <Field label={t('profile.utentNumber')} value={String(profile.utentNumber)} />
+              <Field label={t('profile.birthday')} value={String(profile.birthday)} />
+              <Field label={t('profile.bloodType')} value={String(profile.bloodType ?? t('common.na'))} />
+              <Field label={t('profile.email')} value={String(profile.email ?? t('common.na'))} />
+              <Field label={t('profile.phone')} value={String(profile.phone ?? t('common.na'))} />
+              <Field label={t('profile.profession')} value={String(profile.profession ?? t('common.na'))} />
+              <Field label={t('profile.acceptsTransfusion')} value={profile.acceptsTransfusion ? t('common.yes') : t('common.no')} />
+              <Field label={t('profile.acceptsResuscitation')} value={profile.acceptsResuscitation ? t('common.yes') : t('common.no')} />
             </div>
           </div>
         </div>
@@ -189,11 +191,11 @@ export default function DependentViewPage() {
                 <div className="d-flex align-items-center gap-3">
                   <i className={`bi ${cardActive ? 'bi-shield-check text-success' : 'bi-shield-x text-danger'}`} style={{ fontSize: '2rem' }} />
                   <div>
-                    <div className="fw-semibold">{cardActive ? 'MediCard Ativo' : 'MediCard Suspenso'}</div>
+                    <div className="fw-semibold">{cardActive ? t('access.cardActiveTitle') : t('access.cardSuspendedTitle')}</div>
                     <small className="text-muted">
                       {cardActive
-                        ? 'Os médicos aprovados podem aceder aos dados deste familiar.'
-                        : 'Nenhum médico tem acesso enquanto o cartão estiver suspenso.'}
+                        ? t('dependentView.cardActiveDesc')
+                        : t('access.cardSuspendedDesc')}
                     </small>
                   </div>
                 </div>
@@ -201,22 +203,22 @@ export default function DependentViewPage() {
                   {cardActive ? (
                     confirmSuspend ? (
                       <div className="d-flex align-items-center gap-2 flex-wrap">
-                        <span className="text-muted small">Confirmar suspensão?</span>
+                        <span className="text-muted small">{t('access.confirmSuspendQuestion')}</span>
                         <button className="btn btn-danger btn-sm" disabled={cardLoading} onClick={() => handleCard(false)}>
-                          Sim, suspender
+                          {t('access.confirmSuspendYes')}
                         </button>
                         <button className="btn btn-outline-secondary btn-sm" onClick={() => setConfirmSuspend(false)}>
-                          Cancelar
+                          {t('common.cancel')}
                         </button>
                       </div>
                     ) : (
                       <button className="btn btn-outline-danger btn-sm" onClick={() => setConfirmSuspend(true)}>
-                        <i className="bi bi-lock me-1" />Suspender cartão
+                        <i className="bi bi-lock me-1" />{t('access.suspendCard')}
                       </button>
                     )
                   ) : (
                     <button className="btn btn-success btn-sm" disabled={cardLoading} onClick={() => handleCard(true)}>
-                      <i className="bi bi-lock-open me-1" />Ativar cartão
+                      <i className="bi bi-lock-open me-1" />{t('access.activateCard')}
                     </button>
                   )}
                 </div>
@@ -227,7 +229,7 @@ export default function DependentViewPage() {
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-header bg-white fw-semibold border-bottom">
               <i className="bi bi-qr-code me-2 text-primary" />
-              QR Code de Acesso
+              {t('dependentView.qrTitle')}
             </div>
             <div className="card-body text-center">
               {qrLoading ? (
@@ -236,22 +238,21 @@ export default function DependentViewPage() {
                 <>
                   <QRCodeSVG value={qrPayload} size={200} className="mb-3" />
                   <p className="text-muted small mb-2">
-                    Mostre este código ao médico para partilhar o acesso a este familiar imediatamente.
-                    O acesso expira após <strong>7 dias</strong>.
+                    {t('dependentView.qrInstructions')} <strong>{t('access.qrExpiryDays')}</strong>.
                   </p>
                   <div className="d-flex justify-content-center align-items-center gap-2 mb-1">
                     <code className="bg-light border rounded px-3 py-2 fs-6 user-select-all">{qrPayload}</code>
                   </div>
                 </>
               ) : (
-                <p className="text-danger">Não foi possível gerar o QR Code.</p>
+                <p className="text-danger">{t('access.qrGenerateError')}</p>
               )}
             </div>
           </div>
 
-          <h6 className="fw-semibold mb-1">Pedidos de Acesso de Médicos</h6>
+          <h6 className="fw-semibold mb-1">{t('access.requestsTitle')}</h6>
           {requests.length === 0 ? (
-            <p className="text-muted">Sem pedidos de acesso.</p>
+            <p className="text-muted">{t('access.noRequests')}</p>
           ) : (
             <div className="list-group shadow-sm">
               {requests.map((r) => (
@@ -259,23 +260,23 @@ export default function DependentViewPage() {
                   <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
                     <div>
                       <div className="fw-semibold">{String(r.doctorName)}</div>
-                      <small className="text-muted">Pedido em: {String(r.requestedAt).slice(0, 10)}</small>
+                      <small className="text-muted">{t('access.requestedOn', { date: String(r.requestedAt).slice(0, 10) })}</small>
                     </div>
                     <div className="d-flex align-items-center gap-2">
                       <span className={`badge bg-${badgeClass[String(r.status)] ?? 'secondary'}`}>{String(r.status)}</span>
                       {r.status === 'pending' && (
                         <>
                           <button className="btn btn-success btn-sm" onClick={() => handleApprove(Number(r.id))}>
-                            <i className="bi bi-check me-1" />Aprovar
+                            <i className="bi bi-check me-1" />{t('access.approve')}
                           </button>
-                          <button className="btn btn-outline-danger btn-sm" onClick={() => handleRevoke(Number(r.id), 'Pedido rejeitado.')}>
-                            <i className="bi bi-x me-1" />Rejeitar
+                          <button className="btn btn-outline-danger btn-sm" onClick={() => handleRevoke(Number(r.id), t('access.requestRejected'))}>
+                            <i className="bi bi-x me-1" />{t('access.reject')}
                           </button>
                         </>
                       )}
                       {r.status === 'approved' && (
-                        <button className="btn btn-outline-danger btn-sm" onClick={() => handleRevoke(Number(r.id), 'Acesso revogado com sucesso.')}>
-                          <i className="bi bi-x me-1" />Revogar
+                        <button className="btn btn-outline-danger btn-sm" onClick={() => handleRevoke(Number(r.id), t('access.accessRevoked'))}>
+                          <i className="bi bi-x me-1" />{t('access.revoke')}
                         </button>
                       )}
                     </div>
@@ -290,11 +291,11 @@ export default function DependentViewPage() {
       {!['profile', 'access'].includes(tab) && (
         <>
           <p className="text-muted small mb-3">
-            <i className="bi bi-info-circle me-1" />Esta informação é gerida pelo médico.
+            <i className="bi bi-info-circle me-1" />{t('dependentView.infoManagedByDoctor')}
           </p>
 
           {data.length === 0 ? (
-            <p className="text-muted">Sem registos.</p>
+            <p className="text-muted">{t('patient.noRecords')}</p>
           ) : (
             <div className="list-group shadow-sm">
               {data.map((item) => (
@@ -309,7 +310,7 @@ export default function DependentViewPage() {
                   </div>
                   <small className="text-muted">
                     {tab === 'history'      && [item.surgeryDate, item.location ? '· ' + item.location : ''].filter(Boolean).join(' ')}
-                    {tab === 'medications'  && [item.dose, item.posology ? '· ' + item.posology : '', item.startDate ? '· desde ' + item.startDate : ''].filter(Boolean).join(' ')}
+                    {tab === 'medications'  && [item.dose, item.posology ? '· ' + item.posology : '', item.startDate ? `· ${t('dependentView.since')} ` + item.startDate : ''].filter(Boolean).join(' ')}
                     {tab === 'allergies'    && [item.allergicReaction, item.severity ? '· ' + item.severity : ''].filter(Boolean).join(' ')}
                     {tab === 'exams'        && String(item.notes ?? '')}
                     {tab === 'vaccinations' && [item.doseNumber, item.administeredAt ? '· ' + item.administeredAt : '', item.institution ? '· ' + item.institution : ''].filter(Boolean).join(' ')}
