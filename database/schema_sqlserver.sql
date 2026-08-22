@@ -218,7 +218,7 @@ CREATE TABLE access_requests (
     requested_at DATETIME2     NOT NULL DEFAULT GETDATE(),
     approved_at  DATETIME2,
     expires_at   DATETIME2,
-    status       NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked')),
+    status       NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked', 'finished')),
     is_emergency BIT           NOT NULL DEFAULT 0,
     access_code  NVARCHAR(100),
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -569,5 +569,21 @@ CREATE TABLE patient_chat_messages (
     created_at        DATETIME2        NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
     CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+GO
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id     UNIQUEIDENTIFIER NOT NULL,
+    doctor_id   UNIQUEIDENTIFIER NOT NULL,
+    status      NVARCHAR(20)     NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+    started_at  DATETIME2        NOT NULL,
+    finished_at DATETIME2,
+    created_at  DATETIME2        NOT NULL DEFAULT GETDATE(),
+    updated_at  DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_consultations_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_consultations_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
 GO

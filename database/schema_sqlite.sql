@@ -220,7 +220,7 @@ CREATE TABLE access_requests (
     requested_at TEXT    NOT NULL DEFAULT (datetime('now')),
     approved_at  TEXT,
     expires_at   TEXT,
-    status       TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked')),
+    status       TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked', 'finished')),
     is_emergency INTEGER NOT NULL DEFAULT 0,
     access_code  TEXT,
     FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -567,4 +567,19 @@ CREATE TABLE patient_chat_messages (
     created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     TEXT    NOT NULL,
+    doctor_id   TEXT    NOT NULL,
+    status      TEXT    NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+    started_at  TEXT    NOT NULL,
+    finished_at TEXT,
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );

@@ -65,6 +65,26 @@ public class DoctorNotesControllerTests
     }
 
     [Fact]
+    public async Task GetNotes_ReturnsOk_ForDoctorWithFinishedConsultation_ButNoActiveAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync($"/api/doctor-notes/{user.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetNotes_ReturnsUnauthorized_WithoutToken()
     {
         using var factory = new ApiTestFactory();

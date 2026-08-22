@@ -1,9 +1,20 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
-import { scanQrCode, getAccessStatus } from '../../api/medical'
+import { scanQrCode, getAccessStatus, getFinishedConsultations } from '../../api/medical'
+
+interface FinishedConsultation {
+  id: number
+  userId: string
+  patientName: string
+  patientPublicId: string
+  utentNumber: string
+  startedAt: string
+  finishedAt: string
+  durationMinutes: number
+}
 
 export default function DoctorDashboardPage() {
   const [utentNumber, setUtentNumber] = useState('')
@@ -24,6 +35,9 @@ export default function DoctorDashboardPage() {
   const rafRef = useRef<number>(0)
 
   const navigate = useNavigate()
+
+  const [finishedConsultations, setFinishedConsultations] = useState<FinishedConsultation[]>([])
+  useEffect(() => { getFinishedConsultations().then(setFinishedConsultations).catch(() => {}) }, [])
 
   // ── Patient search ────────────────────────────────────────────
   const handleSearch = async () => {
@@ -278,6 +292,44 @@ export default function DoctorDashboardPage() {
             </>
           )}
         </div>
+
+        {/* Finished consultations */}
+        {finishedConsultations.length > 0 && (
+          <div className="dash-card mt-4">
+            <div className="dash-card-header">
+              <div className="dash-card-heading">
+                <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-clipboard2-check" /></span>
+                <span className="dash-card-title">Consultas Finalizadas</span>
+              </div>
+            </div>
+
+            {finishedConsultations.map((c) => (
+              <div className="consult-context-item context-plain" key={c.id}>
+                <i className="bi bi-person-circle" />
+                <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <div className="consult-context-value fw-semibold">{c.patientName}</div>
+                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · Nº utente: {c.utentNumber}</div>
+                    <div className="consult-context-sub">
+                      {c.finishedAt.slice(0, 10)} · {c.durationMinutes} min
+                    </div>
+                  </div>
+                  <button
+                    className="dash-toolbar-btn"
+                    onClick={() => navigate(`/doctor/finished-consultation/${c.id}`, {
+                      state: {
+                        patientName: c.patientName, userId: c.userId, patientPublicId: c.patientPublicId,
+                        utentNumber: c.utentNumber, durationMinutes: c.durationMinutes, finishedAt: c.finishedAt,
+                      },
+                    })}
+                  >
+                    <i className="bi bi-eye" />Ver
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </Layout>
   )
