@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getUser, logout } from '../hooks/useAuth'
+import { usePendingAccessRequests } from '../hooks/usePendingAccessRequests'
 
 interface NavItem {
   path: string
@@ -11,19 +12,20 @@ interface NavItem {
 
 const patientNav: NavItem[] = [
   { path: '/dashboard',       label: 'Dashboard',        icon: 'bi-grid-1x2',          exact: true },
-  { path: '/profile',         label: 'Perfil de Saúde',  icon: 'bi-heart-pulse' },
   { path: '/medical-history', label: 'Histórico Médico', icon: 'bi-clipboard2-pulse' },
   { path: '/exams',           label: 'Exames',           icon: 'bi-activity' },
   { path: '/habits',          label: 'Hábitos de Saúde', icon: 'bi-heart' },
   { path: '/vaccinations',    label: 'Vacinas',          icon: 'bi-shield-plus' },
   { path: '/access',          label: 'Acessos',          icon: 'bi-key' },
+  { path: '/family',          label: 'Agregado Familiar', icon: 'bi-people' },
+  { path: '/profile',         label: 'Perfil de Saúde',  icon: 'bi-heart-pulse' },
 ]
 
 const doctorNav: NavItem[] = [
-  { path: '/doctor',          label: 'Dashboard',        icon: 'bi-house',              exact: true },
+  { path: '/doctor',          label: 'Consulta',         icon: 'bi-qr-code-scan',       exact: true },
   { path: '/doctor/agendas',  label: 'Agendas',          icon: 'bi-calendar-week' },
-  { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
   { path: '/doctor/access',   label: 'Pedidos de Acesso', icon: 'bi-key' },
+  { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
 ]
 
 const pageInfo: Record<string, { title: string; subtitle: string; icon: string }> = {
@@ -34,7 +36,8 @@ const pageInfo: Record<string, { title: string; subtitle: string; icon: string }
   '/habits':          { title: 'Hábitos de Saúde',   subtitle: 'Estilos de vida e hábitos registados',                icon: 'bi-heart' },
   '/vaccinations':    { title: 'Vacinas',             subtitle: 'Registo do seu plano vacinal',                        icon: 'bi-shield-plus' },
   '/access':          { title: 'Acessos e Partilhas', subtitle: 'Gira quem tem acesso ao seu perfil',                 icon: 'bi-key' },
-  '/doctor':          { title: 'Dashboard',           subtitle: 'Visão geral e pesquisa de utentes',                   icon: 'bi-house' },
+  '/family':          { title: 'Agregado Familiar',   subtitle: 'Gira os membros do seu agregado familiar',           icon: 'bi-people' },
+  '/doctor':          { title: 'Consulta',            subtitle: 'Leia o QR code ou pesquise um utente por número',    icon: 'bi-qr-code-scan' },
   '/doctor/agendas':  { title: 'Agendas',             subtitle: 'Agenda diária e agenda médica programada',            icon: 'bi-calendar-week' },
   '/doctor/profile':  { title: 'Perfil do Médico',   subtitle: 'As suas informações profissionais',                   icon: 'bi-person-badge' },
   '/doctor/access':   { title: 'Pedidos de Acesso',  subtitle: 'Consulte e gira pedidos de acesso a utentes',         icon: 'bi-key' },
@@ -47,8 +50,10 @@ export default function Layout({ children }: Props) {
   const location = useLocation()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const isDoctor = user?.role === 'Doctor'
   const navItems = isDoctor ? doctorNav : patientNav
+  const { pendingRequests, count: pendingCount } = usePendingAccessRequests()
 
   const currentPath = location.pathname
   const info =
@@ -69,6 +74,7 @@ export default function Layout({ children }: Props) {
   const closeMenu = () => setMenuOpen(false)
 
   const initial = user?.name?.charAt(0).toUpperCase() ?? 'U'
+  const avatarContent = isDoctor ? '👩‍⚕️' : initial
 
   return (
     <div className="mv-wrapper">
@@ -103,7 +109,7 @@ export default function Layout({ children }: Props) {
 
         <div className="mv-sidebar-bottom">
           <div className="mv-user-card">
-            <div className="mv-sidebar-avatar">{initial}</div>
+            <div className="mv-sidebar-avatar">{avatarContent}</div>
             <div>
               <div className="mv-user-name">{user?.name}</div>
               <div className="mv-user-role">{user?.role === 'Doctor' ? 'Médico' : 'Paciente'}</div>
@@ -135,7 +141,47 @@ export default function Layout({ children }: Props) {
           </div>
 
           <div className="mv-topbar-right">
-            <div className="mv-topbar-avatar">{initial}</div>
+            {!isDoctor && (
+              <div className="mv-notif">
+                <button
+                  className="mv-notif-btn"
+                  onClick={() => setNotifOpen((o) => !o)}
+                  aria-label="Notificações"
+                >
+                  <i className="bi bi-bell" />
+                  {pendingCount > 0 && (
+                    <span className="mv-notif-badge">{pendingCount > 9 ? '9+' : pendingCount}</span>
+                  )}
+                </button>
+                {notifOpen && (
+                  <>
+                    <div className="mv-notif-backdrop" onClick={() => setNotifOpen(false)} />
+                    <div className="mv-notif-dropdown">
+                      <div className="mv-notif-dropdown-header">Pedidos de Acesso</div>
+                      {pendingRequests.length === 0 ? (
+                        <div className="mv-notif-empty">Sem pedidos pendentes.</div>
+                      ) : (
+                        pendingRequests.map((r) => (
+                          <Link
+                            key={r.id}
+                            to="/access"
+                            className="mv-notif-item"
+                            onClick={() => setNotifOpen(false)}
+                          >
+                            <i className="bi bi-person-badge" />
+                            <div>
+                              <div className="mv-notif-item-title">{r.doctorName}</div>
+                              <div className="mv-notif-item-sub">Pedido em {r.requestedAt.slice(0, 10)}</div>
+                            </div>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="mv-topbar-avatar">{avatarContent}</div>
             <span className="mv-topbar-name">{user?.name}</span>
             <span className={`badge ${isDoctor ? 'bg-success' : 'bg-primary'}`}>
               {user?.role === 'Doctor' ? 'Médico' : 'Paciente'}

@@ -98,6 +98,7 @@ CREATE TABLE users (
     phone                 TEXT,
     is_active             INTEGER NOT NULL DEFAULT 1,
     card_active           INTEGER NOT NULL DEFAULT 1,
+    share_code            TEXT    NOT NULL DEFAULT '',
     photo_path            TEXT,
     created_at            TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at            TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -158,6 +159,7 @@ CREATE TABLE family_guardianships (
     guardian_user_id     TEXT    NOT NULL,
     dependent_user_id    TEXT    NOT NULL,
     relationship_type_id INTEGER NOT NULL,
+    status                TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved')),
     is_active            INTEGER NOT NULL DEFAULT 1,
     created_at           TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (guardian_user_id)     REFERENCES users(id),
@@ -678,3 +680,63 @@ BEGIN
     SELECT RAISE(ABORT, 'doctor_schedule_events: doctor already has an appointment within this date range');
 END;
 
+-- -------------------------------------------------------
+-- CLINICAL CONSULTATION RECORDS
+-- -------------------------------------------------------
+
+CREATE TABLE vital_signs (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id                  TEXT    NOT NULL,
+    doctor_id                TEXT    NOT NULL,
+    recorded_at              TEXT    NOT NULL,
+    blood_pressure_systolic  INTEGER,
+    blood_pressure_diastolic INTEGER,
+    heart_rate               INTEGER,
+    respiratory_rate         INTEGER,
+    temperature              REAL,
+    spo2                     INTEGER,
+    weight                   REAL,
+    height                   REAL,
+    notes                    TEXT,
+    created_at               TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+CREATE TABLE clinical_assessments (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    TEXT    NOT NULL,
+    doctor_id  TEXT    NOT NULL,
+    hypothesis TEXT    NOT NULL,
+    plan       TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- Anamnesis is historical: every save creates a new row. Editing an existing row
+-- is only allowed application-side for the SAME doctor_id, within 24h of created_at.
+CREATE TABLE anamneses (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id          TEXT    NOT NULL,
+    doctor_id        TEXT    NOT NULL,
+    chief_complaint  TEXT,
+    illness_history  TEXT,
+    personal_history TEXT,
+    created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);
+
+-- Team chat: doctors discussing a patient's case amongst themselves.
+CREATE TABLE patient_chat_messages (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id           TEXT    NOT NULL,
+    author_doctor_id  TEXT    NOT NULL,
+    message           TEXT    NOT NULL,
+    created_at        TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);

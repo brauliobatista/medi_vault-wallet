@@ -424,9 +424,10 @@ INSERT INTO emergency_contacts (user_id, type, name, phone, address) VALUES
 -- FAMILY_GUARDIANSHIPS (Pedro Costa is_dependent=1; parents divorced, both keep guardianship)
 -- -------------------------------------------------------
 -- relationship_type_id: 1=parent (see RELATIONSHIP_TYPES above)
-INSERT INTO family_guardianships (guardian_user_id, dependent_user_id, relationship_type_id, is_active) VALUES
-('30000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000005', 1, 1),
-('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000005', 1, 1);
+INSERT INTO family_guardianships (guardian_user_id, dependent_user_id, relationship_type_id, status, is_active) VALUES
+('30000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000005', 1, 'approved', 1),
+('30000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000005', 1, 'approved', 1),
+('30000000-0000-0000-0000-000000000006', '30000000-0000-0000-0000-000000000009', 4, 'pending',  1);
 
 -- -------------------------------------------------------
 -- FEMALE_MEDICAL_INFO (users 2 and 4 are female)
@@ -680,3 +681,37 @@ INSERT INTO patient_appointments (user_id, doctor_id, appointment_type_id, modal
 ('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 1, 'presencial',   '2026-07-26 10:30:00', 'confirmada', 'staff',  NULL),
 ('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 1, 'teleconsulta', '2026-07-26 11:30:00', 'confirmada', 'staff',  NULL),
 ('30000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000001', 4, 'presencial',   '2026-07-26 14:00:00', 'confirmada', 'doctor', '20000000-0000-0000-0000-000000000001');
+
+-- -------------------------------------------------------
+-- VITAL_SIGNS
+-- -------------------------------------------------------
+INSERT INTO vital_signs (user_id, doctor_id, recorded_at, blood_pressure_systolic, blood_pressure_diastolic, heart_rate, respiratory_rate, temperature, spo2, weight, height, notes) VALUES
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '2026-07-26 10:30:00', 128, 80, 72, 16, 36.6, 98, 72.4, 168,
+ 'Doente com bom aspeto geral, eupneico em repouso. Auscultação cardíaca com sopro sistólico II/VI no foco mitral. Sem edemas periféricos. Abdómen mole e depressível, sem massas palpáveis.');
+
+-- -------------------------------------------------------
+-- CLINICAL_ASSESSMENTS
+-- -------------------------------------------------------
+INSERT INTO clinical_assessments (user_id, doctor_id, hypothesis, plan) VALUES
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'Insuficiência Cardíaca', 'Ecocardiograma transtorácico, NT-proBNP, RX tórax'),
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'Doença arterial coronária', 'Teste provocação isquémica, ECG de esforço');
+
+-- -------------------------------------------------------
+-- ANAMNESES
+-- -------------------------------------------------------
+INSERT INTO anamneses (user_id, doctor_id, chief_complaint, illness_history, personal_history) VALUES
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
+ 'Dispneia aos esforços médios (subir escadas), fadiga fácil, sem dor torácica.',
+ 'Sintomas iniciados há cerca de 3 semanas, progressivos. Nega ortopneia, PND ou edema.',
+ 'Hipertensão arterial diagnosticada há 5 anos. Dislipidemia.');
+
+-- -------------------------------------------------------
+-- PATIENT_CHAT_MESSAGES
+-- -------------------------------------------------------
+INSERT INTO patient_chat_messages (user_id, author_doctor_id, message, created_at) VALUES
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000002',
+ 'Bom dia Carlos, o João esteve cá esta semana queixando-se de fadiga fácil e dispneia. Podes dar uma vista de olhos do lado da cardiologia?', '2026-07-24 09:00:00'),
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
+ 'Bom dia, obrigado pelo aviso. Vou pedir um ecocardiograma e reavaliar a medicação anti-hipertensiva dele.', '2026-07-24 12:00:00'),
+('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
+ 'Resultados do eco dentro da normalidade, função sistólica preservada. Reveja os resultados anexados nos documentos.', '2026-07-27 15:00:00');

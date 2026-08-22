@@ -12,7 +12,7 @@ obj/
 appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
-wwwroot/uploads/
+**/wwwroot/uploads/
 
 # ── Node / Vite ───────────────────────────────────────────────────────────────
 node_modules/
@@ -31,3 +31,7 @@ Thumbs.db
 # ── Logs / caches ─────────────────────────────────────────────────────────────
 *.log
 .vite/
+
+# ── Test results ──────────────────────────────────────────────────────────────
+TestResults/
+test-results/

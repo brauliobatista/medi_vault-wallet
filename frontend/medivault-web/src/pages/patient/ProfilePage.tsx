@@ -22,6 +22,8 @@ export default function ProfilePage() {
         acceptsTransfusion: p.acceptsTransfusion,
         acceptsResuscitation: p.acceptsResuscitation,
         emergencyAccess: p.emergencyAccess,
+        biologicalGender: p.biologicalGender ?? '',
+        sexId: p.sexId ?? '',
       })
     })
   }, [])
@@ -130,6 +132,31 @@ export default function ProfilePage() {
               <Field label="Nome" value={`${profile.firstName} ${profile.lastName}`} />
               <Field label="Data de Nascimento" value={String(profile.birthday)} />
               <Field label="Grupo Sanguíneo" value={String(profile.bloodType ?? '-')} />
+              <Field label="Nacionalidade" value={String(profile.nationalityName ?? '-')} />
+              <SelectField
+                label="Sexo Biológico"
+                field="biologicalGender"
+                form={form}
+                setForm={setForm}
+                editing={editing}
+                options={[
+                  { value: 'M', label: 'Masculino' },
+                  { value: 'F', label: 'Feminino' },
+                ]}
+              />
+              <SelectField
+                label="Género"
+                field="sexId"
+                form={form}
+                setForm={setForm}
+                editing={editing}
+                numeric
+                options={[
+                  { value: '1', label: 'Masculino' },
+                  { value: '2', label: 'Feminino' },
+                  { value: '3', label: 'Outro' },
+                ]}
+              />
               <EditableField label="Email" field="email" form={form} setForm={setForm} editing={editing} />
               <EditableField label="Telefone" field="phone" form={form} setForm={setForm} editing={editing} />
               <EditableField label="Profissão" field="profession" form={form} setForm={setForm} editing={editing} />
@@ -137,7 +164,7 @@ export default function ProfilePage() {
                 <div className="row g-2">
                   <CheckField label="Aceita transfusão" field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} />
                   <CheckField label="Manobras de reanimação" field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} />
-                  <CheckField label="Acesso de emergência" field="emergencyAccess" form={form} setForm={setForm} editing={editing} />
+                  <CheckField label="Acesso de emergência" field="emergencyAccess" form={form} setForm={setForm} editing={false} />
                 </div>
               </div>
             </div>
@@ -176,6 +203,30 @@ function EditableField({ label, field, form, setForm, editing }: {
         />
       ) : (
         <div className="fw-semibold">{String(form[field] || '-')}</div>
+      )}
+    </div>
+  )
+}
+
+function SelectField({ label, field, form, setForm, editing, options, numeric }: {
+  label: string; field: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean
+  options: { value: string; label: string }[]; numeric?: boolean
+}) {
+  const current = options.find((o) => o.value === String(form[field] ?? ''))
+  return (
+    <div className="col-sm-6">
+      <label className="form-label text-muted small mb-0">{label}</label>
+      {editing ? (
+        <select
+          className="form-select form-select-sm"
+          value={String(form[field] ?? '')}
+          onChange={(e) => setForm({ ...form, [field]: numeric ? Number(e.target.value) : e.target.value })}
+        >
+          <option value="" disabled>Selecionar…</option>
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      ) : (
+        <div className="fw-semibold">{current?.label ?? '-'}</div>
       )}
     </div>
   )

@@ -10,10 +10,13 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+const isLoginRequest = (url?: string) =>
+  !!url && (url.includes('/auth/patient/login') || url.includes('/auth/doctor/login'))
+
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && !isLoginRequest(err.config?.url)) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
