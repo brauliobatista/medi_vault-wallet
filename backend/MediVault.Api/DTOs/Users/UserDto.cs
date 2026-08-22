@@ -23,7 +23,7 @@ public record UserProfileDto(
     bool CardActive,
     string? PhotoUrl,
     string Language,
-    string? PhoneCountryCode
+    string PhoneCountryCode
 );
 
 public record UpdateUserRequest(

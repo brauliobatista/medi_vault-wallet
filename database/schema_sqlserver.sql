@@ -94,7 +94,7 @@ CREATE TABLE users (
     is_dependent          BIT           NOT NULL DEFAULT 0,
     profession            NVARCHAR(255),
     phone                 NVARCHAR(50),
-    phone_country_code    NVARCHAR(10),
+    phone_country_code    NVARCHAR(10)  NOT NULL DEFAULT '351',
     is_active             BIT           NOT NULL DEFAULT 1,
     card_active           BIT           NOT NULL DEFAULT 1,
     share_code            NVARCHAR(50)  NOT NULL DEFAULT '',
