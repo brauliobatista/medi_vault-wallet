@@ -22,6 +22,14 @@ export default {
   'profile.acceptsTransfusion': 'Akzeptiert Bluttransfusion',
   'profile.acceptsResuscitation': 'Akzeptiert Wiederbelebung',
   'profile.emergencyAccess': 'Notfallzugriff',
+  'profile.changePassword': 'Passwort ändern',
+  'profile.currentPassword': 'Aktuelles Passwort',
+  'profile.newPassword': 'Neues Passwort',
+  'profile.confirmPassword': 'Passwort bestätigen',
+  'profile.passwordMismatch': 'Die Passwörter stimmen nicht überein.',
+  'profile.passwordTooShort': 'Das neue Passwort muss mindestens 6 Zeichen lang sein.',
+  'profile.currentPasswordWrong': 'Aktuelles Passwort ist falsch.',
+  'profile.passwordChangedSuccess': 'Passwort erfolgreich geändert. Sie werden abgemeldet…',
 
   // Dashboard
   'dashboard.examsLabel': 'Untersuchungen (MCDTS)',

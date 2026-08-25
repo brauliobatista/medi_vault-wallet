@@ -2,6 +2,7 @@
 
 export const getProfile = () => api.get('/users/me').then((r) => r.data)
 export const updateProfile = (data: object) => api.put('/users/me', data).then((r) => r.data)
+export const changePassword = (data: object) => api.put('/users/me/password', data)
 
 export const uploadProfilePhoto = (file: File) => {
   const formData = new FormData()

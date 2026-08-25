@@ -5,7 +5,7 @@ export default {
   'doctorProfile.institutionHint': 'Ctrl/Cmd + clic para seleccionar más de una.',
   'doctorProfile.speciality': 'Especialidad',
   'doctorProfile.changePassword': 'Cambiar contraseña',
-  'doctorProfile.passwordChangedSuccess': 'Contraseña cambiada con éxito.',
+  'doctorProfile.passwordChangedSuccess': 'Contraseña cambiada con éxito. Cerrando sesión…',
   'doctorProfile.currentPassword': 'Contraseña actual',
   'doctorProfile.newPassword': 'Nueva contraseña',
   'doctorProfile.confirmPassword': 'Confirmar contraseña',

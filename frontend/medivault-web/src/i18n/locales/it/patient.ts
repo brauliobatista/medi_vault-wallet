@@ -22,6 +22,14 @@ export default {
   'profile.acceptsTransfusion': 'Accetta trasfusione',
   'profile.acceptsResuscitation': 'Manovre di rianimazione',
   'profile.emergencyAccess': "Accesso di emergenza",
+  'profile.changePassword': 'Cambia password',
+  'profile.currentPassword': 'Password attuale',
+  'profile.newPassword': 'Nuova password',
+  'profile.confirmPassword': 'Conferma password',
+  'profile.passwordMismatch': 'Le password non coincidono.',
+  'profile.passwordTooShort': 'La nuova password deve contenere almeno 6 caratteri.',
+  'profile.currentPasswordWrong': 'Password attuale errata.',
+  'profile.passwordChangedSuccess': 'Password cambiata con successo. Disconnessione in corso…',
 
   // Dashboard
   'dashboard.examsLabel': 'Esami (MCDTS)',
