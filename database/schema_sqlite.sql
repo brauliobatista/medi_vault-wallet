@@ -122,6 +122,7 @@ CREATE TABLE doctors (
     institution_id   TEXT    NOT NULL,
     nationality_id   INTEGER NOT NULL,
     language         TEXT    NOT NULL DEFAULT 'pt',
+    photo_path       TEXT,
     is_active        INTEGER NOT NULL DEFAULT 1,
     created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (institution_id) REFERENCES institutions(id),

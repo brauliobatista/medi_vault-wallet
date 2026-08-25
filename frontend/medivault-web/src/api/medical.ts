@@ -16,6 +16,15 @@ export const getDoctorProfile = () => api.get('/doctors/me').then((r) => r.data)
 export const updateDoctorProfile = (data: object) => api.put('/doctors/me', data).then((r) => r.data)
 export const changeDoctorPassword = (data: object) => api.put('/doctors/me/password', data)
 
+export const uploadDoctorPhoto = (file: File) => {
+  const formData = new FormData()
+  formData.append('photo', file)
+  return api.post('/doctors/me/photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data as { photoUrl: string })
+}
+export const deleteDoctorPhoto = () => api.delete('/doctors/me/photo')
+
 export const getAccessStatus = (userId: string) =>
   api.get(`/patients/${userId}/access-status`).then((r) => r.data as { hasAccess: boolean; reason: string })
 

@@ -110,6 +110,7 @@ erDiagram
         guid institution_id FK
         int nationality_id FK
         string language
+        string photo_path
         bool is_active
         datetime created_at
     }

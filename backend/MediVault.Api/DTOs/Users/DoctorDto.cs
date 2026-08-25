@@ -13,7 +13,8 @@ public record DoctorProfileDto(
     string? InstitutionAddress,
     string? InstitutionPhone,
     string? NationalityName,
-    string Language
+    string Language,
+    string? PhotoUrl
 );
 
 public record UpdateDoctorRequest(

@@ -37,7 +37,7 @@ describe('LoginPage', () => {
   })
 
   it('logs in a patient and navigates to the patient dashboard', async () => {
-    mockedPatientLogin.mockResolvedValue({ token: 'jwt', role: 'Patient', id: '1', name: 'Ana Silva', language: 'pt' })
+    mockedPatientLogin.mockResolvedValue({ token: 'jwt', role: 'Patient', id: '1', name: 'Ana Silva', language: 'pt', photoUrl: null })
 
     renderLoginPage()
     fireEvent.change(fieldByLabel('Número de Utente'), { target: { value: '111222333' } })
@@ -46,11 +46,11 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('Página do paciente')).toBeInTheDocument()
     expect(mockedPatientLogin).toHaveBeenCalledWith('111222333', 'correct-horse')
-    expect(getUser()).toEqual({ id: '1', name: 'Ana Silva', role: 'Patient' })
+    expect(getUser()).toEqual({ id: '1', name: 'Ana Silva', role: 'Patient', photoUrl: null })
   })
 
   it('logs in a doctor via the doctor tab and navigates to the doctor area', async () => {
-    mockedDoctorLogin.mockResolvedValue({ token: 'jwt', role: 'Doctor', id: 'd1', name: 'Dr. João Costa', language: 'pt' })
+    mockedDoctorLogin.mockResolvedValue({ token: 'jwt', role: 'Doctor', id: 'd1', name: 'Dr. João Costa', language: 'pt', photoUrl: null })
 
     renderLoginPage()
     fireEvent.click(screen.getByRole('button', { name: /Médico/ }))
@@ -90,7 +90,7 @@ describe('LoginPage', () => {
   })
 
   it('waits for the request to resolve before allowing another submit', async () => {
-    let resolveLogin: (v: { token: string; role: 'Patient'; id: string; name: string; language: string }) => void = () => {}
+    let resolveLogin: (v: { token: string; role: 'Patient'; id: string; name: string; language: string; photoUrl: string | null }) => void = () => {}
     mockedPatientLogin.mockReturnValue(new Promise((resolve) => { resolveLogin = resolve }))
 
     renderLoginPage()
@@ -100,7 +100,7 @@ describe('LoginPage', () => {
 
     expect(screen.getByRole('button', { name: /Entrar/ })).toBeDisabled()
 
-    resolveLogin({ token: 'jwt', role: 'Patient', id: '1', name: 'Ana Silva', language: 'pt' })
+    resolveLogin({ token: 'jwt', role: 'Patient', id: '1', name: 'Ana Silva', language: 'pt', photoUrl: null })
     await waitFor(() => expect(screen.getByRole('button', { name: /Entrar/ })).not.toBeDisabled())
   })
 })

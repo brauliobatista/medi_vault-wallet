@@ -130,6 +130,7 @@ body {
   font-weight: 600;
   font-size: 1.05rem;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .mv-user-name {
@@ -349,6 +350,7 @@ body {
   font-weight: 600;
   font-size: 1.05rem;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .mv-topbar-name {

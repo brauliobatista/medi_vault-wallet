@@ -120,6 +120,7 @@ CREATE TABLE doctors (
     institution_id   UUID      NOT NULL,
     nationality_id   INT       NOT NULL,
     language         TEXT      NOT NULL DEFAULT 'pt',
+    photo_path       TEXT,
     is_active        BOOLEAN   NOT NULL DEFAULT TRUE,
     created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_doctors_institution FOREIGN KEY (institution_id) REFERENCES institutions(id),

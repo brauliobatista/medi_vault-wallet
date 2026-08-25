@@ -41,4 +41,20 @@ public class DoctorsController(DoctorService doctorService) : ControllerBase
     [HttpGet("me/finished-consultations")]
     public async Task<IActionResult> GetFinishedConsultations([FromServices] ClinicalRecordsService records) =>
         Ok(await records.GetFinishedConsultationsForDoctorAsync(DoctorId));
+
+    [HttpPost("me/photo")]
+    public async Task<IActionResult> UploadPhoto(IFormFile photo)
+    {
+        var url = await doctorService.UploadPhotoAsync(DoctorId, photo);
+        if (url is null) return BadRequest(new { message = "Ficheiro inválido. Use JPG, PNG ou WEBP até 5MB." });
+        return Ok(new { photoUrl = url });
+    }
+
+    [HttpDelete("me/photo")]
+    public async Task<IActionResult> DeletePhoto()
+    {
+        var success = await doctorService.DeletePhotoAsync(DoctorId);
+        if (!success) return NotFound();
+        return NoContent();
+    }
 }
