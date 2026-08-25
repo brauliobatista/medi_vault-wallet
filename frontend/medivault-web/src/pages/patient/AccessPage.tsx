@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import Layout from '../../components/Layout'
+import AccessRequestsTable, { type AccessRequestsColumn } from '../../components/AccessRequestsTable'
 import { getProfile, getAccessRequests, respondToRequest, deleteRequest, getQrCode, toggleCard, getGoogleWalletUrl } from '../../api/medical'
+import type { AccessRequest } from '../../types/access'
 
 export default function AccessPage() {
-  const [requests, setRequests] = useState<Record<string, unknown>[]>([])
+  const [requests, setRequests] = useState<AccessRequest[]>([])
   const [qrPayload, setQrPayload] = useState<string | null>(null)
   const [qrLoading, setQrLoading] = useState(true)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -58,7 +60,7 @@ export default function AccessPage() {
   }
 
   const handleApprove = async (id: number) => {
-    setRequests((prev) => prev.map((r) => Number(r.id) === id ? { ...r, status: 'approved' } : r))
+    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: 'approved' } : r))
     try {
       await respondToRequest(id, 'approve')
       setSuccessMsg('Acesso aprovado com sucesso.')
@@ -70,7 +72,7 @@ export default function AccessPage() {
   }
 
   const handleDelete = async (id: number, label: string) => {
-    setRequests((prev) => prev.filter((r) => Number(r.id) !== id))
+    setRequests((prev) => prev.filter((r) => r.id !== id))
     try {
       await deleteRequest(id)
       setSuccessMsg(label)
@@ -94,9 +96,50 @@ export default function AccessPage() {
     expired: 'Expirado',
   }
 
+  const formatDate = (value: string | null | undefined) => (value ? value.slice(0, 10) : '—')
+
+  const columns: AccessRequestsColumn[] = [
+    { key: 'doctorName', label: 'Médico', sortable: true, sortValue: (r) => r.doctorName ?? '', render: (r) => <span className="fw-semibold">{r.doctorName}</span> },
+    {
+      key: 'status',
+      label: 'Estado',
+      sortable: true,
+      sortValue: (r) => r.status,
+      render: (r) => <span className={`badge bg-${badgeClass[r.status] ?? 'secondary'}`}>{statusLabel[r.status] ?? r.status}</span>,
+    },
+    { key: 'requestedAt', label: 'Pedido em', sortable: true, sortValue: (r) => r.requestedAt, render: (r) => formatDate(r.requestedAt) },
+    { key: 'approvedAt', label: 'Aprovado em', sortable: true, sortValue: (r) => r.approvedAt ?? '', render: (r) => formatDate(r.approvedAt) },
+    { key: 'expiresAt', label: 'Expira em', sortable: true, sortValue: (r) => r.expiresAt ?? '', render: (r) => formatDate(r.expiresAt) },
+  ]
+
+  const renderActions = (r: AccessRequest) => (
+    <>
+      {r.status === 'pending' && (
+        <>
+          <button className="btn btn-success btn-sm" onClick={() => handleApprove(r.id)}>
+            <i className="bi bi-check me-1" />Aprovar
+          </button>
+          <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(r.id, 'Pedido rejeitado.')}>
+            <i className="bi bi-x me-1" />Rejeitar
+          </button>
+        </>
+      )}
+      {r.status === 'approved' && (
+        <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(r.id, 'Acesso revogado com sucesso.')}>
+          <i className="bi bi-x me-1" />Revogar
+        </button>
+      )}
+      {r.status === 'expired' && (
+        <button className="btn btn-outline-secondary btn-sm" onClick={() => handleDelete(r.id, 'Pedido removido.')}>
+          <i className="bi bi-trash me-1" />Remover
+        </button>
+      )}
+    </>
+  )
+
   return (
     <Layout>
-      <div style={{ maxWidth: 700 }}>
+      <div style={{ maxWidth: 900 }}>
         {successMsg && <div className="alert alert-success py-2 mb-3">{successMsg}</div>}
 
         {/* MediCard status */}
@@ -182,49 +225,12 @@ export default function AccessPage() {
         {/* Access requests */}
         <h6 className="fw-semibold mb-1">Pedidos de Acesso de Médicos</h6>
         <p className="text-muted small mb-3">Os médicos que pediram acesso via formulário aparecem aqui.</p>
-        {requests.length === 0 ? (
-          <p className="text-muted">Sem pedidos de acesso.</p>
-        ) : (
-          <div className="list-group shadow-sm">
-            {requests.map((r) => (
-              <div key={String(r.id)} className="list-group-item">
-                <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                  <div>
-                    <div className="fw-semibold">{String(r.doctorName)}</div>
-                    <small className="text-muted">Pedido em: {String(r.requestedAt).slice(0, 10)}</small>
-                    {Boolean(r.approvedAt) && <small className="text-muted"> · Aprovado: {String(r.approvedAt).slice(0, 10)}</small>}
-                    {Boolean(r.expiresAt) && <small className="text-muted"> · Expira: {String(r.expiresAt).slice(0, 10)}</small>}
-                  </div>
-                  <div className="d-flex align-items-center gap-2">
-                    <span className={`badge bg-${badgeClass[String(r.status)] ?? 'secondary'}`}>
-                      {statusLabel[String(r.status)] ?? String(r.status)}
-                    </span>
-                    {r.status === 'pending' && (
-                      <>
-                        <button className="btn btn-success btn-sm" onClick={() => handleApprove(Number(r.id))}>
-                          <i className="bi bi-check me-1" />Aprovar
-                        </button>
-                        <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(Number(r.id), 'Pedido rejeitado.')}>
-                          <i className="bi bi-x me-1" />Rejeitar
-                        </button>
-                      </>
-                    )}
-                    {r.status === 'approved' && (
-                      <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(Number(r.id), 'Acesso revogado com sucesso.')}>
-                        <i className="bi bi-x me-1" />Revogar
-                      </button>
-                    )}
-                    {r.status === 'expired' && (
-                      <button className="btn btn-outline-secondary btn-sm" onClick={() => handleDelete(Number(r.id), 'Pedido removido.')}>
-                        <i className="bi bi-trash me-1" />Remover
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <AccessRequestsTable
+          requests={requests}
+          columns={columns}
+          renderActions={renderActions}
+          emptyMessage="Sem pedidos de acesso."
+        />
       </div>
     </Layout>
   )
