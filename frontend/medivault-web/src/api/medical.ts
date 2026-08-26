@@ -1,4 +1,5 @@
 ﻿import api from './client'
+import type { AccessRequest } from '../types/access'
 
 export const getProfile = () => api.get('/users/me').then((r) => r.data)
 export const updateProfile = (data: object) => api.put('/users/me', data).then((r) => r.data)
@@ -121,7 +122,7 @@ export const getGoogleWalletUrl = () => api.get('/users/me/wallet/google').then(
 export const scanQrCode = (qrCode: string) =>
   api.post('/access-requests/qr', { qrCode }).then((r) => r.data)
 
-export const getAccessRequests = () => api.get('/access-requests').then((r) => r.data)
+export const getAccessRequests = () => api.get<AccessRequest[]>('/access-requests').then((r) => r.data)
 export const requestAccess = (userId: string) =>
   api.post(`/access-requests/${userId}`).then((r) => r.data)
 export const respondToRequest = (requestId: number, action: 'approve' | 'revoke') =>
@@ -136,7 +137,7 @@ export const toggleCardFor = (userId: string, active: boolean) =>
   api.put(`/users/${userId}/card`, { active })
 
 export const getAccessRequestsFor = (userId: string) =>
-  api.get(`/access-requests/${userId}`).then((r) => r.data)
+  api.get<AccessRequest[]>(`/access-requests/${userId}`).then((r) => r.data)
 export const respondToRequestFor = (userId: string, requestId: number, action: 'approve' | 'revoke') =>
   api.put(`/access-requests/${userId}/${requestId}/respond`, { action })
 export const deleteRequestFor = (userId: string, requestId: number) =>

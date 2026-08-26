@@ -23,6 +23,9 @@ export default {
   'profile.acceptsTransfusion': 'Akzeptiert Bluttransfusion',
   'profile.acceptsResuscitation': 'Akzeptiert Wiederbelebung',
   'profile.emergencyAccess': 'Notfallzugriff',
+  'profile.confirmChangeTitle': 'Änderung bestätigen',
+  'profile.confirmTransfusionWarning': 'Sie sind dabei, Ihre Präferenz zur Annahme von Bluttransfusionen zu ändern. Diese Information wird von medizinischen Teams in Notfallsituationen verwendet.',
+  'profile.confirmResuscitationWarning': 'Sie sind dabei, Ihre Präferenz zu Wiederbelebungsmaßnahmen zu ändern. Diese Information wird von medizinischen Teams in Notfallsituationen verwendet.',
 
   // Dashboard
   'dashboard.examsLabel': 'Untersuchungen (MCDTS)',
@@ -95,6 +98,11 @@ export default {
   'access.requestsTitle': 'Zugriffsanfragen von Ärzten',
   'access.requestsSubtitle': 'Ärzte, die über das Formular Zugriff beantragt haben, erscheinen hier.',
   'access.noRequests': 'Keine Zugriffsanfragen.',
+  'access.doctorLabel': 'Arzt',
+  'access.statusLabel': 'Status',
+  'access.requestedAtLabel': 'Angefragt am',
+  'access.approvedAtLabel': 'Genehmigt am',
+  'access.expiresAtLabel': 'Läuft ab am',
   'access.requestedOn': 'Angefragt am: {date}',
   'access.approvedOn': 'Genehmigt: {date}',
   'access.expiresOn': 'Läuft ab: {date}',

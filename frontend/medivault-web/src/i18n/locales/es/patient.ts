@@ -23,6 +23,9 @@ export default {
   'profile.acceptsTransfusion': 'Acepta transfusión',
   'profile.acceptsResuscitation': 'Maniobras de reanimación',
   'profile.emergencyAccess': 'Acceso de emergencia',
+  'profile.confirmChangeTitle': 'Confirmar cambio',
+  'profile.confirmTransfusionWarning': 'Está a punto de cambiar su preferencia sobre la aceptación de transfusiones de sangre. Esta información es utilizada por los equipos médicos en situaciones de emergencia.',
+  'profile.confirmResuscitationWarning': 'Está a punto de cambiar su preferencia sobre las maniobras de reanimación. Esta información es utilizada por los equipos médicos en situaciones de emergencia.',
 
   // Dashboard
   'dashboard.examsLabel': 'Exámenes (MCDTS)',
@@ -95,6 +98,11 @@ export default {
   'access.requestsTitle': 'Solicitudes de Acceso de Médicos',
   'access.requestsSubtitle': 'Los médicos que solicitaron acceso mediante el formulario aparecen aquí.',
   'access.noRequests': 'Sin solicitudes de acceso.',
+  'access.doctorLabel': 'Médico',
+  'access.statusLabel': 'Estado',
+  'access.requestedAtLabel': 'Solicitado el',
+  'access.approvedAtLabel': 'Aprobado el',
+  'access.expiresAtLabel': 'Caduca el',
   'access.requestedOn': 'Solicitado el: {date}',
   'access.approvedOn': 'Aprobado: {date}',
   'access.expiresOn': 'Caduca: {date}',

@@ -23,6 +23,9 @@ export default {
   'profile.acceptsTransfusion': 'Accepts blood transfusion',
   'profile.acceptsResuscitation': 'Accepts resuscitation',
   'profile.emergencyAccess': 'Emergency access',
+  'profile.confirmChangeTitle': 'Confirm change',
+  'profile.confirmTransfusionWarning': 'You are about to change your blood transfusion acceptance preference. This information is used by medical teams in emergency situations.',
+  'profile.confirmResuscitationWarning': 'You are about to change your resuscitation preference. This information is used by medical teams in emergency situations.',
 
   // Dashboard
   'dashboard.examsLabel': 'Exams (MCDTS)',
@@ -95,6 +98,11 @@ export default {
   'access.requestsTitle': 'Doctor Access Requests',
   'access.requestsSubtitle': 'Doctors who requested access via the form appear here.',
   'access.noRequests': 'No access requests.',
+  'access.doctorLabel': 'Doctor',
+  'access.statusLabel': 'Status',
+  'access.requestedAtLabel': 'Requested on',
+  'access.approvedAtLabel': 'Approved on',
+  'access.expiresAtLabel': 'Expires on',
   'access.requestedOn': 'Requested on: {date}',
   'access.approvedOn': 'Approved: {date}',
   'access.expiresOn': 'Expires: {date}',
