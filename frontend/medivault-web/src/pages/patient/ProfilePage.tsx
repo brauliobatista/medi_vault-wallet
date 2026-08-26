@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
+import Modal from '../../components/Modal'
 import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto } from '../../api/medical'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
+
+const CRITICAL_FIELD_WARNINGS: Record<string, string> = {
+  acceptsTransfusion: 'Está prestes a alterar a sua preferência sobre a aceitação de transfusões de sangue. Esta informação é usada pelas equipas médicas em situações de emergência.',
+  acceptsResuscitation: 'Está prestes a alterar a sua preferência sobre manobras de reanimação. Esta informação é usada pelas equipas médicas em situações de emergência.',
+}
 
 export default function ProfilePage() {
   const { t } = useTranslation()
@@ -13,6 +19,7 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [pendingCritical, setPendingCritical] = useState<{ field: string; value: boolean } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -67,6 +74,20 @@ export default function ProfilePage() {
 
   const handleLanguageSave = async (lang: Language) => {
     await updateProfile({ language: lang })
+  }
+
+  const handleCriticalFieldChange = (field: string, value: boolean) => {
+    setPendingCritical({ field, value })
+  }
+
+  const confirmCriticalChange = () => {
+    if (!pendingCritical) return
+    setForm({ ...form, [pendingCritical.field]: pendingCritical.value })
+    setPendingCritical(null)
+  }
+
+  const cancelCriticalChange = () => {
+    setPendingCritical(null)
   }
 
   if (!profile) return (
@@ -176,8 +197,8 @@ export default function ProfilePage() {
               <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
               <div className="col-12">
                 <div className="row g-2">
-                  <CheckField label={t('profile.acceptsTransfusion')} field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} />
-                  <CheckField label={t('profile.acceptsResuscitation')} field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} />
+                  <CheckField label={t('profile.acceptsTransfusion')} field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
+                  <CheckField label={t('profile.acceptsResuscitation')} field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
                   <CheckField label={t('profile.emergencyAccess')} field="emergencyAccess" form={form} setForm={setForm} editing={false} />
                 </div>
               </div>
@@ -189,6 +210,16 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+
+        {pendingCritical && (
+          <Modal title="Confirmar alteração" onClose={cancelCriticalChange}>
+            <p>{CRITICAL_FIELD_WARNINGS[pendingCritical.field]}</p>
+            <div className="d-flex justify-content-end gap-2 mt-3">
+              <button className="btn btn-outline-secondary btn-sm" onClick={cancelCriticalChange}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={confirmCriticalChange}>Confirmar</button>
+            </div>
+          </Modal>
+        )}
       </div>
     </Layout>
   )
@@ -246,8 +277,9 @@ function SelectField({ label, field, form, setForm, editing, options, numeric, n
   )
 }
 
-function CheckField({ label, field, form, setForm, editing }: {
+function CheckField({ label, field, form, setForm, editing, onCriticalChange }: {
   label: string; field: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean
+  onCriticalChange?: (field: string, value: boolean) => void
 }) {
   return (
     <div className="col-auto">
@@ -256,7 +288,7 @@ function CheckField({ label, field, form, setForm, editing }: {
           className="form-check-input"
           type="checkbox"
           checked={Boolean(form[field])}
-          onChange={(e) => setForm({ ...form, [field]: e.target.checked })}
+          onChange={(e) => onCriticalChange ? onCriticalChange(field, e.target.checked) : setForm({ ...form, [field]: e.target.checked })}
           disabled={!editing}
           id={field}
         />

@@ -13,6 +13,7 @@ import {
   getAccessRequestsFor, respondToRequestFor, deleteRequestFor,
 } from '../../api/medical'
 import { useTranslation } from '../../i18n/LanguageContext'
+import type { AccessRequest } from '../../types/access'
 
 type TabKey = 'profile' | 'history' | 'medications' | 'allergies' | 'exams' | 'vaccinations' | 'habits' | 'access'
 
@@ -29,7 +30,7 @@ export default function DependentViewPage() {
   const [data, setData] = useState<Record<string, unknown>[]>([])
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  const [requests, setRequests] = useState<Record<string, unknown>[]>([])
+  const [requests, setRequests] = useState<AccessRequest[]>([])
   const [qrPayload, setQrPayload] = useState<string | null>(null)
   const [qrLoading, setQrLoading] = useState(true)
   const [cardActive, setCardActive] = useState<boolean | null>(null)
