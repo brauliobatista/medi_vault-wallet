@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
-import { scanQrCode, getAccessStatus, getFinishedConsultations } from '../../api/medical'
+import { scanQrCode, getAccessStatus, getFinishedConsultations, getDraftConsultations } from '../../api/medical'
 
 interface FinishedConsultation {
   id: number
@@ -14,6 +14,16 @@ interface FinishedConsultation {
   startedAt: string
   finishedAt: string
   durationMinutes: number
+}
+
+interface DraftConsultation {
+  id: number
+  userId: string
+  patientName: string
+  patientPublicId: string
+  utentNumber: string
+  startedAt: string
+  updatedAt: string
 }
 
 export default function DoctorDashboardPage() {
@@ -38,6 +48,9 @@ export default function DoctorDashboardPage() {
 
   const [finishedConsultations, setFinishedConsultations] = useState<FinishedConsultation[]>([])
   useEffect(() => { getFinishedConsultations().then(setFinishedConsultations).catch(() => {}) }, [])
+
+  const [draftConsultations, setDraftConsultations] = useState<DraftConsultation[]>([])
+  useEffect(() => { getDraftConsultations().then(setDraftConsultations).catch(() => {}) }, [])
 
   // ── Patient search ────────────────────────────────────────────
   const handleSearch = async () => {
@@ -293,6 +306,44 @@ export default function DoctorDashboardPage() {
           )}
         </div>
 
+        {/* Draft consultations (standby) */}
+        {draftConsultations.length > 0 && (
+          <div className="dash-card mt-4">
+            <div className="dash-card-header">
+              <div className="dash-card-heading">
+                <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-hourglass-split" /></span>
+                <span className="dash-card-title">Rascunhos de Consultas</span>
+              </div>
+            </div>
+
+            {draftConsultations.map((c) => (
+              <div className="consult-context-item context-plain" key={c.id}>
+                <i className="bi bi-person-circle" />
+                <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <div className="consult-context-value fw-semibold">{c.patientName}</div>
+                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · Nº utente: {c.utentNumber}</div>
+                    <div className="consult-context-sub">
+                      Em standby desde {c.updatedAt.slice(0, 10)}
+                    </div>
+                  </div>
+                  <button
+                    className="consult-finish-btn"
+                    onClick={() => navigate(`/doctor/patient/${c.userId}`, {
+                      state: {
+                        publicId: c.patientPublicId, patientName: c.patientName,
+                        consultationId: c.id, startedAt: c.startedAt,
+                      },
+                    })}
+                  >
+                    <i className="bi bi-play-fill" />Retomar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Finished consultations */}
         {finishedConsultations.length > 0 && (
           <div className="dash-card mt-4">
@@ -319,7 +370,8 @@ export default function DoctorDashboardPage() {
                     onClick={() => navigate(`/doctor/finished-consultation/${c.id}`, {
                       state: {
                         patientName: c.patientName, userId: c.userId, patientPublicId: c.patientPublicId,
-                        utentNumber: c.utentNumber, durationMinutes: c.durationMinutes, finishedAt: c.finishedAt,
+                        utentNumber: c.utentNumber, durationMinutes: c.durationMinutes,
+                        startedAt: c.startedAt, finishedAt: c.finishedAt,
                       },
                     })}
                   >
