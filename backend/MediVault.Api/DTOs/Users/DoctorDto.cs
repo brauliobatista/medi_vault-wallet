@@ -12,10 +12,12 @@ public record DoctorProfileDto(
     string InstitutionType,
     string? InstitutionAddress,
     string? InstitutionPhone,
-    string? NationalityName
+    string? NationalityName,
+    string Language
 );
 
 public record UpdateDoctorRequest(
     string? Email,
-    string? Speciality
+    string? Speciality,
+    string? Language
 );

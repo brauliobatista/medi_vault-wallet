@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal'
 import { getAssessments, addAssessment, updateAssessment, deleteAssessment } from '../api/medical'
+import { useTranslation } from '../i18n/LanguageContext'
 
 interface Props { userId: string; onClose: () => void }
 interface Assessment { id: number; hypothesis: string; plan: string; createdAt: string }
@@ -8,6 +9,7 @@ interface Assessment { id: number; hypothesis: string; plan: string; createdAt: 
 const emptyForm = { hypothesis: '', plan: '' }
 
 export default function AssessmentsModal({ userId, onClose }: Props) {
+  const { t } = useTranslation()
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -30,53 +32,53 @@ export default function AssessmentsModal({ userId, onClose }: Props) {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Remover esta avaliação?')) return
+    if (!confirm(t('assessmentsModal.confirmDelete'))) return
     await deleteAssessment(userId, id)
     load()
   }
 
   return (
-    <Modal title="Avaliações" onClose={onClose}>
+    <Modal title={t('assessmentsModal.title')} onClose={onClose}>
       <div className="mv-modal-toolbar">
-        <button className="consult-finish-btn" onClick={startCreate}><i className="bi bi-plus-lg" /> Adicionar avaliação</button>
+        <button className="consult-finish-btn" onClick={startCreate}><i className="bi bi-plus-lg" /> {t('assessmentsModal.addButton')}</button>
       </div>
 
       {showForm && (
         <div className="mv-modal-form">
           <div className="mb-3">
-            <label className="mv-modal-form-label">Hipótese diagnóstica</label>
+            <label className="mv-modal-form-label">{t('assessmentsModal.hypothesisLabel')}</label>
             <textarea className="form-control form-control-sm" rows={2} value={form.hypothesis} onChange={(e) => setForm({ ...form, hypothesis: e.target.value })} />
           </div>
           <div className="mb-3">
-            <label className="mv-modal-form-label">Plano diagnóstico</label>
+            <label className="mv-modal-form-label">{t('assessmentsModal.planLabel')}</label>
             <textarea className="form-control form-control-sm" rows={2} value={form.plan} onChange={(e) => setForm({ ...form, plan: e.target.value })} />
           </div>
           <div className="d-flex gap-2">
-            <button className="consult-finish-btn" onClick={handleSave}><i className="bi bi-check-lg" /> Guardar</button>
-            <button className="dash-toolbar-btn" onClick={() => setShowForm(false)}>Cancelar</button>
+            <button className="consult-finish-btn" onClick={handleSave}><i className="bi bi-check-lg" /> {t('common.save')}</button>
+            <button className="dash-toolbar-btn" onClick={() => setShowForm(false)}>{t('common.cancel')}</button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <p className="text-muted">A carregar…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       ) : assessments.length === 0 ? (
-        <p className="mv-empty-state">Sem avaliações registadas.</p>
+        <p className="mv-empty-state">{t('assessmentsModal.emptyState')}</p>
       ) : (
         assessments.map((a, idx) => (
           <div className="consult-avaliacao-card" key={a.id}>
             <div className="consult-avaliacao-header">
               <span className={`consult-avaliacao-dot ${idx % 2 === 0 ? 'dot-blue' : 'dot-purple'}`} />
-              <span className="consult-avaliacao-title">Avaliação {assessments.length - idx}</span>
-              <button className="consult-link-btn consult-avaliacao-edit" onClick={() => startEdit(a)}>Editar</button>
+              <span className="consult-avaliacao-title">{t('assessmentsModal.assessmentNumber', { n: assessments.length - idx })}</span>
+              <button className="consult-link-btn consult-avaliacao-edit" onClick={() => startEdit(a)}>{t('common.edit')}</button>
               <button className="mv-icon-btn danger" onClick={() => handleDelete(a.id)}><i className="bi bi-trash" /></button>
             </div>
             <div className="consult-avaliacao-field">
-              <div className="consult-field-label">Hipótese diagnóstica</div>
+              <div className="consult-field-label">{t('assessmentsModal.hypothesisLabel')}</div>
               <div>{a.hypothesis}</div>
             </div>
             <div className="consult-avaliacao-field">
-              <div className="consult-field-label">Plano diagnóstico</div>
+              <div className="consult-field-label">{t('assessmentsModal.planLabel')}</div>
               <div>{a.plan}</div>
             </div>
           </div>

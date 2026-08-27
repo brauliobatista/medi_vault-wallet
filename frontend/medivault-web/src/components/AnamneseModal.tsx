@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal'
 import { getAnamneses, addAnamnesis, updateAnamnesis } from '../api/medical'
+import { useTranslation } from '../i18n/LanguageContext'
 
 interface Props { userId: string; onClose: () => void }
 
@@ -18,6 +19,7 @@ interface Anamnesis {
 const emptyForm = { chiefComplaint: '', illnessHistory: '', personalHistory: '' }
 
 export default function AnamneseModal({ userId, onClose }: Props) {
+  const { t } = useTranslation()
   const [anamneses, setAnamneses] = useState<Anamnesis[]>([])
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState<'none' | 'new' | 'edit'>('none')
@@ -46,26 +48,26 @@ export default function AnamneseModal({ userId, onClose }: Props) {
       load()
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setError(msg ?? 'Não foi possível guardar.')
+      setError(msg ?? t('anamneseModal.saveError'))
     }
   }
 
   return (
-    <Modal title="Anamnese" onClose={onClose}>
+    <Modal title={t('anamneseModal.title')} onClose={onClose}>
       {loading ? (
-        <p className="text-muted">A carregar…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       ) : (
         <>
           <div className="mv-modal-toolbar" style={{ justifyContent: 'space-between' }}>
             <div>
               {current && (
-                <button className="dash-toolbar-btn" onClick={startEdit} disabled={!current.canEdit} title={!current.canEdit ? 'Só o médico que criou este registo o pode editar, e só nas primeiras 24h' : ''}>
-                  <i className="bi bi-pencil" /> Editar atual
+                <button className="dash-toolbar-btn" onClick={startEdit} disabled={!current.canEdit} title={!current.canEdit ? t('anamneseModal.editRestrictedTooltip') : ''}>
+                  <i className="bi bi-pencil" /> {t('anamneseModal.editCurrentButton')}
                 </button>
               )}
             </div>
             <button className="consult-finish-btn" onClick={startNew}>
-              <i className="bi bi-plus-lg" /> Nova anamnese
+              <i className="bi bi-plus-lg" /> {t('anamneseModal.newButton')}
             </button>
           </div>
 
@@ -78,36 +80,36 @@ export default function AnamneseModal({ userId, onClose }: Props) {
                 </div>
               )}
               <div className="mb-3">
-                <label className="mv-modal-form-label">Queixa principal</label>
+                <label className="mv-modal-form-label">{t('anamneseModal.chiefComplaintLabel')}</label>
                 <textarea className="form-control form-control-sm" rows={2} value={form.chiefComplaint} onChange={(e) => setForm({ ...form, chiefComplaint: e.target.value })} />
               </div>
               <div className="mb-3">
-                <label className="mv-modal-form-label">História da doença atual</label>
+                <label className="mv-modal-form-label">{t('anamneseModal.illnessHistoryLabel')}</label>
                 <textarea className="form-control form-control-sm" rows={2} value={form.illnessHistory} onChange={(e) => setForm({ ...form, illnessHistory: e.target.value })} />
               </div>
               <div className="mb-3">
-                <label className="mv-modal-form-label">História pessoal relevante</label>
+                <label className="mv-modal-form-label">{t('anamneseModal.personalHistoryLabel')}</label>
                 <textarea className="form-control form-control-sm" rows={2} value={form.personalHistory} onChange={(e) => setForm({ ...form, personalHistory: e.target.value })} />
               </div>
               <div className="d-flex gap-2">
-                <button className="consult-finish-btn" onClick={handleSave}><i className="bi bi-check-lg" /> Guardar</button>
-                <button className="dash-toolbar-btn" onClick={() => setMode('none')}>Cancelar</button>
+                <button className="consult-finish-btn" onClick={handleSave}><i className="bi bi-check-lg" /> {t('common.save')}</button>
+                <button className="dash-toolbar-btn" onClick={() => setMode('none')}>{t('common.cancel')}</button>
               </div>
             </div>
           )}
 
-          {!current && mode === 'none' && <p className="mv-empty-state">Sem registos de anamnese.</p>}
+          {!current && mode === 'none' && <p className="mv-empty-state">{t('anamneseModal.emptyState')}</p>}
 
           {anamneses.map((a, idx) => (
             <div className="consult-avaliacao-card" key={a.id}>
               <div className="consult-avaliacao-header">
                 <span className={`consult-avaliacao-dot ${idx === 0 ? 'dot-blue' : 'dot-purple'}`} />
-                <span className="consult-avaliacao-title">{idx === 0 ? 'Atual' : 'Anterior'} — {a.doctorName}</span>
+                <span className="consult-avaliacao-title">{idx === 0 ? t('anamneseModal.current') : t('anamneseModal.previous')} — {a.doctorName}</span>
                 <span className="consult-context-sub ms-auto">{a.createdAt.slice(0, 16).replace('T', ' ')}</span>
               </div>
-              {a.chiefComplaint && <div className="consult-avaliacao-field"><div className="consult-field-label">Queixa principal</div><div>{a.chiefComplaint}</div></div>}
-              {a.illnessHistory && <div className="consult-avaliacao-field"><div className="consult-field-label">História da doença atual</div><div>{a.illnessHistory}</div></div>}
-              {a.personalHistory && <div className="consult-avaliacao-field"><div className="consult-field-label">História pessoal relevante</div><div>{a.personalHistory}</div></div>}
+              {a.chiefComplaint && <div className="consult-avaliacao-field"><div className="consult-field-label">{t('anamneseModal.chiefComplaintLabel')}</div><div>{a.chiefComplaint}</div></div>}
+              {a.illnessHistory && <div className="consult-avaliacao-field"><div className="consult-field-label">{t('anamneseModal.illnessHistoryLabel')}</div><div>{a.illnessHistory}</div></div>}
+              {a.personalHistory && <div className="consult-avaliacao-field"><div className="consult-field-label">{t('anamneseModal.personalHistoryLabel')}</div><div>{a.personalHistory}</div></div>}
             </div>
           ))}
         </>

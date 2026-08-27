@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import Layout from '../../components/Layout'
+import LanguageSelector from '../../components/LanguageSelector'
 import Modal from '../../components/Modal'
 import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto } from '../../api/medical'
+import { useTranslation } from '../../i18n/LanguageContext'
+import { isLanguage, type Language } from '../../i18n/languages'
 
 const CRITICAL_FIELD_WARNINGS: Record<string, string> = {
   acceptsTransfusion: 'Está prestes a alterar a sua preferência sobre a aceitação de transfusões de sangue. Esta informação é usada pelas equipas médicas em situações de emergência.',
@@ -9,6 +12,7 @@ const CRITICAL_FIELD_WARNINGS: Record<string, string> = {
 }
 
 export default function ProfilePage() {
+  const { t } = useTranslation()
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Record<string, unknown>>({})
@@ -54,7 +58,7 @@ export default function ProfilePage() {
       const p = await getProfile()
       setProfile(p)
     } catch {
-      setPhotoError('Não foi possível carregar a imagem. Use JPG, PNG ou WEBP até 5MB.')
+      setPhotoError(t('profile.photoUploadError'))
     } finally {
       setPhotoUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -62,10 +66,14 @@ export default function ProfilePage() {
   }
 
   const handlePhotoRemove = async () => {
-    if (!confirm('Remover a foto de perfil?')) return
+    if (!confirm(t('profile.confirmRemovePhoto'))) return
     await deleteProfilePhoto()
     const p = await getProfile()
     setProfile(p)
+  }
+
+  const handleLanguageSave = async (lang: Language) => {
+    await updateProfile({ language: lang })
   }
 
   const handleCriticalFieldChange = (field: string, value: boolean) => {
@@ -94,20 +102,20 @@ export default function ProfilePage() {
     <Layout>
       <div style={{ maxWidth: 700 }}>
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5 className="mb-0 fw-semibold">Informações pessoais</h5>
+          <h5 className="mb-0 fw-semibold">{t('profile.personalInfo')}</h5>
           <button className="btn btn-outline-primary btn-sm" onClick={() => setEditing(!editing)}>
             <i className={`bi ${editing ? 'bi-x' : 'bi-pencil'} me-1`} />
-            {editing ? 'Cancelar' : 'Editar'}
+            {editing ? t('common.cancel') : t('common.edit')}
           </button>
         </div>
-        {saved && <div className="alert alert-success py-2">Guardado com sucesso.</div>}
+        {saved && <div className="alert alert-success py-2">{t('common.savedSuccess')}</div>}
 
         <div className="card border-0 shadow-sm mb-3">
           <div className="card-body d-flex align-items-center gap-3 flex-wrap">
             {profile.photoUrl ? (
               <img
                 src={String(profile.photoUrl)}
-                alt="Foto de perfil"
+                alt={t('profile.photoAlt')}
                 className="rounded-circle"
                 style={{ width: 80, height: 80, objectFit: 'cover' }}
               />
@@ -124,6 +132,7 @@ export default function ProfilePage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                capture="user"
                 className="d-none"
                 onChange={handlePhotoSelect}
               />
@@ -134,11 +143,11 @@ export default function ProfilePage() {
               >
                 {photoUploading
                   ? <span className="spinner-border spinner-border-sm" />
-                  : <><i className="bi bi-camera me-1" />{profile.photoUrl ? 'Alterar foto' : 'Adicionar foto'}</>}
+                  : <><i className="bi bi-camera me-1" />{profile.photoUrl ? t('profile.changePhoto') : t('profile.addPhoto')}</>}
               </button>
               {Boolean(profile.photoUrl) && (
                 <button className="btn btn-outline-danger btn-sm" onClick={handlePhotoRemove}>
-                  <i className="bi bi-trash me-1" />Remover
+                  <i className="bi bi-trash me-1" />{t('profile.removePhoto')}
                 </button>
               )}
               {photoError && <div className="text-danger small mt-1">{photoError}</div>}
@@ -149,49 +158,54 @@ export default function ProfilePage() {
         <div className="card border-0 shadow-sm">
           <div className="card-body">
             <div className="row g-3">
-              <Field label="Nº Utente" value={String(profile.utentNumber)} />
-              <Field label="Nome" value={`${profile.firstName} ${profile.lastName}`} />
-              <Field label="Data de Nascimento" value={String(profile.birthday)} />
-              <Field label="Grupo Sanguíneo" value={String(profile.bloodType ?? '-')} />
-              <Field label="Nacionalidade" value={String(profile.nationalityName ?? '-')} />
+              <Field label={t('profile.utentNumber')} value={String(profile.utentNumber)} />
+              <Field label={t('profile.name')} value={`${profile.firstName} ${profile.lastName}`} />
+              <Field label={t('profile.birthday')} value={String(profile.birthday)} />
+              <Field label={t('profile.bloodType')} value={String(profile.bloodType ?? t('common.na'))} />
+              <Field label={t('profile.nationality')} value={String(profile.nationalityName ?? t('common.na'))} />
               <SelectField
-                label="Sexo Biológico"
+                label={t('profile.biologicalGender')}
                 field="biologicalGender"
                 form={form}
                 setForm={setForm}
                 editing={editing}
+                naLabel={t('common.na')}
+                selectLabel={t('common.select')}
                 options={[
-                  { value: 'M', label: 'Masculino' },
-                  { value: 'F', label: 'Feminino' },
+                  { value: 'M', label: t('profile.genderMale') },
+                  { value: 'F', label: t('profile.genderFemale') },
                 ]}
               />
               <SelectField
-                label="Género"
+                label={t('profile.gender')}
                 field="sexId"
                 form={form}
                 setForm={setForm}
                 editing={editing}
                 numeric
+                naLabel={t('common.na')}
+                selectLabel={t('common.select')}
                 options={[
-                  { value: '1', label: 'Masculino' },
-                  { value: '2', label: 'Feminino' },
-                  { value: '3', label: 'Outro' },
+                  { value: '1', label: t('profile.genderMale') },
+                  { value: '2', label: t('profile.genderFemale') },
+                  { value: '3', label: t('profile.genderOther') },
                 ]}
               />
-              <EditableField label="Email" field="email" form={form} setForm={setForm} editing={editing} />
-              <EditableField label="Telefone" field="phone" form={form} setForm={setForm} editing={editing} />
-              <EditableField label="Profissão" field="profession" form={form} setForm={setForm} editing={editing} />
+              <EditableField label={t('profile.email')} field="email" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
+              <EditableField label={t('profile.phone')} field="phone" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
+              <EditableField label={t('profile.profession')} field="profession" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
+              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
               <div className="col-12">
                 <div className="row g-2">
-                  <CheckField label="Aceita transfusão" field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
-                  <CheckField label="Manobras de reanimação" field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
-                  <CheckField label="Acesso de emergência" field="emergencyAccess" form={form} setForm={setForm} editing={false} />
+                  <CheckField label={t('profile.acceptsTransfusion')} field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
+                  <CheckField label={t('profile.acceptsResuscitation')} field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
+                  <CheckField label={t('profile.emergencyAccess')} field="emergencyAccess" form={form} setForm={setForm} editing={false} />
                 </div>
               </div>
             </div>
             {editing && (
               <div className="mt-3">
-                <button className="btn btn-primary" onClick={handleSave}>Guardar</button>
+                <button className="btn btn-primary" onClick={handleSave}>{t('common.save')}</button>
               </div>
             )}
           </div>
@@ -220,8 +234,8 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-function EditableField({ label, field, form, setForm, editing }: {
-  label: string; field: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean
+function EditableField({ label, field, form, setForm, editing, naLabel }: {
+  label: string; field: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean; naLabel: string
 }) {
   return (
     <div className="col-sm-6">
@@ -233,15 +247,15 @@ function EditableField({ label, field, form, setForm, editing }: {
           onChange={(e) => setForm({ ...form, [field]: e.target.value })}
         />
       ) : (
-        <div className="fw-semibold">{String(form[field] || '-')}</div>
+        <div className="fw-semibold">{String(form[field] || naLabel)}</div>
       )}
     </div>
   )
 }
 
-function SelectField({ label, field, form, setForm, editing, options, numeric }: {
+function SelectField({ label, field, form, setForm, editing, options, numeric, naLabel, selectLabel }: {
   label: string; field: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean
-  options: { value: string; label: string }[]; numeric?: boolean
+  options: { value: string; label: string }[]; numeric?: boolean; naLabel: string; selectLabel: string
 }) {
   const current = options.find((o) => o.value === String(form[field] ?? ''))
   return (
@@ -253,11 +267,11 @@ function SelectField({ label, field, form, setForm, editing, options, numeric }:
           value={String(form[field] ?? '')}
           onChange={(e) => setForm({ ...form, [field]: numeric ? Number(e.target.value) : e.target.value })}
         >
-          <option value="" disabled>Selecionar…</option>
+          <option value="" disabled>{selectLabel}</option>
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       ) : (
-        <div className="fw-semibold">{current?.label ?? '-'}</div>
+        <div className="fw-semibold">{current?.label ?? naLabel}</div>
       )}
     </div>
   )

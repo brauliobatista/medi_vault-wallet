@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import DoctorDashboardPage from './DoctorDashboardPage'
 import { saveUser } from '../../hooks/useAuth'
 import { getFinishedConsultations } from '../../api/medical'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../api/client', () => ({
   default: { get: vi.fn(), post: vi.fn() },
@@ -19,12 +20,14 @@ const mockedGetFinished = vi.mocked(getFinishedConsultations)
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/doctor']}>
-      <Routes>
-        <Route path="/doctor" element={<DoctorDashboardPage />} />
-        <Route path="/doctor/finished-consultation/:consultationId" element={<div>Página da consulta finalizada</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter initialEntries={['/doctor']}>
+        <Routes>
+          <Route path="/doctor" element={<DoctorDashboardPage />} />
+          <Route path="/doctor/finished-consultation/:consultationId" element={<div>Página da consulta finalizada</div>} />
+        </Routes>
+      </MemoryRouter>
+    </LanguageProvider>,
   )
 }
 

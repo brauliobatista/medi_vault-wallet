@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
+import LanguageSelector from '../../components/LanguageSelector'
 import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword } from '../../api/medical'
-
-const institutionTypeLabels: Record<string, string> = {
-  hospital: 'Hospital',
-  clinic: 'Clínica',
-  lab: 'Laboratório',
-  pharmacy: 'Farmácia',
-  other: 'Outro',
-}
+import { useTranslation } from '../../i18n/LanguageContext'
+import { isLanguage, type Language } from '../../i18n/languages'
 
 export default function DoctorProfilePage() {
+  const { t } = useTranslation()
+  const institutionTypeLabels: Record<string, string> = {
+    hospital: t('doctorProfile.institutionTypeHospital'),
+    clinic: t('doctorProfile.institutionTypeClinic'),
+    lab: t('doctorProfile.institutionTypeLab'),
+    pharmacy: t('doctorProfile.institutionTypePharmacy'),
+    other: t('doctorProfile.institutionTypeOther'),
+  }
+
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Record<string, string>>({})
@@ -37,18 +41,22 @@ export default function DoctorProfilePage() {
     setForm({ email: p.email, speciality: p.speciality ?? '' })
   }
 
+  const handleLanguageSave = async (lang: Language) => {
+    await updateDoctorProfile({ language: lang })
+  }
+
   const handlePassword = async () => {
     setPwError('')
     setPwOk(false)
-    if (pwForm.next !== pwForm.confirm) { setPwError('As passwords não coincidem.'); return }
-    if (pwForm.next.length < 6) { setPwError('A nova password deve ter pelo menos 6 caracteres.'); return }
+    if (pwForm.next !== pwForm.confirm) { setPwError(t('doctorProfile.passwordMismatch')); return }
+    if (pwForm.next.length < 6) { setPwError(t('doctorProfile.passwordTooShort')); return }
     try {
       await changeDoctorPassword({ currentPassword: pwForm.current, newPassword: pwForm.next })
       setPwOk(true)
       setPwForm({ current: '', next: '', confirm: '' })
       setShowPw(false)
     } catch {
-      setPwError('Password atual incorreta.')
+      setPwError(t('doctorProfile.currentPasswordWrong'))
     }
   }
 
@@ -64,29 +72,29 @@ export default function DoctorProfilePage() {
     <Layout>
       <div style={{ maxWidth: 680 }}>
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5 className="mb-0 fw-semibold">Informações profissionais</h5>
+          <h5 className="mb-0 fw-semibold">{t('doctorProfile.professionalInfo')}</h5>
           <button className="btn btn-outline-primary btn-sm" onClick={() => setEditing(!editing)}>
             <i className={`bi ${editing ? 'bi-x' : 'bi-pencil'} me-1`} />
-            {editing ? 'Cancelar' : 'Editar'}
+            {editing ? t('common.cancel') : t('common.edit')}
           </button>
         </div>
 
-        {saved && <div className="alert alert-success py-2">Guardado com sucesso.</div>}
-        {pwOk && <div className="alert alert-success py-2">Password alterada com sucesso.</div>}
+        {saved && <div className="alert alert-success py-2">{t('common.savedSuccess')}</div>}
+        {pwOk && <div className="alert alert-success py-2">{t('doctorProfile.passwordChangedSuccess')}</div>}
 
         <div className="card border-0 shadow-sm mb-3">
           <div className="card-body">
             <div className="row g-3">
               <div className="col-sm-6">
-                <div className="text-muted small">Nº Ordem dos Médicos</div>
+                <div className="text-muted small">{t('doctorProfile.ordemMedicosId')}</div>
                 <div className="fw-semibold">{String(profile.ordemMedicosId)}</div>
               </div>
               <div className="col-sm-6">
-                <div className="text-muted small">Nome</div>
+                <div className="text-muted small">{t('profile.name')}</div>
                 <div className="fw-semibold">{String(profile.firstName)} {String(profile.lastName)}</div>
               </div>
               <div className="col-12">
-                <div className="text-muted small">Instituição de Saúde</div>
+                <div className="text-muted small">{t('doctorProfile.healthInstitution')}</div>
                 <div className="d-flex align-items-center flex-wrap gap-2">
                   <span className="fw-semibold">
                     <i className="bi bi-hospital me-1 text-primary" />
@@ -116,7 +124,7 @@ export default function DoctorProfilePage() {
                 )}
               </div>
               <div className="col-sm-6">
-                <div className="text-muted small">Email</div>
+                <div className="text-muted small">{t('profile.email')}</div>
                 {editing ? (
                   <input className="form-control form-control-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 ) : (
@@ -124,21 +132,22 @@ export default function DoctorProfilePage() {
                 )}
               </div>
               <div className="col-sm-6">
-                <div className="text-muted small">Especialidade</div>
+                <div className="text-muted small">{t('doctorProfile.speciality')}</div>
                 {editing ? (
                   <input className="form-control form-control-sm" value={form.speciality} onChange={(e) => setForm({ ...form, speciality: e.target.value })} />
                 ) : (
-                  <div className="fw-semibold">{String(profile.speciality ?? '-')}</div>
+                  <div className="fw-semibold">{String(profile.speciality ?? t('common.na'))}</div>
                 )}
               </div>
               <div className="col-sm-6">
-                <div className="text-muted small">Nacionalidade</div>
-                <div className="fw-semibold">{String(profile.nationalityName ?? '-')}</div>
+                <div className="text-muted small">{t('profile.nationality')}</div>
+                <div className="fw-semibold">{String(profile.nationalityName ?? t('common.na'))}</div>
               </div>
+              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
             </div>
             {editing && (
               <div className="mt-3">
-                <button className="btn btn-primary btn-sm" onClick={handleSave}>Guardar</button>
+                <button className="btn btn-primary btn-sm" onClick={handleSave}>{t('common.save')}</button>
               </div>
             )}
           </div>
@@ -151,7 +160,7 @@ export default function DoctorProfilePage() {
             style={{ cursor: 'pointer' }}
             onClick={() => setShowPw(!showPw)}
           >
-            <span><i className="bi bi-lock me-2" />Alterar password</span>
+            <span><i className="bi bi-lock me-2" />{t('doctorProfile.changePassword')}</span>
             <i className={`bi bi-chevron-${showPw ? 'up' : 'down'}`} />
           </div>
           {showPw && (
@@ -159,19 +168,19 @@ export default function DoctorProfilePage() {
               {pwError && <div className="alert alert-danger py-2">{pwError}</div>}
               <div className="row g-2">
                 <div className="col-12">
-                  <label className="form-label small">Password atual</label>
+                  <label className="form-label small">{t('doctorProfile.currentPassword')}</label>
                   <input type="password" className="form-control form-control-sm" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} />
                 </div>
                 <div className="col-sm-6">
-                  <label className="form-label small">Nova password</label>
+                  <label className="form-label small">{t('doctorProfile.newPassword')}</label>
                   <input type="password" className="form-control form-control-sm" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} />
                 </div>
                 <div className="col-sm-6">
-                  <label className="form-label small">Confirmar password</label>
+                  <label className="form-label small">{t('doctorProfile.confirmPassword')}</label>
                   <input type="password" className="form-control form-control-sm" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} />
                 </div>
                 <div className="col-12 mt-1">
-                  <button className="btn btn-primary btn-sm" onClick={handlePassword}>Alterar password</button>
+                  <button className="btn btn-primary btn-sm" onClick={handlePassword}>{t('doctorProfile.changePassword')}</button>
                 </div>
               </div>
             </div>

@@ -66,7 +66,7 @@ public class DoctorServiceTests
         var doctor = TestDataFactory.SeedDoctor(db);
         var sut = new DoctorService(db);
 
-        var result = await sut.UpdateProfileAsync(doctor.Id, new UpdateDoctorRequest("new@example.com", "Pediatria"));
+        var result = await sut.UpdateProfileAsync(doctor.Id, new UpdateDoctorRequest("new@example.com", "Pediatria", null));
 
         Assert.True(result);
         var updated = await sut.GetProfileAsync(doctor.Id);
@@ -80,7 +80,7 @@ public class DoctorServiceTests
         using var db = TestDbContextFactory.Create();
         var sut = new DoctorService(db);
 
-        var result = await sut.UpdateProfileAsync("missing-id", new UpdateDoctorRequest("a@b.com", null));
+        var result = await sut.UpdateProfileAsync("missing-id", new UpdateDoctorRequest("a@b.com", null, null));
 
         Assert.False(result);
     }

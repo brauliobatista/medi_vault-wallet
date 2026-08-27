@@ -6,6 +6,7 @@ import type { AxiosResponse } from 'axios'
 import AccessPage from './AccessPage'
 import { saveUser } from '../../hooks/useAuth'
 import { getProfile, getAccessRequests, getQrCode, respondToRequest, deleteRequest } from '../../api/medical'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 const fakeAxiosResponse = {} as AxiosResponse
 
@@ -27,9 +28,11 @@ const mockedDeleteRequest = vi.mocked(deleteRequest)
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <AccessPage />
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter>
+        <AccessPage />
+      </MemoryRouter>
+    </LanguageProvider>,
   )
 }
 
