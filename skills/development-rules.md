@@ -26,9 +26,10 @@ Load this skill at the start of every ticket/task in this project, whenever writ
 
 ### Git / PR workflow
 - No direct commits to `main` — every change goes through a Pull Request.
+- Every Pull Request must always target `main` as its base branch, and each ticket must have its own separate PR — never bundle more than one ticket's changes into a single PR.
 - A PR needs at least one reviewer approval before it can be merged.
 - Branch names follow the ticket key (`KAN##-short-description`).
-- Claude must never run `git commit` or `git push` in this repo — make the file changes only and leave committing and pushing to the developer, every time, no exceptions.
+- Claude may run `git commit` and `git push` for ticket branches and to open Pull Requests. Claude must never commit or push directly to `main` without human review — that always goes through a PR.
 
 ## Checklist before finishing a ticket
 
