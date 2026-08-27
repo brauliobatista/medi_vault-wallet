@@ -11,7 +11,7 @@ vi.mock('../../api/medical', () => ({
   updateProfile: vi.fn(),
   uploadProfilePhoto: vi.fn(),
   deleteProfilePhoto: vi.fn(),
-  getAccessRequests: vi.fn().mockResolvedValue([]),
+  getAccessRequests: vi.fn(),
 }))
 
 const mockedGetProfile = vi.mocked(getProfile)
@@ -25,17 +25,11 @@ const baseProfile = {
   firstName: 'Ana',
   lastName: 'Silva',
   birthday: '1990-01-01',
-  bloodType: 'A+',
+  bloodType: 'O+',
   nationalityName: 'Portuguesa',
   email: 'ana@example.com',
-  phone: '912345678',
-  profession: 'Engenheira',
-  maritalStatus: 'Solteira',
-  acceptsTransfusion: false,
-  acceptsResuscitation: false,
-  emergencyAccess: false,
-  biologicalGender: 'F',
-  sexId: 2,
+  phone: '',
+  profession: '',
   photoUrl: null,
 }
 
@@ -123,15 +117,68 @@ describe('ProfilePage', () => {
     await waitFor(() => expect(mockedDelete).toHaveBeenCalled())
     expect(await screen.findByRole('button', { name: /Adicionar foto/ })).toBeInTheDocument()
   })
+
+  it('shows the phone country code as "+code Country" when not editing', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile, phoneCountryCode: '351' })
+
+    renderPage()
+
+    expect(await screen.findByText('+351 Portugal')).toBeInTheDocument()
+  })
+
+  it('shows the placeholder when no phone country code is set', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+
+    await screen.findByText('Indicativo do País')
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  })
+
+  it('lets the patient search for and select a phone country code, then saves it', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: /Editar/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Selecionar…' }))
+    fireEvent.change(screen.getByPlaceholderText('Pesquisar'), { target: { value: 'Espanha' } })
+    fireEvent.click(await screen.findByText('Espanha'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(mockedUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ phoneCountryCode: '34' }),
+    ))
+  })
 })
+
+const criticalFieldsProfile = {
+  utentNumber: '123456789',
+  firstName: 'Ana',
+  lastName: 'Silva',
+  birthday: '1990-01-01',
+  bloodType: 'A+',
+  nationalityName: 'Portuguesa',
+  email: 'ana@example.com',
+  phone: '912345678',
+  profession: 'Engenheira',
+  maritalStatus: 'Solteira',
+  acceptsTransfusion: false,
+  acceptsResuscitation: false,
+  emergencyAccess: false,
+  biologicalGender: 'F',
+  sexId: 2,
+  photoUrl: null,
+}
 
 describe('ProfilePage - critical field confirmation popup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
     saveUser({ id: 'u1', name: 'Ana Silva', role: 'Patient' }, 'token')
-    mockedGetProfile.mockResolvedValue(baseProfile)
-    mockedUpdateProfile.mockResolvedValue(baseProfile)
+    mockedGetProfile.mockResolvedValue(criticalFieldsProfile)
+    mockedUpdateProfile.mockResolvedValue(criticalFieldsProfile)
     mockedGetAccessRequests.mockResolvedValue([])
   })
 

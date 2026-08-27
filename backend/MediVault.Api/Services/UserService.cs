@@ -21,7 +21,7 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
                 NationalityName = x.Nationality != null ? x.Nationality.Name : null,
                 x.MaritalStatus, x.BloodType,
                 x.AcceptsTransfusion, x.AcceptsResuscitation, x.EmergencyAccessCode,
-                x.IsDependent, x.Profession, x.Phone, x.CardActive, x.PhotoPath, x.Language
+                x.IsDependent, x.Profession, x.Phone, x.CardActive, x.PhotoPath, x.Language, x.PhoneCountryCode
             })
             .FirstOrDefaultAsync();
         if (row is null) return null;
@@ -31,7 +31,7 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
             row.MaritalStatus, row.BloodType,
             row.AcceptsTransfusion == 1, row.AcceptsResuscitation == 1,
             row.EmergencyAccessCode == 1, row.IsDependent == 1, row.Profession, row.Phone,
-            row.CardActive == 1, ToPhotoUrl(row.PhotoPath), row.Language);
+            row.CardActive == 1, ToPhotoUrl(row.PhotoPath), row.Language, row.PhoneCountryCode);
     }
 
     public async Task<bool> UpdateProfileAsync(string userId, UpdateUserRequest req)
@@ -41,6 +41,7 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
 
         if (req.Email is not null) u.Email = req.Email;
         if (req.Phone is not null) u.Phone = req.Phone;
+        if (req.PhoneCountryCode is not null) u.PhoneCountryCode = req.PhoneCountryCode;
         if (req.Profession is not null) u.Profession = req.Profession;
         if (req.MaritalStatus is not null) u.MaritalStatus = req.MaritalStatus;
         if (req.AcceptsTransfusion.HasValue) u.AcceptsTransfusion = req.AcceptsTransfusion.Value ? 1 : 0;
