@@ -194,7 +194,7 @@ export default function ProfilePage() {
               <EditableField label={t('profile.email')} field="email" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.phone')} field="phone" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.profession')} field="profession" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
-              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
+              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} editing={editing} onSave={handleLanguageSave} />
               <div className="col-12">
                 <div className="row g-2">
                   <CheckField label={t('profile.acceptsTransfusion')} field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />

@@ -143,7 +143,7 @@ export default function DoctorProfilePage() {
                 <div className="text-muted small">{t('profile.nationality')}</div>
                 <div className="fw-semibold">{String(profile.nationalityName ?? t('common.na'))}</div>
               </div>
-              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
+              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} editing={editing} onSave={handleLanguageSave} />
             </div>
             {editing && (
               <div className="mt-3">

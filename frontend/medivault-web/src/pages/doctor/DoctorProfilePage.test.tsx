@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import DoctorProfilePage from './DoctorProfilePage'
 import { saveUser } from '../../hooks/useAuth'
@@ -57,6 +57,20 @@ describe('DoctorProfilePage', () => {
     expect(screen.getByText('Hospital')).toBeInTheDocument()
     expect(screen.getByText('Rua A, 123')).toBeInTheDocument()
     expect(screen.getByText('212345678')).toBeInTheDocument()
+  })
+
+  it('only allows changing the language while editing', async () => {
+    mockedGet.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+    await screen.findByText('Hospital Central')
+
+    const languageLabel = screen.getByText('Idioma da Plataforma')
+    const languageSelect = languageLabel.parentElement!.querySelector('select') as HTMLSelectElement
+    expect(languageSelect).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: /Editar/ }))
+    expect(languageSelect).toBeEnabled()
   })
 
   it('does not render the address/phone line when the institution has none', async () => {
