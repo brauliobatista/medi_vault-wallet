@@ -76,7 +76,7 @@ export default function DoctorAccessPage() {
   const columns: AccessRequestsColumn[] = [
     {
       key: 'patientName',
-      label: 'Paciente',
+      label: t('doctorAccess.patientLabel'),
       sortable: true,
       sortValue: (r) => r.patientName ?? '',
       render: (r) => (
@@ -88,14 +88,14 @@ export default function DoctorAccessPage() {
     },
     {
       key: 'status',
-      label: 'Estado',
+      label: t('doctorAccess.statusLabel'),
       sortable: true,
       sortValue: (r) => r.status,
       render: (r) => <span className={`badge bg-${badgeClass[r.status] ?? 'secondary'}`}>{statusLabel[r.status] ?? r.status}</span>,
     },
-    { key: 'requestedAt', label: 'Pedido em', sortable: true, sortValue: (r) => r.requestedAt, render: (r) => formatDate(r.requestedAt) },
-    { key: 'approvedAt', label: 'Aprovado em', sortable: true, sortValue: (r) => r.approvedAt ?? '', render: (r) => formatDate(r.approvedAt) },
-    { key: 'expiresAt', label: 'Expira em', sortable: true, sortValue: (r) => r.expiresAt ?? '', render: (r) => formatDate(r.expiresAt) },
+    { key: 'requestedAt', label: t('doctorAccess.requestedAtLabel'), sortable: true, sortValue: (r) => r.requestedAt, render: (r) => formatDate(r.requestedAt) },
+    { key: 'approvedAt', label: t('doctorAccess.approvedAtLabel'), sortable: true, sortValue: (r) => r.approvedAt ?? '', render: (r) => formatDate(r.approvedAt) },
+    { key: 'expiresAt', label: t('doctorAccess.expiresAtLabel'), sortable: true, sortValue: (r) => r.expiresAt ?? '', render: (r) => formatDate(r.expiresAt) },
   ]
 
   const renderActions = (r: AccessRequest) =>

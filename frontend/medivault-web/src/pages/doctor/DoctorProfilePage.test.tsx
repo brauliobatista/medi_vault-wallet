@@ -60,6 +60,20 @@ describe('DoctorProfilePage', () => {
     expect(screen.getByText('212345678')).toBeInTheDocument()
   })
 
+  it('only allows changing the language while editing', async () => {
+    mockedGet.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+    await screen.findByText('Hospital Central')
+
+    const languageLabel = screen.getByText('Idioma da Plataforma')
+    const languageSelect = languageLabel.parentElement!.querySelector('select') as HTMLSelectElement
+    expect(languageSelect).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: /Editar/ }))
+    expect(languageSelect).toBeEnabled()
+  })
+
   it('does not render the address/phone line when the institution has none', async () => {
     mockedGet.mockResolvedValue({
       ...baseProfile,

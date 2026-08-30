@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
+import CountryCodeSelect from '../../components/CountryCodeSelect'
 import Modal from '../../components/Modal'
 import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto, changePassword } from '../../api/medical'
 import { logout } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
+import { COUNTRY_CALLING_CODES } from '../../data/countryCallingCodes'
 
 const LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS = 1200
 
-const CRITICAL_FIELD_WARNINGS: Record<string, string> = {
-  acceptsTransfusion: 'Está prestes a alterar a sua preferência sobre a aceitação de transfusões de sangue. Esta informação é usada pelas equipas médicas em situações de emergência.',
-  acceptsResuscitation: 'Está prestes a alterar a sua preferência sobre manobras de reanimação. Esta informação é usada pelas equipas médicas em situações de emergência.',
+const CRITICAL_FIELD_WARNING_KEYS: Record<string, string> = {
+  acceptsTransfusion: 'profile.confirmTransfusionWarning',
+  acceptsResuscitation: 'profile.confirmResuscitationWarning',
 }
 
 export default function ProfilePage() {
@@ -34,6 +36,7 @@ export default function ProfilePage() {
       setProfile(p)
       setForm({
         email: p.email,
+        phoneCountryCode: p.phoneCountryCode ?? '',
         phone: p.phone ?? '',
         profession: p.profession ?? '',
         maritalStatus: p.maritalStatus ?? '',
@@ -216,9 +219,10 @@ export default function ProfilePage() {
                 ]}
               />
               <EditableField label={t('profile.email')} field="email" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
+              <PhoneCountryCodeField label={t('profile.phoneCountryCode')} form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.phone')} field="phone" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.profession')} field="profession" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
-              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
+              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} editing={editing} onSave={handleLanguageSave} />
               <div className="col-12">
                 <div className="row g-2">
                   <CheckField label={t('profile.acceptsTransfusion')} field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
@@ -269,11 +273,11 @@ export default function ProfilePage() {
         </div>
 
         {pendingCritical && (
-          <Modal title="Confirmar alteração" onClose={cancelCriticalChange}>
-            <p>{CRITICAL_FIELD_WARNINGS[pendingCritical.field]}</p>
+          <Modal title={t('profile.confirmChangeTitle')} onClose={cancelCriticalChange}>
+            <p>{t(CRITICAL_FIELD_WARNING_KEYS[pendingCritical.field])}</p>
             <div className="d-flex justify-content-end gap-2 mt-3">
-              <button className="btn btn-outline-secondary btn-sm" onClick={cancelCriticalChange}>Cancelar</button>
-              <button className="btn btn-primary btn-sm" onClick={confirmCriticalChange}>Confirmar</button>
+              <button className="btn btn-outline-secondary btn-sm" onClick={cancelCriticalChange}>{t('common.cancel')}</button>
+              <button className="btn btn-primary btn-sm" onClick={confirmCriticalChange}>{t('common.confirm')}</button>
             </div>
           </Modal>
         )}
@@ -305,6 +309,32 @@ function EditableField({ label, field, form, setForm, editing, naLabel }: {
         />
       ) : (
         <div className="fw-semibold">{String(form[field] || naLabel)}</div>
+      )}
+    </div>
+  )
+}
+
+function PhoneCountryCodeField({ label, form, setForm, editing, naLabel }: {
+  label: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean; naLabel: string
+}) {
+  const { language } = useTranslation()
+  const value = String(form.phoneCountryCode ?? '')
+
+  const displayValue = () => {
+    if (!value) return naLabel
+    const match = COUNTRY_CALLING_CODES.find((c) => c.callingCode === value)
+    if (!match) return `+${value}`
+    const name = new Intl.DisplayNames([language], { type: 'region' }).of(match.iso2)
+    return `+${value}${name ? ` ${name}` : ''}`
+  }
+
+  return (
+    <div className="col-sm-6">
+      <label className="form-label text-muted small mb-0">{label}</label>
+      {editing ? (
+        <CountryCodeSelect value={value} onChange={(code) => setForm({ ...form, phoneCountryCode: code })} />
+      ) : (
+        <div className="fw-semibold">{displayValue()}</div>
       )}
     </div>
   )

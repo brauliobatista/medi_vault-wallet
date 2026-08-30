@@ -49,12 +49,13 @@ public class UserServiceTests
         var sut = new UserService(db, env);
 
         var result = await sut.UpdateProfileAsync(user.Id,
-            new UpdateUserRequest("new@example.com", "912345678", "Enfermeiro", "Casado", true, false, null, null, null));
+            new UpdateUserRequest("new@example.com", "912345678", "Enfermeiro", "Casado", true, false, null, null, null, "351"));
 
         Assert.True(result);
         var updated = await sut.GetProfileAsync(user.Id);
         Assert.Equal("new@example.com", updated!.Email);
         Assert.Equal("912345678", updated.Phone);
+        Assert.Equal("351", updated.PhoneCountryCode);
         Assert.True(updated.AcceptsTransfusion);
         Assert.False(updated.AcceptsResuscitation);
         Assert.Single(db.PendingReviewFlags.Where(f => f.UserId == user.Id && f.Section == "identification"));
@@ -68,7 +69,7 @@ public class UserServiceTests
         var sut = new UserService(db, env);
 
         var result = await sut.UpdateProfileAsync("missing-id",
-            new UpdateUserRequest(null, null, null, null, null, null, null, null, null));
+            new UpdateUserRequest(null, null, null, null, null, null, null, null, null, null));
 
         Assert.False(result);
     }
