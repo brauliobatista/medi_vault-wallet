@@ -30,6 +30,7 @@ public class User
     [Column("is_active")] public int IsActive { get; set; } = 1;
     [Column("card_active")] public int CardActive { get; set; } = 1;
     [Column("photo_path")] public string? PhotoPath { get; set; }
+    [Column("language")] public string Language { get; set; } = "pt";
     [Column("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
     [Column("updated_at")] public string UpdatedAt { get; set; } = DateTime.UtcNow.ToString("o");
 

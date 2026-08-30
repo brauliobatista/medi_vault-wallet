@@ -21,7 +21,8 @@ public record UserProfileDto(
     string? Profession,
     string? Phone,
     bool CardActive,
-    string? PhotoUrl
+    string? PhotoUrl,
+    string Language
 );
 
 public record UpdateUserRequest(
@@ -32,7 +33,8 @@ public record UpdateUserRequest(
     bool? AcceptsTransfusion,
     bool? AcceptsResuscitation,
     string? BiologicalGender,
-    int? SexId
+    int? SexId,
+    string? Language
 );
 
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);

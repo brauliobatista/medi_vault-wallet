@@ -142,6 +142,10 @@ using (var scope = app.Services.CreateScope())
         catch { /* table already exists */ }
         try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN photo_path TEXT"); }
         catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN language TEXT NOT NULL DEFAULT 'pt'"); }
+        catch { /* column already exists */ }
+        try { db.Database.ExecuteSqlRaw("ALTER TABLE doctors ADD COLUMN language TEXT NOT NULL DEFAULT 'pt'"); }
+        catch { /* column already exists */ }
         try
         {
             db.Database.ExecuteSqlRaw(@"CREATE TABLE IF NOT EXISTS consultations (

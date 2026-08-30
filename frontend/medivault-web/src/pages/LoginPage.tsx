@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { patientLogin, doctorLogin } from '../api/auth'
 import { saveUser } from '../hooks/useAuth'
+import { useTranslation } from '../i18n/LanguageContext'
+import { isLanguage } from '../i18n/languages'
 
 export default function LoginPage() {
+  const { t, setLanguage } = useTranslation()
   const [tab, setTab] = useState<'patient' | 'doctor'>('patient')
   const [utentNumber, setUtentNumber] = useState('')
   const [ordemId, setOrdemId] = useState('')
@@ -29,9 +32,10 @@ export default function LoginPage() {
         ? await patientLogin(utentNumber, password)
         : await doctorLogin(ordemId, password)
       saveUser({ id: result.id, name: result.name, role: result.role }, result.token)
+      if (isLanguage(result.language)) setLanguage(result.language)
       navigate(result.role === 'Doctor' ? '/doctor' : '/dashboard')
     } catch {
-      setError('Credenciais inválidas. Verifique e tente novamente.')
+      setError(t('login.invalidCredentials'))
     } finally {
       setLoading(false)
     }
@@ -44,8 +48,8 @@ export default function LoginPage() {
           <div className="col-md-5">
             <div className="text-center mb-4">
               <i className="bi bi-heart-pulse text-primary" style={{ fontSize: 48 }} />
-              <h2 className="fw-bold text-primary mt-2">MediVault</h2>
-              <p className="text-muted">A sua carteira de saúde digital</p>
+              <h2 className="fw-bold text-primary mt-2">{t('app.name')}</h2>
+              <p className="text-muted">{t('app.subtitle')}</p>
             </div>
             <div className="card shadow-sm">
               <div className="card-body p-4">
@@ -55,7 +59,7 @@ export default function LoginPage() {
                       className={`nav-link w-100 ${tab === 'patient' ? 'active' : ''}`}
                       onClick={() => switchTab('patient')}
                     >
-                      <i className="bi bi-person me-1" />Paciente
+                      <i className="bi bi-person me-1" />{t('login.patientTab')}
                     </button>
                   </li>
                   <li className="nav-item w-50">
@@ -63,7 +67,7 @@ export default function LoginPage() {
                       className={`nav-link w-100 ${tab === 'doctor' ? 'active' : ''}`}
                       onClick={() => switchTab('doctor')}
                     >
-                      <i className="bi bi-hospital me-1" />Médico
+                      <i className="bi bi-hospital me-1" />{t('login.doctorTab')}
                     </button>
                   </li>
                 </ul>
@@ -73,7 +77,7 @@ export default function LoginPage() {
                 <form onSubmit={handleSubmit}>
                   {tab === 'patient' ? (
                     <div className="mb-3">
-                      <label className="form-label">Número de Utente</label>
+                      <label className="form-label">{t('login.utentNumber')}</label>
                       <input
                         className="form-control"
                         value={utentNumber}
@@ -84,7 +88,7 @@ export default function LoginPage() {
                     </div>
                   ) : (
                     <div className="mb-3">
-                      <label className="form-label">Nº Ordem dos Médicos</label>
+                      <label className="form-label">{t('login.ordemMedicosId')}</label>
                       <input
                         className="form-control"
                         value={ordemId}
@@ -96,7 +100,7 @@ export default function LoginPage() {
                   )}
 
                   <div className="mb-4">
-                    <label className="form-label">Password</label>
+                    <label className="form-label">{t('login.password')}</label>
                     <input
                       type="password"
                       className="form-control"
@@ -108,7 +112,7 @@ export default function LoginPage() {
 
                   <button className="btn btn-primary w-100" type="submit" disabled={loading}>
                     {loading ? <span className="spinner-border spinner-border-sm me-2" /> : null}
-                    Entrar
+                    {t('login.submit')}
                   </button>
                 </form>
               </div>

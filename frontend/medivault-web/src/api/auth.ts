@@ -5,6 +5,7 @@ export interface LoginResponse {
   role: 'Patient' | 'Doctor'
   id: string
   name: string
+  language: string
 }
 
 export const patientLogin = (utentNumber: string, password: string) =>

@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import DoctorAccessPage from './DoctorAccessPage'
 import { saveUser } from '../../hooks/useAuth'
 import { getAccessRequests } from '../../api/medical'
+import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../api/medical', () => ({
   getAccessRequests: vi.fn(),
@@ -14,9 +15,11 @@ const mockedGetAccessRequests = vi.mocked(getAccessRequests)
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <DoctorAccessPage />
-    </MemoryRouter>,
+    <LanguageProvider>
+      <MemoryRouter>
+        <DoctorAccessPage />
+      </MemoryRouter>
+    </LanguageProvider>,
   )
 }
 

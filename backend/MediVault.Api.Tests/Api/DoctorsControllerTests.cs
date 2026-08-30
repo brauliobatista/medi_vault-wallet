@@ -62,7 +62,7 @@ public class DoctorsControllerTests
         var doctor = TestDataFactory.SeedDoctor(db);
         var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
 
-        var response = await client.PutAsJsonAsync("/api/doctors/me", new UpdateDoctorRequest("new@example.com", "Cardiologia"));
+        var response = await client.PutAsJsonAsync("/api/doctors/me", new UpdateDoctorRequest("new@example.com", "Cardiologia", null));
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         using var verifyDb = factory.CreateDbContext();
