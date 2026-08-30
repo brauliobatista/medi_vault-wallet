@@ -182,6 +182,20 @@ describe('ProfilePage - critical field confirmation popup', () => {
     mockedGetAccessRequests.mockResolvedValue([])
   })
 
+  it('only allows changing the language while editing', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+    await screen.findByRole('button', { name: /Editar/ })
+
+    const languageLabel = screen.getByText('Idioma da Plataforma')
+    const languageSelect = languageLabel.parentElement!.querySelector('select') as HTMLSelectElement
+    expect(languageSelect).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: /Editar/ }))
+    expect(languageSelect).toBeEnabled()
+  })
+
   it('shows a warning popup instead of applying the change immediately when toggling "Aceita transfusão"', async () => {
     renderPage()
     await waitFor(() => expect(mockedGetProfile).toHaveBeenCalled())
