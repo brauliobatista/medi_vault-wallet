@@ -17,6 +17,7 @@ import {
   getDocuments,
   getChatMessages,
   getFamilyCircle,
+  getDoctorNotes,
   saveConsultationDraft,
   finishConsultation,
 } from '../../api/medical'
@@ -28,10 +29,11 @@ import AssessmentsModal from '../../components/AssessmentsModal'
 import AnamneseModal from '../../components/AnamneseModal'
 import DocumentsModal from '../../components/DocumentsModal'
 import ChatModal from '../../components/ChatModal'
+import NotesModal from '../../components/NotesModal'
 import { useTranslation } from '../../i18n/LanguageContext'
 
 type CenterTab = 'anamnese' | 'exame' | 'diagnostico' | 'plano' | 'prescricao' | 'documentos'
-type OpenModal = 'contexto' | 'prescricao' | 'exames' | 'vitais' | 'avaliacoes' | 'anamnese' | 'documentos' | 'chat' | null
+type OpenModal = 'contexto' | 'prescricao' | 'exames' | 'vitais' | 'avaliacoes' | 'anamnese' | 'documentos' | 'chat' | 'notas' | null
 
 interface Summary {
   userId: string
@@ -60,6 +62,7 @@ interface VitalSign {
 }
 interface MedicalFile { id: number; fileName: string; fileType: string | null; fileUrl: string; uploadedAt: string; uploadedByName: string | null }
 interface ChatMessage { id: number; authorDoctorId: string; authorName: string; message: string; createdAt: string }
+interface DoctorNote { id: number; doctorId: string; doctorName: string; section: string; noteText: string; createdAt: string; updatedAt: string }
 interface FamilyContact { userId: string; name: string; phone: string | null; relationshipCode: string; direction: 'guardian' | 'dependent' }
 
 type TFunc = (key: string, vars?: Record<string, string | number>) => string
@@ -114,7 +117,7 @@ export default function PatientViewPage() {
   const uid = patientId!
   const location = useLocation()
   const navigate = useNavigate()
-  const navState = location.state as { publicId?: string; patientName?: string } | null
+  const navState = location.state as { publicId?: string; patientName?: string; consultationId?: number; startedAt?: string } | null
 
   const [patientName, setPatientName] = useState(navState?.patientName ?? '')
   const [publicId, setPublicId] = useState(navState?.publicId ?? '')
@@ -130,15 +133,16 @@ export default function PatientViewPage() {
   const [vitals, setVitals] = useState<VitalSign[]>([])
   const [documents, setDocuments] = useState<MedicalFile[]>([])
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [notes, setNotes] = useState<DoctorNote[]>([])
   const [familyCircle, setFamilyCircle] = useState<FamilyContact[]>([])
   const [deniedReason, setDeniedReason] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<CenterTab>('anamnese')
   const [openModal, setOpenModal] = useState<OpenModal>(null)
 
-  const [startedAt] = useState(() => new Date())
+  const [startedAt] = useState(() => (navState?.startedAt ? new Date(navState.startedAt) : new Date()))
   const [elapsedSec, setElapsedSec] = useState(0)
-  const [consultationId, setConsultationId] = useState<number | null>(null)
+  const [consultationId, setConsultationId] = useState<number | null>(navState?.consultationId ?? null)
   const [savingDraft, setSavingDraft] = useState(false)
   const [finishing, setFinishing] = useState(false)
   const [draftSavedMsg, setDraftSavedMsg] = useState(false)
@@ -181,8 +185,9 @@ export default function PatientViewPage() {
       getDocuments(uid),
       getChatMessages(uid),
       getFamilyCircle(uid),
+      getDoctorNotes(uid),
     ])
-      .then(([summaryRes, pathRes, allergyRes, medRes, analyticalRes, imagingRes, optometryRes, anamnesesRes, assessmentsRes, vitalsRes, documentsRes, chatRes, familyRes]) => {
+      .then(([summaryRes, pathRes, allergyRes, medRes, analyticalRes, imagingRes, optometryRes, anamnesesRes, assessmentsRes, vitalsRes, documentsRes, chatRes, familyRes, notesRes]) => {
         setSummary(summaryRes)
         setPathologies(pathRes)
         setAllergies(allergyRes)
@@ -193,6 +198,7 @@ export default function PatientViewPage() {
         setDocuments(documentsRes)
         setChatMessages(chatRes)
         setFamilyCircle(familyRes)
+        setNotes(notesRes)
 
         type Analytical = { id: number; examDate: string; laboratory: string | null; parameters: { isAbnormal: boolean }[] }
         type Imaging = { id: number; examType: string; examDate: string }
@@ -692,6 +698,25 @@ export default function PatientViewPage() {
 
           <div className="consult-panel">
             <div className="consult-panel-header">
+              Notas
+              <button className="consult-link-btn" onClick={() => setOpenModal('notas')}>Ver notas</button>
+            </div>
+            {notes.length > 0 ? (
+              <div className="consult-context-item context-plain">
+                <i className="bi bi-sticky" />
+                <div className="flex-grow-1">
+                  <div className="consult-context-title">{notes[0].section}</div>
+                  <div className="consult-context-value">{notes[0].noteText}</div>
+                  <div className="consult-context-sub">{notes[0].updatedAt.slice(0, 16).replace('T', ' ')}</div>
+                </div>
+              </div>
+            ) : (
+              <p className="consult-context-sub mb-0">Sem notas registadas.</p>
+            )}
+          </div>
+
+          <div className="consult-panel">
+            <div className="consult-panel-header">
               {t('patientRecord.teamChat')}
               <button className="consult-link-btn" onClick={() => setOpenModal('chat')}>{t('patientRecord.viewConversations')}</button>
             </div>
@@ -723,6 +748,7 @@ export default function PatientViewPage() {
       {openModal === 'anamnese' && <AnamneseModal userId={uid} onClose={closeModalAndReload} />}
       {openModal === 'documentos' && <DocumentsModal userId={uid} onClose={closeModalAndReload} />}
       {openModal === 'chat' && <ChatModal userId={uid} onClose={closeModalAndReload} />}
+      {openModal === 'notas' && <NotesModal userId={uid} startedAt={startedAt.toISOString()} onClose={closeModalAndReload} />}
     </Layout>
   )
 }

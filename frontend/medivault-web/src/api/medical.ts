@@ -3,6 +3,7 @@ import type { AccessRequest } from '../types/access'
 
 export const getProfile = () => api.get('/users/me').then((r) => r.data)
 export const updateProfile = (data: object) => api.put('/users/me', data).then((r) => r.data)
+export const changePassword = (data: object) => api.put('/users/me/password', data)
 
 export const uploadProfilePhoto = (file: File) => {
   const formData = new FormData()
@@ -181,4 +182,8 @@ export const finishConsultation = (userId: string, data: object) =>
   api.post(`/patients/${userId}/consultation/finish`, data).then((r) => r.data)
 export const getFinishedConsultations = () =>
   api.get('/doctors/me/finished-consultations').then((r) => r.data)
+export const getDraftConsultations = () =>
+  api.get('/doctors/me/draft-consultations').then((r) => r.data)
+export const getConsultationActivity = (userId: string, startedAt: string, endedAt?: string) =>
+  api.get(`/patients/${userId}/consultation/activity`, { params: { startedAt, endedAt } }).then((r) => r.data)
 

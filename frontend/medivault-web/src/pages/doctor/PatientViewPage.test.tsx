@@ -21,6 +21,7 @@ import {
   getDocuments,
   getChatMessages,
   getFamilyCircle,
+  getDoctorNotes,
   saveConsultationDraft,
   finishConsultation,
 } from '../../api/medical'
@@ -45,6 +46,7 @@ vi.mock('../../api/medical', () => ({
   getDocuments: vi.fn(),
   getChatMessages: vi.fn(),
   getFamilyCircle: vi.fn(),
+  getDoctorNotes: vi.fn(),
   saveConsultationDraft: vi.fn(),
   finishConsultation: vi.fn(),
 }))
@@ -62,10 +64,10 @@ const summary = {
   utentNumber: '123456789', photoUrl: null,
 }
 
-function renderPage() {
+function renderPage(state?: object) {
   return render(
     <LanguageProvider>
-      <MemoryRouter initialEntries={['/doctor/patient/u1']}>
+      <MemoryRouter initialEntries={[{ pathname: '/doctor/patient/u1', state }]}>
         <Routes>
           <Route path="/doctor/patient/:patientId" element={<PatientViewPage />} />
           <Route path="/doctor" element={<div>Dashboard do médico</div>} />
@@ -97,6 +99,7 @@ describe('PatientViewPage', () => {
     vi.mocked(getDocuments).mockResolvedValue([])
     vi.mocked(getChatMessages).mockResolvedValue([])
     vi.mocked(getFamilyCircle).mockResolvedValue([])
+    vi.mocked(getDoctorNotes).mockResolvedValue([])
   })
 
   it('renders the draft and finish buttons once the patient loads', async () => {
@@ -127,5 +130,33 @@ describe('PatientViewPage', () => {
 
     await waitFor(() => expect(mockedFinish).toHaveBeenCalledWith('u1', expect.objectContaining({ consultationId: null })))
     expect(await screen.findByText('Dashboard do médico')).toBeInTheDocument()
+  })
+
+  it('resumes a draft: pre-fills the consultation id from navigation state instead of creating a new one', async () => {
+    mockedSaveDraft.mockResolvedValue({ id: 5, status: 'draft', startedAt: '2026-08-19T10:00:00Z', finishedAt: null, updatedAt: '2026-08-19T10:05:00Z' })
+    renderPage({ patientName: 'João Silva', publicId: 'PUB123', consultationId: 5, startedAt: '2026-08-19T10:00:00Z' })
+    const draftButton = await screen.findByRole('button', { name: /Guardar rascunho/ })
+
+    fireEvent.click(draftButton)
+
+    await waitFor(() => expect(mockedSaveDraft).toHaveBeenCalledWith('u1', expect.objectContaining({ consultationId: 5 })))
+  })
+
+  it('shows an empty state in the Notas panel when there are no notes', async () => {
+    renderPage()
+
+    expect(await screen.findByText('Notas')).toBeInTheDocument()
+    expect(screen.getByText('Sem notas registadas.')).toBeInTheDocument()
+  })
+
+  it('previews the most recent note in the Notas panel', async () => {
+    vi.mocked(getDoctorNotes).mockResolvedValue([
+      { id: 1, doctorId: 'd1', doctorName: 'Dr. Carlos Rodrigues', section: 'Diagnóstico', noteText: 'Suspeita de hipertensão', createdAt: '2026-08-19T10:05:00Z', updatedAt: '2026-08-19T10:05:00Z' },
+    ])
+
+    renderPage()
+
+    expect(await screen.findByText('Suspeita de hipertensão')).toBeInTheDocument()
+    expect(screen.getByText('Suspeita de hipertensão').previousElementSibling).toHaveTextContent('Diagnóstico')
   })
 })

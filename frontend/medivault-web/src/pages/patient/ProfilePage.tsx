@@ -3,10 +3,13 @@ import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
 import CountryCodeSelect from '../../components/CountryCodeSelect'
 import Modal from '../../components/Modal'
-import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto } from '../../api/medical'
+import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto, changePassword } from '../../api/medical'
+import { logout } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
 import { COUNTRY_CALLING_CODES } from '../../data/countryCallingCodes'
+
+const LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS = 1200
 
 const CRITICAL_FIELD_WARNING_KEYS: Record<string, string> = {
   acceptsTransfusion: 'profile.confirmTransfusionWarning',
@@ -21,6 +24,10 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+  const [showPw, setShowPw] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwOk, setPwOk] = useState(false)
   const [pendingCritical, setPendingCritical] = useState<{ field: string; value: boolean } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -79,6 +86,22 @@ export default function ProfilePage() {
     await updateProfile({ language: lang })
   }
 
+  const handlePassword = async () => {
+    setPwError('')
+    setPwOk(false)
+    if (pwForm.next !== pwForm.confirm) { setPwError(t('profile.passwordMismatch')); return }
+    if (pwForm.next.length < 6) { setPwError(t('profile.passwordTooShort')); return }
+    try {
+      await changePassword({ currentPassword: pwForm.current, newPassword: pwForm.next })
+      setPwOk(true)
+      setPwForm({ current: '', next: '', confirm: '' })
+      setShowPw(false)
+      setTimeout(logout, LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS)
+    } catch {
+      setPwError(t('profile.currentPasswordWrong'))
+    }
+  }
+
   const handleCriticalFieldChange = (field: string, value: boolean) => {
     setPendingCritical({ field, value })
   }
@@ -112,6 +135,7 @@ export default function ProfilePage() {
           </button>
         </div>
         {saved && <div className="alert alert-success py-2">{t('common.savedSuccess')}</div>}
+        {pwOk && <div className="alert alert-success py-2">{t('profile.passwordChangedSuccess')}</div>}
 
         <div className="card border-0 shadow-sm mb-3">
           <div className="card-body d-flex align-items-center gap-3 flex-wrap">
@@ -213,6 +237,39 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="card border-0 shadow-sm mt-3">
+          <div
+            className="card-header bg-white d-flex justify-content-between align-items-center"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setShowPw(!showPw)}
+          >
+            <span><i className="bi bi-lock me-2" />{t('profile.changePassword')}</span>
+            <i className={`bi bi-chevron-${showPw ? 'up' : 'down'}`} />
+          </div>
+          {showPw && (
+            <div className="card-body">
+              {pwError && <div className="alert alert-danger py-2">{pwError}</div>}
+              <div className="row g-2">
+                <div className="col-12">
+                  <label className="form-label small">{t('profile.currentPassword')}</label>
+                  <input type="password" className="form-control form-control-sm" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} />
+                </div>
+                <div className="col-sm-6">
+                  <label className="form-label small">{t('profile.newPassword')}</label>
+                  <input type="password" className="form-control form-control-sm" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} />
+                </div>
+                <div className="col-sm-6">
+                  <label className="form-label small">{t('profile.confirmPassword')}</label>
+                  <input type="password" className="form-control form-control-sm" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} />
+                </div>
+                <div className="col-12 mt-1">
+                  <button className="btn btn-primary btn-sm" onClick={handlePassword}>{t('profile.changePassword')}</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {pendingCritical && (

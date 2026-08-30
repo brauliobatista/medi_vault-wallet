@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
 import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword } from '../../api/medical'
+import { logout } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
+
+const LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS = 1200
 
 export default function DoctorProfilePage() {
   const { t } = useTranslation()
@@ -55,6 +58,7 @@ export default function DoctorProfilePage() {
       setPwOk(true)
       setPwForm({ current: '', next: '', confirm: '' })
       setShowPw(false)
+      setTimeout(logout, LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS)
     } catch {
       setPwError(t('doctorProfile.currentPasswordWrong'))
     }
