@@ -166,124 +166,224 @@ using (var scope = app.Services.CreateScope())
     var seedPath = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "database", "seed.sql"));
     DatabaseSeeder.Seed(db, seedPath);
 
-    // EnsureCreated() only creates tables/columns from the EF model — triggers aren't
-    // part of that model, so the two overlap-prevention triggers (see database/schema_sqlite.sql)
-    // are created here with raw SQL, mirroring that file exactly.
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_overlap_insert
-        BEFORE INSERT ON doctor_schedule_events
-        FOR EACH ROW
-        WHEN EXISTS (
-            SELECT 1 FROM doctor_schedule_events
-            WHERE doctor_id = NEW.doctor_id
-              AND NEW.start_date <= end_date
-              AND NEW.end_date >= start_date
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'doctor_schedule_events: overlapping date range for this doctor');
-        END
-        """);
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_overlap_update
-        BEFORE UPDATE ON doctor_schedule_events
-        FOR EACH ROW
-        WHEN EXISTS (
-            SELECT 1 FROM doctor_schedule_events
-            WHERE doctor_id = NEW.doctor_id
-              AND id <> NEW.id
-              AND NEW.start_date <= end_date
-              AND NEW.end_date >= start_date
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'doctor_schedule_events: overlapping date range for this doctor');
-        END
-        """);
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_overlap_insert
-        BEFORE INSERT ON patient_appointments
-        FOR EACH ROW
-        WHEN NEW.status <> 'cancelada' AND EXISTS (
-            SELECT 1 FROM patient_appointments
-            WHERE doctor_id = NEW.doctor_id
-              AND scheduled_at = NEW.scheduled_at
-              AND status <> 'cancelada'
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'patient_appointments: doctor already has an appointment at this time');
-        END
-        """);
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_overlap_update
-        BEFORE UPDATE ON patient_appointments
-        FOR EACH ROW
-        WHEN NEW.status <> 'cancelada' AND EXISTS (
-            SELECT 1 FROM patient_appointments
-            WHERE doctor_id = NEW.doctor_id
-              AND scheduled_at = NEW.scheduled_at
-              AND status <> 'cancelada'
-              AND id <> NEW.id
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'patient_appointments: doctor already has an appointment at this time');
-        END
-        """);
+    // EnsureCreated() only creates tables/columns from the EF model — triggers aren't part of
+    // that model, so the schedule/appointment overlap-prevention triggers (documented in
+    // database/schema_sqlite.sql and database/schema_postgres.sql) are created here with raw SQL.
+    // SQLite and PostgreSQL need completely different trigger syntax, so branch on the provider —
+    // running the SQLite-only form unconditionally aborts startup on Postgres (Neon/Render).
+    if (db.Database.IsSqlite())
+    {
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_overlap_insert
+            BEFORE INSERT ON doctor_schedule_events
+            FOR EACH ROW
+            WHEN EXISTS (
+                SELECT 1 FROM doctor_schedule_events
+                WHERE doctor_id = NEW.doctor_id
+                  AND NEW.start_date <= end_date
+                  AND NEW.end_date >= start_date
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'doctor_schedule_events: overlapping date range for this doctor');
+            END
+            """);
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_overlap_update
+            BEFORE UPDATE ON doctor_schedule_events
+            FOR EACH ROW
+            WHEN EXISTS (
+                SELECT 1 FROM doctor_schedule_events
+                WHERE doctor_id = NEW.doctor_id
+                  AND id <> NEW.id
+                  AND NEW.start_date <= end_date
+                  AND NEW.end_date >= start_date
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'doctor_schedule_events: overlapping date range for this doctor');
+            END
+            """);
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_overlap_insert
+            BEFORE INSERT ON patient_appointments
+            FOR EACH ROW
+            WHEN NEW.status <> 'cancelada' AND EXISTS (
+                SELECT 1 FROM patient_appointments
+                WHERE doctor_id = NEW.doctor_id
+                  AND scheduled_at = NEW.scheduled_at
+                  AND status <> 'cancelada'
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'patient_appointments: doctor already has an appointment at this time');
+            END
+            """);
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_overlap_update
+            BEFORE UPDATE ON patient_appointments
+            FOR EACH ROW
+            WHEN NEW.status <> 'cancelada' AND EXISTS (
+                SELECT 1 FROM patient_appointments
+                WHERE doctor_id = NEW.doctor_id
+                  AND scheduled_at = NEW.scheduled_at
+                  AND status <> 'cancelada'
+                  AND id <> NEW.id
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'patient_appointments: doctor already has an appointment at this time');
+            END
+            """);
 
-    // Prevent a doctor's own schedule (congress/training/vacation) from silently conflicting with
-    // their patient appointments — see database/schema_sqlite.sql for the documented pair.
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_schedule_conflict_insert
-        BEFORE INSERT ON patient_appointments
-        FOR EACH ROW
-        WHEN NEW.status <> 'cancelada' AND EXISTS (
-            SELECT 1 FROM doctor_schedule_events
-            WHERE doctor_id = NEW.doctor_id
-              AND date(NEW.scheduled_at) BETWEEN start_date AND end_date
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'patient_appointments: doctor has a schedule event covering this date');
-        END
-        """);
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_schedule_conflict_update
-        BEFORE UPDATE ON patient_appointments
-        FOR EACH ROW
-        WHEN NEW.status <> 'cancelada' AND EXISTS (
-            SELECT 1 FROM doctor_schedule_events
-            WHERE doctor_id = NEW.doctor_id
-              AND date(NEW.scheduled_at) BETWEEN start_date AND end_date
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'patient_appointments: doctor has a schedule event covering this date');
-        END
-        """);
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_appointment_conflict_insert
-        BEFORE INSERT ON doctor_schedule_events
-        FOR EACH ROW
-        WHEN EXISTS (
-            SELECT 1 FROM patient_appointments
-            WHERE doctor_id = NEW.doctor_id
-              AND status <> 'cancelada'
-              AND date(scheduled_at) BETWEEN NEW.start_date AND NEW.end_date
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'doctor_schedule_events: doctor already has an appointment within this date range');
-        END
-        """);
-    db.Database.ExecuteSqlRaw("""
-        CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_appointment_conflict_update
-        BEFORE UPDATE ON doctor_schedule_events
-        FOR EACH ROW
-        WHEN EXISTS (
-            SELECT 1 FROM patient_appointments
-            WHERE doctor_id = NEW.doctor_id
-              AND status <> 'cancelada'
-              AND date(scheduled_at) BETWEEN NEW.start_date AND NEW.end_date
-        )
-        BEGIN
-            SELECT RAISE(ABORT, 'doctor_schedule_events: doctor already has an appointment within this date range');
-        END
-        """);
+        // Prevent a doctor's own schedule (congress/training/vacation) from silently conflicting
+        // with their patient appointments — see database/schema_sqlite.sql for the documented pair.
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_schedule_conflict_insert
+            BEFORE INSERT ON patient_appointments
+            FOR EACH ROW
+            WHEN NEW.status <> 'cancelada' AND EXISTS (
+                SELECT 1 FROM doctor_schedule_events
+                WHERE doctor_id = NEW.doctor_id
+                  AND date(NEW.scheduled_at) BETWEEN start_date AND end_date
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'patient_appointments: doctor has a schedule event covering this date');
+            END
+            """);
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_patient_appointments_no_schedule_conflict_update
+            BEFORE UPDATE ON patient_appointments
+            FOR EACH ROW
+            WHEN NEW.status <> 'cancelada' AND EXISTS (
+                SELECT 1 FROM doctor_schedule_events
+                WHERE doctor_id = NEW.doctor_id
+                  AND date(NEW.scheduled_at) BETWEEN start_date AND end_date
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'patient_appointments: doctor has a schedule event covering this date');
+            END
+            """);
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_appointment_conflict_insert
+            BEFORE INSERT ON doctor_schedule_events
+            FOR EACH ROW
+            WHEN EXISTS (
+                SELECT 1 FROM patient_appointments
+                WHERE doctor_id = NEW.doctor_id
+                  AND status <> 'cancelada'
+                  AND date(scheduled_at) BETWEEN NEW.start_date AND NEW.end_date
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'doctor_schedule_events: doctor already has an appointment within this date range');
+            END
+            """);
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER IF NOT EXISTS trg_doctor_schedule_events_no_appointment_conflict_update
+            BEFORE UPDATE ON doctor_schedule_events
+            FOR EACH ROW
+            WHEN EXISTS (
+                SELECT 1 FROM patient_appointments
+                WHERE doctor_id = NEW.doctor_id
+                  AND status <> 'cancelada'
+                  AND date(scheduled_at) BETWEEN NEW.start_date AND NEW.end_date
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'doctor_schedule_events: doctor already has an appointment within this date range');
+            END
+            """);
+    }
+    else if (db.Database.IsNpgsql())
+    {
+        // PostgreSQL (Neon). Mirrors database/schema_postgres.sql: one plpgsql function per rule
+        // (CREATE OR REPLACE = idempotent) plus a single BEFORE INSERT OR UPDATE trigger, dropped
+        // first so a redeploy onto a persisted database re-applies cleanly. SQLite's paired
+        // INSERT/UPDATE triggers collapse into one here because Postgres triggers cover both events.
+        db.Database.ExecuteSqlRaw("""
+            CREATE OR REPLACE FUNCTION check_doctor_schedule_events_no_overlap() RETURNS TRIGGER AS $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM doctor_schedule_events
+                    WHERE doctor_id = NEW.doctor_id
+                      AND id <> COALESCE(NEW.id, -1)
+                      AND NEW.start_date <= end_date
+                      AND NEW.end_date >= start_date
+                ) THEN
+                    RAISE EXCEPTION 'doctor_schedule_events: overlapping date range for doctor_id %', NEW.doctor_id;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """);
+        db.Database.ExecuteSqlRaw("DROP TRIGGER IF EXISTS trg_doctor_schedule_events_no_overlap ON doctor_schedule_events");
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER trg_doctor_schedule_events_no_overlap
+            BEFORE INSERT OR UPDATE ON doctor_schedule_events
+            FOR EACH ROW EXECUTE FUNCTION check_doctor_schedule_events_no_overlap();
+            """);
+
+        db.Database.ExecuteSqlRaw("""
+            CREATE OR REPLACE FUNCTION check_patient_appointments_no_overlap() RETURNS TRIGGER AS $$
+            BEGIN
+                IF NEW.status <> 'cancelada' AND EXISTS (
+                    SELECT 1 FROM patient_appointments
+                    WHERE doctor_id = NEW.doctor_id
+                      AND scheduled_at = NEW.scheduled_at
+                      AND status <> 'cancelada'
+                      AND id <> COALESCE(NEW.id, -1)
+                ) THEN
+                    RAISE EXCEPTION 'patient_appointments: doctor % already has an appointment at %', NEW.doctor_id, NEW.scheduled_at;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """);
+        db.Database.ExecuteSqlRaw("DROP TRIGGER IF EXISTS trg_patient_appointments_no_overlap ON patient_appointments");
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER trg_patient_appointments_no_overlap
+            BEFORE INSERT OR UPDATE ON patient_appointments
+            FOR EACH ROW EXECUTE FUNCTION check_patient_appointments_no_overlap();
+            """);
+
+        db.Database.ExecuteSqlRaw("""
+            CREATE OR REPLACE FUNCTION check_patient_appointments_no_schedule_conflict() RETURNS TRIGGER AS $$
+            BEGIN
+                IF NEW.status <> 'cancelada' AND EXISTS (
+                    SELECT 1 FROM doctor_schedule_events
+                    WHERE doctor_id = NEW.doctor_id
+                      AND NEW.scheduled_at::date BETWEEN start_date AND end_date
+                ) THEN
+                    RAISE EXCEPTION 'patient_appointments: doctor % has a schedule event covering %', NEW.doctor_id, NEW.scheduled_at::date;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """);
+        db.Database.ExecuteSqlRaw("DROP TRIGGER IF EXISTS trg_patient_appointments_no_schedule_conflict ON patient_appointments");
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER trg_patient_appointments_no_schedule_conflict
+            BEFORE INSERT OR UPDATE ON patient_appointments
+            FOR EACH ROW EXECUTE FUNCTION check_patient_appointments_no_schedule_conflict();
+            """);
+
+        db.Database.ExecuteSqlRaw("""
+            CREATE OR REPLACE FUNCTION check_doctor_schedule_events_no_appointment_conflict() RETURNS TRIGGER AS $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM patient_appointments
+                    WHERE doctor_id = NEW.doctor_id
+                      AND status <> 'cancelada'
+                      AND scheduled_at::date BETWEEN NEW.start_date AND NEW.end_date
+                ) THEN
+                    RAISE EXCEPTION 'doctor_schedule_events: doctor % already has an appointment within % and %', NEW.doctor_id, NEW.start_date, NEW.end_date;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+            """);
+        db.Database.ExecuteSqlRaw("DROP TRIGGER IF EXISTS trg_doctor_schedule_events_no_appointment_conflict ON doctor_schedule_events");
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER trg_doctor_schedule_events_no_appointment_conflict
+            BEFORE INSERT OR UPDATE ON doctor_schedule_events
+            FOR EACH ROW EXECUTE FUNCTION check_doctor_schedule_events_no_appointment_conflict();
+            """);
+    }
 
     // Backfill missing share codes (must run after seeding: seed.sql's raw INSERT
     // statements don't set share_code, and a fresh DB's column has no SQL-level default)

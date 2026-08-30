@@ -101,6 +101,49 @@ Reminder: if the rule involves a column default rather than (or in addition to) 
 
 ---
 
+## Applying DDL at application startup (`backend/MediVault.Api/Program.cs`)
+
+`EnsureCreated()` only builds what the EF model describes — **tables and columns**. Anything outside the model (triggers, functions, indexes it doesn't manage, raw column back-fills) is applied by hand in the startup `using (var scope = ...)` block in `Program.cs`, and that block runs against **both** databases the app supports:
+
+| Environment | Provider |
+|---|---|
+| Local dev, all automated tests | SQLite (`db.Database.IsSqlite()`) |
+| Deployed (Render backend + Neon) | PostgreSQL (`db.Database.IsNpgsql()`) |
+
+### Rule
+
+**Never run one dialect's raw SQL unconditionally.** SQLite-only syntax (`CREATE TRIGGER IF NOT EXISTS`, `RAISE(ABORT, ...)`, `AUTOINCREMENT`, `datetime('now')`, `ALTER TABLE ... ADD COLUMN` batches) aborts backend startup on Postgres with `42601: syntax error` → the Render deploy crashes (`Exited with status 134`), no instance comes up, and the whole API returns 404. This is what broke the *Reset DB and Redeploy* workflow (Aug 2026).
+
+Every startup DDL statement must be inside a provider branch, with an equivalent for **both** engines:
+
+```csharp
+if (db.Database.IsSqlite())
+{
+    // SQLite form — mirrors database/schema_sqlite.sql
+    // paired BEFORE INSERT / BEFORE UPDATE triggers, WHEN clause, SELECT RAISE(ABORT, '...')
+}
+else if (db.Database.IsNpgsql())
+{
+    // PostgreSQL form — mirrors database/schema_postgres.sql
+    // CREATE OR REPLACE FUNCTION ... RETURNS TRIGGER ... plpgsql (RAISE EXCEPTION)
+    // then DROP TRIGGER IF EXISTS ... then CREATE TRIGGER ... BEFORE INSERT OR UPDATE ... FOR EACH ROW EXECUTE FUNCTION ...
+}
+```
+
+### Idempotency (both branches run on every startup / redeploy)
+
+- SQLite: `CREATE TRIGGER IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`; wrap `ALTER TABLE ... ADD COLUMN` in `try { ... } catch { /* already exists */ }`.
+- Postgres: functions are `CREATE OR REPLACE` (safe to re-run); precede each `CREATE TRIGGER` with `DROP TRIGGER IF EXISTS <name> ON <table>` (a persisted Neon DB keeps the trigger between deploys, and `CREATE TRIGGER` has no `IF NOT EXISTS` before PG 14).
+
+### Checklist when adding startup DDL
+
+- [ ] Statement is inside an `if (db.Database.IsSqlite())` / `else if (db.Database.IsNpgsql())` branch — never unconditional
+- [ ] Both branches present, each mirroring the matching `database/schema_*.sql` file
+- [ ] Both branches are idempotent (re-runnable on every boot and on a redeploy onto a persisted DB)
+- [ ] Verified locally on SQLite; Postgres form syntax-checked against `database/schema_postgres.sql`
+
+---
+
 ## ERD update rules (database/erd.md)
 
 - New table → add block with all columns inside `erDiagram`, add all relationship lines
@@ -217,3 +260,4 @@ The seed file contains Portuguese test data and must be kept in sync with the sc
 - [ ] Syntax verified for each dialect (types, defaults, FK syntax)
 - [ ] Cross-table business rule → trigger added to all 4 dialects (see [Trigger pattern](#trigger-pattern-for-cross-table-business-rules)), not a same-table `CHECK`
 - [ ] Table creation order respects FK dependencies (referenced tables first)
+- [ ] If the object also needs to exist at runtime (trigger/function/index not in the EF model): added to `Program.cs` startup block **behind a `IsSqlite()` / `IsNpgsql()` branch with both forms**, idempotent (see [Applying DDL at application startup](#applying-ddl-at-application-startup-backendmedivaultapiprogramcs))
