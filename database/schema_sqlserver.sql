@@ -121,6 +121,7 @@ CREATE TABLE doctors (
     institution_id   UNIQUEIDENTIFIER NOT NULL,
     nationality_id   INT           NOT NULL,
     language         NVARCHAR(5)   NOT NULL DEFAULT 'pt',
+    photo_path       NVARCHAR(255),
     is_active        BIT           NOT NULL DEFAULT 1,
     created_at       DATETIME2     NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_doctors_institution  FOREIGN KEY (institution_id) REFERENCES institutions(id),

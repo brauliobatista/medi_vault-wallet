@@ -124,6 +124,7 @@ CREATE TABLE doctors (
     institution_id   CHAR(36)     NOT NULL,
     nationality_id   INT          NOT NULL,
     language         VARCHAR(5)   NOT NULL DEFAULT 'pt',
+    photo_path       VARCHAR(255),
     is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_doctors_institution FOREIGN KEY (institution_id) REFERENCES institutions(id),

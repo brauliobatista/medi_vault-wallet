@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { getUser, logout } from '../hooks/useAuth'
+import { AUTH_USER_UPDATED_EVENT, getUser, logout } from '../hooks/useAuth'
 import { usePendingAccessRequests } from '../hooks/usePendingAccessRequests'
 import { useTranslation } from '../i18n/LanguageContext'
 
@@ -55,7 +55,7 @@ interface Props { children: React.ReactNode }
 
 export default function Layout({ children }: Props) {
   const { t } = useTranslation()
-  const user = getUser()
+  const [user, setUser] = useState(getUser)
   const location = useLocation()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -64,6 +64,12 @@ export default function Layout({ children }: Props) {
   const navItems = isDoctor ? getDoctorNav(t) : getPatientNav(t)
   const pageInfo = getPageInfo(t)
   const { pendingRequests, count: pendingCount } = usePendingAccessRequests()
+
+  useEffect(() => {
+    const handleUserUpdated = () => setUser(getUser())
+    window.addEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated)
+    return () => window.removeEventListener(AUTH_USER_UPDATED_EVENT, handleUserUpdated)
+  }, [])
 
   const currentPath = location.pathname
   const info =
@@ -88,7 +94,10 @@ export default function Layout({ children }: Props) {
   const closeMenu = () => setMenuOpen(false)
 
   const initial = user?.name?.charAt(0).toUpperCase() ?? 'U'
-  const avatarContent = isDoctor ? '👩‍⚕️' : initial
+  const fallbackAvatarContent = isDoctor ? '👩‍⚕️' : initial
+  const avatar = user?.photoUrl
+    ? <img src={user.photoUrl} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    : fallbackAvatarContent
 
   return (
     <div className="mv-wrapper">
@@ -123,7 +132,7 @@ export default function Layout({ children }: Props) {
 
         <div className="mv-sidebar-bottom">
           <div className="mv-user-card">
-            <div className="mv-sidebar-avatar">{avatarContent}</div>
+            <div className="mv-sidebar-avatar">{avatar}</div>
             <div>
               <div className="mv-user-name">{user?.name}</div>
               <div className="mv-user-role">{user?.role === 'Doctor' ? t('role.doctor') : t('role.patient')}</div>
@@ -195,7 +204,7 @@ export default function Layout({ children }: Props) {
                 )}
               </div>
             )}
-            <div className="mv-topbar-avatar">{avatarContent}</div>
+            <div className="mv-topbar-avatar">{avatar}</div>
             <span className="mv-topbar-name">{user?.name}</span>
             <span className={`badge ${isDoctor ? 'bg-success' : 'bg-primary'}`}>
               {user?.role === 'Doctor' ? t('role.doctor') : t('role.patient')}

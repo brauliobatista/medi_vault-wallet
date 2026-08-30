@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
-import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword } from '../../api/medical'
-import { logout } from '../../hooks/useAuth'
+import CameraCaptureModal from '../../components/CameraCaptureModal'
+import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword, uploadDoctorPhoto, deleteDoctorPhoto } from '../../api/medical'
+import { updateUserPhoto, logout } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
 
@@ -26,6 +27,10 @@ export default function DoctorProfilePage() {
   const [saved, setSaved] = useState(false)
   const [pwError, setPwError] = useState('')
   const [pwOk, setPwOk] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [showCamera, setShowCamera] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getDoctorProfile().then((p) => {
@@ -46,6 +51,40 @@ export default function DoctorProfilePage() {
 
   const handleLanguageSave = async (lang: Language) => {
     await updateDoctorProfile({ language: lang })
+  }
+
+  const uploadPhoto = async (file: File) => {
+    setPhotoError(null)
+    setPhotoUploading(true)
+    try {
+      const { photoUrl } = await uploadDoctorPhoto(file)
+      const p = await getDoctorProfile()
+      setProfile(p)
+      updateUserPhoto(photoUrl)
+    } catch {
+      setPhotoError(t('profile.photoUploadError'))
+    } finally {
+      setPhotoUploading(false)
+    }
+  }
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) await uploadPhoto(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleCameraCapture = async (file: File) => {
+    setShowCamera(false)
+    await uploadPhoto(file)
+  }
+
+  const handlePhotoRemove = async () => {
+    if (!confirm(t('profile.confirmRemovePhoto'))) return
+    await deleteDoctorPhoto()
+    const p = await getDoctorProfile()
+    setProfile(p)
+    updateUserPhoto(null)
   }
 
   const handlePassword = async () => {
@@ -85,6 +124,63 @@ export default function DoctorProfilePage() {
 
         {saved && <div className="alert alert-success py-2">{t('common.savedSuccess')}</div>}
         {pwOk && <div className="alert alert-success py-2">{t('doctorProfile.passwordChangedSuccess')}</div>}
+
+        <div className="card border-0 shadow-sm mb-3">
+          <div className="card-body d-flex align-items-center gap-3 flex-wrap">
+            {profile.photoUrl ? (
+              <img
+                src={String(profile.photoUrl)}
+                alt={t('profile.photoAlt')}
+                className="rounded-circle"
+                style={{ width: 80, height: 80, objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
+                style={{ width: 80, height: 80, fontSize: '1.75rem' }}
+              >
+                {String(profile.firstName ?? 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="d-flex flex-column gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="d-none"
+                onChange={handlePhotoSelect}
+              />
+              <div className="d-flex flex-wrap gap-2">
+                <button
+                  className="btn btn-outline-primary btn-sm"
+                  disabled={photoUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {photoUploading
+                    ? <span className="spinner-border spinner-border-sm" />
+                    : <><i className="bi bi-upload me-1" />{t('profile.uploadFromDevice')}</>}
+                </button>
+                <button
+                  className="btn btn-outline-primary btn-sm"
+                  disabled={photoUploading}
+                  onClick={() => setShowCamera(true)}
+                >
+                  <i className="bi bi-camera me-1" />{t('profile.useCamera')}
+                </button>
+                {Boolean(profile.photoUrl) && (
+                  <button className="btn btn-outline-danger btn-sm" onClick={handlePhotoRemove}>
+                    <i className="bi bi-trash me-1" />{t('profile.removePhoto')}
+                  </button>
+                )}
+              </div>
+              {photoError && <div className="text-danger small">{photoError}</div>}
+            </div>
+          </div>
+        </div>
+
+        {showCamera && (
+          <CameraCaptureModal onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
+        )}
 
         <div className="card border-0 shadow-sm mb-3">
           <div className="card-body">
