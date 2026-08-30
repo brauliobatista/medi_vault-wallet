@@ -3,9 +3,11 @@ import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
 import CameraCaptureModal from '../../components/CameraCaptureModal'
 import { getDoctorProfile, updateDoctorProfile, changeDoctorPassword, uploadDoctorPhoto, deleteDoctorPhoto } from '../../api/medical'
-import { updateUserPhoto } from '../../hooks/useAuth'
+import { updateUserPhoto, logout } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
+
+const LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS = 1200
 
 export default function DoctorProfilePage() {
   const { t } = useTranslation()
@@ -95,6 +97,7 @@ export default function DoctorProfilePage() {
       setPwOk(true)
       setPwForm({ current: '', next: '', confirm: '' })
       setShowPw(false)
+      setTimeout(logout, LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS)
     } catch {
       setPwError(t('doctorProfile.currentPasswordWrong'))
     }
@@ -240,7 +243,7 @@ export default function DoctorProfilePage() {
                 <div className="text-muted small">{t('profile.nationality')}</div>
                 <div className="fw-semibold">{String(profile.nationalityName ?? t('common.na'))}</div>
               </div>
-              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
+              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} editing={editing} onSave={handleLanguageSave} />
             </div>
             {editing && (
               <div className="mt-3">

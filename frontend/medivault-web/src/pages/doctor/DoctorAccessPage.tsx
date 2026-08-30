@@ -1,21 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import AccessRequestsTable, { type AccessRequestsColumn } from '../../components/AccessRequestsTable'
 import { getAccessRequests } from '../../api/medical'
 import { useTranslation } from '../../i18n/LanguageContext'
-
-interface AccessRequest {
-  id: number
-  userId: string
-  patientName: string
-  patientPublicId: string
-  utentNumber: string
-  status: string
-  isEmergency: boolean
-  requestedAt: string
-  approvedAt: string | null
-  expiresAt: string | null
-}
+import type { AccessRequest } from '../../types/access'
 
 type StatusFilter = 'approved' | 'rejected' | 'expired' | 'pending' | 'revoked' | 'finished' | 'all'
 
@@ -82,6 +71,43 @@ export default function DoctorAccessPage() {
     })
   }, [requests, statusFilter, search, dateFrom, dateTo])
 
+  const formatDate = (value: string | null | undefined) => (value ? value.slice(0, 10) : '—')
+
+  const columns: AccessRequestsColumn[] = [
+    {
+      key: 'patientName',
+      label: t('doctorAccess.patientLabel'),
+      sortable: true,
+      sortValue: (r) => r.patientName ?? '',
+      render: (r) => (
+        <>
+          <i className="bi bi-person me-1" />
+          {r.patientName} <span className="text-muted small font-monospace">{r.patientPublicId ?? ''}</span>
+        </>
+      ),
+    },
+    {
+      key: 'status',
+      label: t('doctorAccess.statusLabel'),
+      sortable: true,
+      sortValue: (r) => r.status,
+      render: (r) => <span className={`badge bg-${badgeClass[r.status] ?? 'secondary'}`}>{statusLabel[r.status] ?? r.status}</span>,
+    },
+    { key: 'requestedAt', label: t('doctorAccess.requestedAtLabel'), sortable: true, sortValue: (r) => r.requestedAt, render: (r) => formatDate(r.requestedAt) },
+    { key: 'approvedAt', label: t('doctorAccess.approvedAtLabel'), sortable: true, sortValue: (r) => r.approvedAt ?? '', render: (r) => formatDate(r.approvedAt) },
+    { key: 'expiresAt', label: t('doctorAccess.expiresAtLabel'), sortable: true, sortValue: (r) => r.expiresAt ?? '', render: (r) => formatDate(r.expiresAt) },
+  ]
+
+  const renderActions = (r: AccessRequest) =>
+    r.status === 'approved' ? (
+      <button
+        className="btn btn-sm btn-primary"
+        onClick={() => navigate(`/doctor/patient/${r.userId}`, { state: { publicId: r.patientPublicId, patientName: r.patientName } })}
+      >
+        <i className="bi bi-eye me-1" />{t('doctorAccess.viewData')}
+      </button>
+    ) : null
+
   return (
     <Layout>
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -138,42 +164,12 @@ export default function DoctorAccessPage() {
         </div>
       </div>
 
-      {filteredRequests.length === 0 ? (
-        <p className="text-muted">{t('doctorAccess.noRequests')}</p>
-      ) : (
-        <div className="list-group shadow-sm">
-          {filteredRequests.map((r) => (
-            <div key={String(r.id)} className="list-group-item">
-              <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                  <div className="fw-semibold">
-                    <i className="bi bi-person me-1" />
-                    {String(r.patientName)} <span className="text-muted small font-monospace">{String(r.patientPublicId ?? '')}</span>
-                  </div>
-                  <small className="text-muted">
-                    {t('doctorAccess.requested')}: {String(r.requestedAt).slice(0, 10)}
-                    {r.approvedAt ? ` · ${t('doctorAccess.approved')}: ${String(r.approvedAt).slice(0, 10)}` : ''}
-                    {r.expiresAt ? ` · ${t('doctorAccess.expires')}: ${String(r.expiresAt).slice(0, 10)}` : ''}
-                  </small>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <span className={`badge bg-${badgeClass[String(r.status)] ?? 'secondary'}`}>
-                    {statusLabel[String(r.status)] ?? String(r.status)}
-                  </span>
-                  {r.status === 'approved' && (
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => navigate(`/doctor/patient/${r.userId}`, { state: { publicId: r.patientPublicId, patientName: r.patientName } })}
-                    >
-                      <i className="bi bi-eye me-1" />{t('doctorAccess.viewData')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <AccessRequestsTable
+        requests={filteredRequests}
+        columns={columns}
+        renderActions={renderActions}
+        emptyMessage={t('doctorAccess.noRequests')}
+      />
     </Layout>
   )
 }

@@ -97,6 +97,7 @@ CREATE TABLE users (
     is_dependent          BOOLEAN      NOT NULL DEFAULT FALSE,
     profession            VARCHAR(255),
     phone                 VARCHAR(50),
+    phone_country_code    VARCHAR(10)  NOT NULL DEFAULT '351',
     is_active             BOOLEAN      NOT NULL DEFAULT TRUE,
     card_active           BOOLEAN      NOT NULL DEFAULT TRUE,
     share_code            VARCHAR(50)  NOT NULL DEFAULT '',

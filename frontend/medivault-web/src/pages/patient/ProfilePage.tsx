@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
-import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto } from '../../api/medical'
+import CountryCodeSelect from '../../components/CountryCodeSelect'
+import Modal from '../../components/Modal'
+import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto, changePassword } from '../../api/medical'
+import { logout } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
+import { COUNTRY_CALLING_CODES } from '../../data/countryCallingCodes'
+
+const LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS = 1200
+
+const CRITICAL_FIELD_WARNING_KEYS: Record<string, string> = {
+  acceptsTransfusion: 'profile.confirmTransfusionWarning',
+  acceptsResuscitation: 'profile.confirmResuscitationWarning',
+}
 
 export default function ProfilePage() {
   const { t } = useTranslation()
@@ -13,6 +24,11 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
+  const [showPw, setShowPw] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwOk, setPwOk] = useState(false)
+  const [pendingCritical, setPendingCritical] = useState<{ field: string; value: boolean } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -20,6 +36,7 @@ export default function ProfilePage() {
       setProfile(p)
       setForm({
         email: p.email,
+        phoneCountryCode: p.phoneCountryCode ?? '',
         phone: p.phone ?? '',
         profession: p.profession ?? '',
         maritalStatus: p.maritalStatus ?? '',
@@ -69,6 +86,36 @@ export default function ProfilePage() {
     await updateProfile({ language: lang })
   }
 
+  const handlePassword = async () => {
+    setPwError('')
+    setPwOk(false)
+    if (pwForm.next !== pwForm.confirm) { setPwError(t('profile.passwordMismatch')); return }
+    if (pwForm.next.length < 6) { setPwError(t('profile.passwordTooShort')); return }
+    try {
+      await changePassword({ currentPassword: pwForm.current, newPassword: pwForm.next })
+      setPwOk(true)
+      setPwForm({ current: '', next: '', confirm: '' })
+      setShowPw(false)
+      setTimeout(logout, LOGOUT_AFTER_PASSWORD_CHANGE_DELAY_MS)
+    } catch {
+      setPwError(t('profile.currentPasswordWrong'))
+    }
+  }
+
+  const handleCriticalFieldChange = (field: string, value: boolean) => {
+    setPendingCritical({ field, value })
+  }
+
+  const confirmCriticalChange = () => {
+    if (!pendingCritical) return
+    setForm({ ...form, [pendingCritical.field]: pendingCritical.value })
+    setPendingCritical(null)
+  }
+
+  const cancelCriticalChange = () => {
+    setPendingCritical(null)
+  }
+
   if (!profile) return (
     <Layout>
       <div className="d-flex justify-content-center py-5">
@@ -88,6 +135,7 @@ export default function ProfilePage() {
           </button>
         </div>
         {saved && <div className="alert alert-success py-2">{t('common.savedSuccess')}</div>}
+        {pwOk && <div className="alert alert-success py-2">{t('profile.passwordChangedSuccess')}</div>}
 
         <div className="card border-0 shadow-sm mb-3">
           <div className="card-body d-flex align-items-center gap-3 flex-wrap">
@@ -171,13 +219,14 @@ export default function ProfilePage() {
                 ]}
               />
               <EditableField label={t('profile.email')} field="email" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
+              <PhoneCountryCodeField label={t('profile.phoneCountryCode')} form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.phone')} field="phone" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
               <EditableField label={t('profile.profession')} field="profession" form={form} setForm={setForm} editing={editing} naLabel={t('common.na')} />
-              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} onSave={handleLanguageSave} />
+              <LanguageSelector value={(isLanguage(String(profile.language)) ? profile.language : 'pt') as Language} editing={editing} onSave={handleLanguageSave} />
               <div className="col-12">
                 <div className="row g-2">
-                  <CheckField label={t('profile.acceptsTransfusion')} field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} />
-                  <CheckField label={t('profile.acceptsResuscitation')} field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} />
+                  <CheckField label={t('profile.acceptsTransfusion')} field="acceptsTransfusion" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
+                  <CheckField label={t('profile.acceptsResuscitation')} field="acceptsResuscitation" form={form} setForm={setForm} editing={editing} onCriticalChange={handleCriticalFieldChange} />
                   <CheckField label={t('profile.emergencyAccess')} field="emergencyAccess" form={form} setForm={setForm} editing={false} />
                 </div>
               </div>
@@ -189,6 +238,49 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+
+        <div className="card border-0 shadow-sm mt-3">
+          <div
+            className="card-header bg-white d-flex justify-content-between align-items-center"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setShowPw(!showPw)}
+          >
+            <span><i className="bi bi-lock me-2" />{t('profile.changePassword')}</span>
+            <i className={`bi bi-chevron-${showPw ? 'up' : 'down'}`} />
+          </div>
+          {showPw && (
+            <div className="card-body">
+              {pwError && <div className="alert alert-danger py-2">{pwError}</div>}
+              <div className="row g-2">
+                <div className="col-12">
+                  <label className="form-label small">{t('profile.currentPassword')}</label>
+                  <input type="password" className="form-control form-control-sm" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} />
+                </div>
+                <div className="col-sm-6">
+                  <label className="form-label small">{t('profile.newPassword')}</label>
+                  <input type="password" className="form-control form-control-sm" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} />
+                </div>
+                <div className="col-sm-6">
+                  <label className="form-label small">{t('profile.confirmPassword')}</label>
+                  <input type="password" className="form-control form-control-sm" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} />
+                </div>
+                <div className="col-12 mt-1">
+                  <button className="btn btn-primary btn-sm" onClick={handlePassword}>{t('profile.changePassword')}</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {pendingCritical && (
+          <Modal title={t('profile.confirmChangeTitle')} onClose={cancelCriticalChange}>
+            <p>{t(CRITICAL_FIELD_WARNING_KEYS[pendingCritical.field])}</p>
+            <div className="d-flex justify-content-end gap-2 mt-3">
+              <button className="btn btn-outline-secondary btn-sm" onClick={cancelCriticalChange}>{t('common.cancel')}</button>
+              <button className="btn btn-primary btn-sm" onClick={confirmCriticalChange}>{t('common.confirm')}</button>
+            </div>
+          </Modal>
+        )}
       </div>
     </Layout>
   )
@@ -222,6 +314,32 @@ function EditableField({ label, field, form, setForm, editing, naLabel }: {
   )
 }
 
+function PhoneCountryCodeField({ label, form, setForm, editing, naLabel }: {
+  label: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean; naLabel: string
+}) {
+  const { language } = useTranslation()
+  const value = String(form.phoneCountryCode ?? '')
+
+  const displayValue = () => {
+    if (!value) return naLabel
+    const match = COUNTRY_CALLING_CODES.find((c) => c.callingCode === value)
+    if (!match) return `+${value}`
+    const name = new Intl.DisplayNames([language], { type: 'region' }).of(match.iso2)
+    return `+${value}${name ? ` ${name}` : ''}`
+  }
+
+  return (
+    <div className="col-sm-6">
+      <label className="form-label text-muted small mb-0">{label}</label>
+      {editing ? (
+        <CountryCodeSelect value={value} onChange={(code) => setForm({ ...form, phoneCountryCode: code })} />
+      ) : (
+        <div className="fw-semibold">{displayValue()}</div>
+      )}
+    </div>
+  )
+}
+
 function SelectField({ label, field, form, setForm, editing, options, numeric, naLabel, selectLabel }: {
   label: string; field: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean
   options: { value: string; label: string }[]; numeric?: boolean; naLabel: string; selectLabel: string
@@ -246,8 +364,9 @@ function SelectField({ label, field, form, setForm, editing, options, numeric, n
   )
 }
 
-function CheckField({ label, field, form, setForm, editing }: {
+function CheckField({ label, field, form, setForm, editing, onCriticalChange }: {
   label: string; field: string; form: Record<string, unknown>; setForm: (f: Record<string, unknown>) => void; editing: boolean
+  onCriticalChange?: (field: string, value: boolean) => void
 }) {
   return (
     <div className="col-auto">
@@ -256,7 +375,7 @@ function CheckField({ label, field, form, setForm, editing }: {
           className="form-check-input"
           type="checkbox"
           checked={Boolean(form[field])}
-          onChange={(e) => setForm({ ...form, [field]: e.target.checked })}
+          onChange={(e) => onCriticalChange ? onCriticalChange(field, e.target.checked) : setForm({ ...form, [field]: e.target.checked })}
           disabled={!editing}
           id={field}
         />

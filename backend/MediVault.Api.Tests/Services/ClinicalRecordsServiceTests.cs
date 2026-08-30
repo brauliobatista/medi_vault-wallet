@@ -365,4 +365,182 @@ public class ClinicalRecordsServiceTests
         Assert.Equal(user.Id, result[0].UserId);
         Assert.True(result[0].DurationMinutes >= 29 && result[0].DurationMinutes <= 31);
     }
+
+    [Fact]
+    public async Task SaveConsultationDraftAsync_ReusesExistingDraft_WhenNoConsultationIdProvidedOnRepeatCalls()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var started = DateTime.UtcNow.ToString("o");
+
+        var first = await sut.SaveConsultationDraftAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, started));
+        var second = await sut.SaveConsultationDraftAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, started));
+        var third = await sut.SaveConsultationDraftAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, started));
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(first.Id, third.Id);
+        Assert.Single(db.Consultations);
+    }
+
+    [Fact]
+    public async Task SaveConsultationDraftAsync_DoesNotReuseDraft_FromDifferentPatient()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var otherUser = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var started = DateTime.UtcNow.ToString("o");
+        var first = await sut.SaveConsultationDraftAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, started));
+
+        var second = await sut.SaveConsultationDraftAsync(otherUser.Id, doctor.Id, new SaveConsultationRequest(null, started));
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.Equal(2, db.Consultations.Count());
+    }
+
+    [Fact]
+    public async Task SaveConsultationDraftAsync_DoesNotReuseDraft_FromDifferentDoctor()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var otherDoctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var started = DateTime.UtcNow.ToString("o");
+        var first = await sut.SaveConsultationDraftAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, started));
+
+        var second = await sut.SaveConsultationDraftAsync(user.Id, otherDoctor.Id, new SaveConsultationRequest(null, started));
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.Equal(2, db.Consultations.Count());
+    }
+
+    [Fact]
+    public async Task FinishConsultationAsync_ReusesExistingDraft_WhenNoConsultationIdProvided()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var started = DateTime.UtcNow.ToString("o");
+        var draft = await sut.SaveConsultationDraftAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, started));
+
+        var finished = await sut.FinishConsultationAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, started));
+
+        Assert.Equal(draft.Id, finished.Id);
+        Assert.Equal("finished", finished.Status);
+        Assert.Single(db.Consultations);
+    }
+
+    [Fact]
+    public async Task GetDraftConsultationsForDoctorAsync_ReturnsOnlyThisDoctorsDrafts_OrderedByUpdatedAtDescending()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var otherDoctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var older = await sut.SaveConsultationDraftAsync(user.Id, doctor.Id, new SaveConsultationRequest(null, DateTime.UtcNow.AddMinutes(-10).ToString("o")));
+        db.Consultations.First(c => c.Id == older.Id).UpdatedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o");
+        await db.SaveChangesAsync();
+        var otherPatient = TestDataFactory.SeedUser(db);
+        var newer = await sut.SaveConsultationDraftAsync(otherPatient.Id, doctor.Id, new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+        await sut.FinishConsultationAsync(TestDataFactory.SeedUser(db).Id, doctor.Id, new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+        await sut.SaveConsultationDraftAsync(TestDataFactory.SeedUser(db).Id, otherDoctor.Id, new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        var result = await sut.GetDraftConsultationsForDoctorAsync(doctor.Id);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(newer.Id, result[0].Id);
+        Assert.Equal(older.Id, result[1].Id);
+    }
+
+    // --- Consultation activity ---
+
+    [Fact]
+    public async Task GetConsultationActivityAsync_IncludesItemsWithinWindow_ExcludingOutsideWindow()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var windowStart = DateTime.UtcNow.AddMinutes(-10);
+        var windowEnd = DateTime.UtcNow.AddMinutes(10);
+
+        db.Anamneses.Add(new Anamnesis
+        {
+            UserId = user.Id, DoctorId = doctor.Id, ChiefComplaint = "Dentro da janela",
+            CreatedAt = DateTime.UtcNow.ToString("o"), UpdatedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.Anamneses.Add(new Anamnesis
+        {
+            UserId = user.Id, DoctorId = doctor.Id, ChiefComplaint = "Fora da janela",
+            CreatedAt = DateTime.UtcNow.AddHours(-2).ToString("o"), UpdatedAt = DateTime.UtcNow.AddHours(-2).ToString("o"),
+        });
+        await db.SaveChangesAsync();
+
+        var result = await sut.GetConsultationActivityAsync(user.Id, doctor.Id, windowStart.ToString("o"), windowEnd.ToString("o"));
+
+        Assert.Single(result);
+        Assert.Equal("Dentro da janela", result[0].Detail);
+    }
+
+    [Fact]
+    public async Task GetConsultationActivityAsync_OnlyIncludesActionsByThatDoctor()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var otherDoctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var now = DateTime.UtcNow;
+
+        await sut.AddAssessmentAsync(user.Id, doctor.Id, new CreateAssessmentRequest("Gripe", "Repouso"));
+        await sut.AddAssessmentAsync(user.Id, otherDoctor.Id, new CreateAssessmentRequest("Outra hipótese", "Outro plano"));
+
+        var result = await sut.GetConsultationActivityAsync(user.Id, doctor.Id, now.AddMinutes(-5).ToString("o"), now.AddMinutes(5).ToString("o"));
+
+        Assert.Single(result);
+        Assert.Equal("Gripe", result[0].Detail);
+        Assert.Equal(doctor.Id, result[0].DoctorId);
+    }
+
+    [Fact]
+    public async Task GetConsultationActivityAsync_IncludesVitalsAssessmentsMedicationsAndDocuments()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        var now = DateTime.UtcNow.ToString("o");
+
+        db.VitalSigns.Add(new VitalSign { UserId = user.Id, DoctorId = doctor.Id, RecordedAt = now, CreatedAt = now, Notes = "TA normal" });
+        db.ChronicMedications.Add(new ChronicMedication { UserId = user.Id, ActiveSubstance = "Ibuprofeno", PrescribedBy = doctor.Id, CreatedAt = now });
+        db.MedicalFiles.Add(new MedicalFile { UserId = user.Id, FileName = "exame.pdf", FilePath = "/tmp/exame.pdf", UploadedBy = doctor.Id, UploadedAt = now });
+        await db.SaveChangesAsync();
+
+        var result = await sut.GetConsultationActivityAsync(user.Id, doctor.Id, DateTime.UtcNow.AddMinutes(-5).ToString("o"), DateTime.UtcNow.AddMinutes(5).ToString("o"));
+
+        Assert.Equal(3, result.Count);
+        Assert.Contains(result, i => i.Type == "vitais" && i.Detail == "TA normal");
+        Assert.Contains(result, i => i.Type == "prescricao" && i.Detail == "Ibuprofeno");
+        Assert.Contains(result, i => i.Type == "documento" && i.Detail == "exame.pdf");
+    }
+
+    [Fact]
+    public async Task GetConsultationActivityAsync_UsesNowAsWindowEnd_WhenEndedAtNotProvided()
+    {
+        using var db = TestDbContextFactory.Create();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var sut = new ClinicalRecordsService(db, new AccessControlService(db, new MemoryCache(new MemoryCacheOptions())));
+        await sut.AddAssessmentAsync(user.Id, doctor.Id, new CreateAssessmentRequest("Gripe", "Repouso"));
+
+        var result = await sut.GetConsultationActivityAsync(user.Id, doctor.Id, DateTime.UtcNow.AddMinutes(-5).ToString("o"), null);
+
+        Assert.Single(result);
+    }
 }

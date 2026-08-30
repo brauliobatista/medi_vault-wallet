@@ -57,4 +57,8 @@ public class DoctorsController(DoctorService doctorService) : ControllerBase
         if (!success) return NotFound();
         return NoContent();
     }
+
+    [HttpGet("me/draft-consultations")]
+    public async Task<IActionResult> GetDraftConsultations([FromServices] ClinicalRecordsService records) =>
+        Ok(await records.GetDraftConsultationsForDoctorAsync(DoctorId));
 }

@@ -130,4 +130,45 @@ public class DoctorsControllerTests
         Assert.Equal(user.Id, body[0].PatientPublicId);
         Assert.Equal(user.UtentNumber, body[0].UtentNumber);
     }
+
+    // --- GET /api/doctors/me/draft-consultations ---
+
+    [Fact]
+    public async Task GetDraftConsultations_ReturnsOnlyThisDoctorsDrafts()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var otherDoctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation { UserId = user.Id, DoctorId = doctor.Id, Status = "draft", StartedAt = DateTime.UtcNow.ToString("o") });
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-15).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.Consultations.Add(new Consultation { UserId = user.Id, DoctorId = otherDoctor.Id, Status = "draft", StartedAt = DateTime.UtcNow.ToString("o") });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync("/api/doctors/me/draft-consultations");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<DraftConsultationDto>>();
+        Assert.Single(body!);
+        Assert.Equal(user.Id, body![0].UserId);
+    }
+
+    [Fact]
+    public async Task GetDraftConsultations_ReturnsForbidden_ForPatientToken()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var client = factory.CreateAuthorizedClient(user.Id, "Patient", user.UtentNumber);
+
+        var response = await client.GetAsync("/api/doctors/me/draft-consultations");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }

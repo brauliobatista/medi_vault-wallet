@@ -91,6 +91,7 @@ erDiagram
         bool is_dependent
         string profession
         string phone
+        string phone_country_code
         bool is_active
         bool card_active
         string photo_path
