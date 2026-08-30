@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getUser } from './useAuth'
 import { getAccessRequests } from '../api/medical'
+import type { AccessRequest } from '../types/access'
 
 export interface PendingAccessRequest {
   id: number
@@ -16,14 +17,14 @@ export function usePendingAccessRequests() {
 
   const refresh = useCallback(() => {
     if (!isPatient) return
-    getAccessRequests().then((requests: Record<string, unknown>[]) => {
+    getAccessRequests().then((requests: AccessRequest[]) => {
       setPendingRequests(
         requests
           .filter((r) => r.status === 'pending')
           .map((r) => ({
-            id: Number(r.id),
-            doctorName: String(r.doctorName),
-            requestedAt: String(r.requestedAt),
+            id: r.id,
+            doctorName: r.doctorName ?? '',
+            requestedAt: r.requestedAt,
           })),
       )
     })

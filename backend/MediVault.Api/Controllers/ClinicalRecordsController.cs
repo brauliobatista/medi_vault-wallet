@@ -140,6 +140,16 @@ public class ClinicalRecordsController(ClinicalRecordsService records, AccessCon
         return Ok(await records.FinishConsultationAsync(userId, CurrentId, req));
     }
 
+    [HttpGet("consultation/activity")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> GetConsultationActivity(string userId, [FromQuery] string startedAt, [FromQuery] string? endedAt)
+    {
+        if (!await accessControl.DoctorHasAccessAsync(CurrentId, userId) &&
+            !await accessControl.DoctorHadFinishedConsultationAsync(CurrentId, userId))
+            return Forbid();
+        return Ok(await records.GetConsultationActivityAsync(userId, CurrentId, startedAt, endedAt));
+    }
+
     // --- Documents ---
 
     [HttpGet("documents")]
