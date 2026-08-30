@@ -68,6 +68,7 @@ export default {
   'common.select': 'Seleccionar…',
   'common.na': '—',
   'common.notFound': 'No encontrado',
+  'common.noResults': 'Sin resultados.',
 
   'common.month1': 'ene', 'common.month2': 'feb', 'common.month3': 'mar', 'common.month4': 'abr',
   'common.month5': 'may', 'common.month6': 'jun', 'common.month7': 'jul', 'common.month8': 'ago',

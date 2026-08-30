@@ -31,7 +31,7 @@ export default function LoginPage() {
       const result = tab === 'patient'
         ? await patientLogin(utentNumber, password)
         : await doctorLogin(ordemId, password)
-      saveUser({ id: result.id, name: result.name, role: result.role }, result.token)
+      saveUser({ id: result.id, name: result.name, role: result.role, photoUrl: result.photoUrl }, result.token)
       if (isLanguage(result.language)) setLanguage(result.language)
       navigate(result.role === 'Doctor' ? '/doctor' : '/dashboard')
     } catch {

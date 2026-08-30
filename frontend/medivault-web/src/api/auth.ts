@@ -6,6 +6,7 @@ export interface LoginResponse {
   id: string
   name: string
   language: string
+  photoUrl: string | null
 }
 
 export const patientLogin = (utentNumber: string, password: string) =>

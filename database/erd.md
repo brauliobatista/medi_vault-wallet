@@ -91,6 +91,7 @@ erDiagram
         bool is_dependent
         string profession
         string phone
+        string phone_country_code
         bool is_active
         bool card_active
         string photo_path
@@ -110,6 +111,7 @@ erDiagram
         guid institution_id FK
         int nationality_id FK
         string language
+        string photo_path
         bool is_active
         datetime created_at
     }

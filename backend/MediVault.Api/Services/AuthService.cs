@@ -15,7 +15,8 @@ public class AuthService(MediVaultDbContext db, JwtService jwt)
             return null;
 
         var token = jwt.GenerateToken(user.Id, "Patient", user.UtentNumber);
-        return new LoginResponse(token, "Patient", user.Id, $"{user.FirstName} {user.LastName}", user.Language);
+        var photoUrl = user.PhotoPath is null ? null : $"/uploads/profile-photos/{user.PhotoPath}";
+        return new LoginResponse(token, "Patient", user.Id, $"{user.FirstName} {user.LastName}", user.Language, photoUrl);
     }
 
     public async Task<LoginResponse?> LoginDoctorAsync(DoctorLoginRequest req)
@@ -26,6 +27,7 @@ public class AuthService(MediVaultDbContext db, JwtService jwt)
             return null;
 
         var token = jwt.GenerateToken(doctor.Id, "Doctor", doctor.OrdemMedicosId);
-        return new LoginResponse(token, "Doctor", doctor.Id, $"{doctor.FirstName} {doctor.LastName}", doctor.Language);
+        var photoUrl = doctor.PhotoPath is null ? null : $"/uploads/doctor-photos/{doctor.PhotoPath}";
+        return new LoginResponse(token, "Doctor", doctor.Id, $"{doctor.FirstName} {doctor.LastName}", doctor.Language, photoUrl);
     }
 }

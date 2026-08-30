@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Layout from './Layout'
-import { saveUser } from '../hooks/useAuth'
+import { saveUser, updateUserPhoto } from '../hooks/useAuth'
 import { getAccessRequests } from '../api/medical'
 import { LanguageProvider } from '../i18n/LanguageContext'
 
@@ -116,5 +116,35 @@ describe('Layout', () => {
 
     expect(screen.queryByRole('button', { name: 'Notificações' })).not.toBeInTheDocument()
     expect(mockedGet).not.toHaveBeenCalled()
+  })
+
+  it('shows the fallback avatar when no photo is set', async () => {
+    saveUser({ id: '1', name: 'Dr. João Costa', role: 'Doctor' }, 'token')
+
+    renderAt('/doctor')
+
+    expect(screen.getAllByText('👩‍⚕️').length).toBeGreaterThan(0)
+    expect(screen.queryByAltText('Dr. João Costa')).not.toBeInTheDocument()
+  })
+
+  it('shows the profile photo in both avatars once one is set', async () => {
+    saveUser({ id: '1', name: 'Dr. João Costa', role: 'Doctor', photoUrl: '/uploads/doctor-photos/joao.jpg' }, 'token')
+
+    renderAt('/doctor')
+
+    const images = screen.getAllByAltText('Dr. João Costa')
+    expect(images).toHaveLength(2)
+    images.forEach((img) => expect(img).toHaveAttribute('src', '/uploads/doctor-photos/joao.jpg'))
+  })
+
+  it('picks up a newly uploaded photo without a full page reload', async () => {
+    saveUser({ id: '1', name: 'Dr. João Costa', role: 'Doctor' }, 'token')
+
+    renderAt('/doctor')
+    expect(screen.queryByAltText('Dr. João Costa')).not.toBeInTheDocument()
+
+    act(() => updateUserPhoto('/uploads/doctor-photos/joao.jpg'))
+
+    expect(await screen.findAllByAltText('Dr. João Costa')).toHaveLength(2)
   })
 })

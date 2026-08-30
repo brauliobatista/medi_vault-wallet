@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import ProfilePage from './ProfilePage'
-import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto, getAccessRequests } from '../../api/medical'
+import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto, getAccessRequests, changePassword } from '../../api/medical'
 import { saveUser } from '../../hooks/useAuth'
 import { LanguageProvider } from '../../i18n/LanguageContext'
 
@@ -12,6 +12,7 @@ vi.mock('../../api/medical', () => ({
   uploadProfilePhoto: vi.fn(),
   deleteProfilePhoto: vi.fn(),
   getAccessRequests: vi.fn().mockResolvedValue([]),
+  changePassword: vi.fn(),
 }))
 
 const mockedGetProfile = vi.mocked(getProfile)
@@ -19,23 +20,18 @@ const mockedUpdateProfile = vi.mocked(updateProfile)
 const mockedUpload = vi.mocked(uploadProfilePhoto)
 const mockedDelete = vi.mocked(deleteProfilePhoto)
 const mockedGetAccessRequests = vi.mocked(getAccessRequests)
+const mockedChangePassword = vi.mocked(changePassword)
 
 const baseProfile = {
   utentNumber: '123456789',
   firstName: 'Ana',
   lastName: 'Silva',
   birthday: '1990-01-01',
-  bloodType: 'A+',
+  bloodType: 'O+',
   nationalityName: 'Portuguesa',
   email: 'ana@example.com',
-  phone: '912345678',
-  profession: 'Engenheira',
-  maritalStatus: 'Solteira',
-  acceptsTransfusion: false,
-  acceptsResuscitation: false,
-  emergencyAccess: false,
-  biologicalGender: 'F',
-  sexId: 2,
+  phone: '',
+  profession: '',
   photoUrl: null,
 }
 
@@ -123,16 +119,124 @@ describe('ProfilePage', () => {
     await waitFor(() => expect(mockedDelete).toHaveBeenCalled())
     expect(await screen.findByRole('button', { name: /Adicionar foto/ })).toBeInTheDocument()
   })
+
+  it('logs the patient out shortly after a successful password change', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+    mockedChangePassword.mockResolvedValue({} as never)
+    const originalLocation = window.location
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...originalLocation, href: '' } })
+
+    const { container } = renderPage()
+    await screen.findByRole('button', { name: /Adicionar foto/ })
+
+    fireEvent.click(screen.getByText('Alterar password'))
+    const [current, next, confirm] = container.querySelectorAll('input[type="password"]')
+    fireEvent.change(current, { target: { value: 'old-password' } })
+    fireEvent.change(next, { target: { value: 'new-password' } })
+    fireEvent.change(confirm, { target: { value: 'new-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Alterar password' }))
+
+    expect(await screen.findByText(/Password alterada com sucesso/)).toBeInTheDocument()
+    expect(localStorage.getItem('token')).toBe('token')
+
+    await waitFor(() => expect(localStorage.getItem('token')).toBeNull(), { timeout: 3000 })
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation })
+  })
+
+  it('shows an error and does not log out when the passwords do not match', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    const { container } = renderPage()
+    await screen.findByRole('button', { name: /Adicionar foto/ })
+
+    fireEvent.click(screen.getByText('Alterar password'))
+    const [current, next, confirm] = container.querySelectorAll('input[type="password"]')
+    fireEvent.change(current, { target: { value: 'old-password' } })
+    fireEvent.change(next, { target: { value: 'new-password' } })
+    fireEvent.change(confirm, { target: { value: 'different-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Alterar password' }))
+
+    expect(await screen.findByText('As passwords não coincidem.')).toBeInTheDocument()
+    expect(mockedChangePassword).not.toHaveBeenCalled()
+    expect(localStorage.getItem('token')).toBe('token')
+  })
+
+  it('shows the phone country code as "+code Country" when not editing', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile, phoneCountryCode: '351' })
+
+    renderPage()
+
+    expect(await screen.findByText('+351 Portugal')).toBeInTheDocument()
+  })
+
+  it('shows the placeholder when no phone country code is set', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+
+    await screen.findByText('Indicativo do País')
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  })
+
+  it('lets the patient search for and select a phone country code, then saves it', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: /Editar/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Selecionar…' }))
+    fireEvent.change(screen.getByPlaceholderText('Pesquisar'), { target: { value: 'Espanha' } })
+    fireEvent.click(await screen.findByText('Espanha'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(mockedUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ phoneCountryCode: '34' }),
+    ))
+  })
 })
+
+const criticalFieldsProfile = {
+  utentNumber: '123456789',
+  firstName: 'Ana',
+  lastName: 'Silva',
+  birthday: '1990-01-01',
+  bloodType: 'A+',
+  nationalityName: 'Portuguesa',
+  email: 'ana@example.com',
+  phone: '912345678',
+  profession: 'Engenheira',
+  maritalStatus: 'Solteira',
+  acceptsTransfusion: false,
+  acceptsResuscitation: false,
+  emergencyAccess: false,
+  biologicalGender: 'F',
+  sexId: 2,
+  photoUrl: null,
+}
 
 describe('ProfilePage - critical field confirmation popup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
     saveUser({ id: 'u1', name: 'Ana Silva', role: 'Patient' }, 'token')
-    mockedGetProfile.mockResolvedValue(baseProfile)
-    mockedUpdateProfile.mockResolvedValue(baseProfile)
+    mockedGetProfile.mockResolvedValue(criticalFieldsProfile)
+    mockedUpdateProfile.mockResolvedValue(criticalFieldsProfile)
     mockedGetAccessRequests.mockResolvedValue([])
+  })
+
+  it('only allows changing the language while editing', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+
+    renderPage()
+    await screen.findByRole('button', { name: /Editar/ })
+
+    const languageLabel = screen.getByText('Idioma da Plataforma')
+    const languageSelect = languageLabel.parentElement!.querySelector('select') as HTMLSelectElement
+    expect(languageSelect).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: /Editar/ }))
+    expect(languageSelect).toBeEnabled()
   })
 
   it('shows a warning popup instead of applying the change immediately when toggling "Aceita transfusão"', async () => {
