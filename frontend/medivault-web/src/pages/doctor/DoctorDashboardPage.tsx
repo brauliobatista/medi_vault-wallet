@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import Layout from '../../components/Layout'
 import api from '../../api/client'
-import { scanQrCode, getAccessStatus, getFinishedConsultations } from '../../api/medical'
+import { scanQrCode, getAccessStatus, getFinishedConsultations, getDraftConsultations } from '../../api/medical'
+import { useTranslation } from '../../i18n/LanguageContext'
 
 interface FinishedConsultation {
   id: number
@@ -16,7 +17,18 @@ interface FinishedConsultation {
   durationMinutes: number
 }
 
+interface DraftConsultation {
+  id: number
+  userId: string
+  patientName: string
+  patientPublicId: string
+  utentNumber: string
+  startedAt: string
+  updatedAt: string
+}
+
 export default function DoctorDashboardPage() {
+  const { t } = useTranslation()
   const [utentNumber, setUtentNumber] = useState('')
   const [found, setFound] = useState<{ userId: string; name: string; publicId: string } | null>(null)
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null)
@@ -39,6 +51,9 @@ export default function DoctorDashboardPage() {
   const [finishedConsultations, setFinishedConsultations] = useState<FinishedConsultation[]>([])
   useEffect(() => { getFinishedConsultations().then(setFinishedConsultations).catch(() => {}) }, [])
 
+  const [draftConsultations, setDraftConsultations] = useState<DraftConsultation[]>([])
+  useEffect(() => { getDraftConsultations().then(setDraftConsultations).catch(() => {}) }, [])
+
   // ── Patient search ────────────────────────────────────────────
   const handleSearch = async () => {
     if (!utentNumber.trim()) return
@@ -52,7 +67,7 @@ export default function DoctorDashboardPage() {
       const s = await getAccessStatus(r.data.userId).catch(() => ({ reason: 'granted' }))
       setFoundCardSuspended(s.reason === 'card_suspended')
     } catch {
-      setStatus({ type: 'error', msg: 'Utente não encontrado. Verifique o número.' })
+      setStatus({ type: 'error', msg: t('doctorDashboard.patientNotFound') })
     } finally {
       setLoading(false)
     }
@@ -62,9 +77,9 @@ export default function DoctorDashboardPage() {
     if (!found) return
     try {
       await api.post(`/access-requests/${found.userId}`)
-      setStatus({ type: 'success', msg: `Pedido enviado a ${found.name}. Aguarde aprovação.` })
+      setStatus({ type: 'success', msg: t('doctorDashboard.requestSent', { name: found.name }) })
     } catch {
-      setStatus({ type: 'error', msg: 'Não foi possível enviar o pedido.' })
+      setStatus({ type: 'error', msg: t('doctorDashboard.requestSendError') })
     }
   }
 
@@ -87,7 +102,7 @@ export default function DoctorDashboardPage() {
         rafRef.current = requestAnimationFrame(tick)
       }
     } catch {
-      setScanError('Não foi possível aceder à câmara.')
+      setScanError(t('doctorDashboard.cameraAccessError'))
       setScanning(false)
     }
   }
@@ -131,7 +146,7 @@ export default function DoctorDashboardPage() {
       if (httpStatus === 423) {
         setScanCardSuspended(true)
       } else {
-        setScanError('QR Code inválido ou sem correspondência.')
+        setScanError(t('doctorDashboard.invalidQrCode'))
       }
     }
   }
@@ -149,7 +164,7 @@ export default function DoctorDashboardPage() {
           <div className="dash-card-header">
             <div className="dash-card-heading">
               <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-qr-code-scan" /></span>
-              <span className="dash-card-title">Ler QR Code do Utente</span>
+              <span className="dash-card-title">{t('doctorDashboard.scanQrTitle')}</span>
             </div>
           </div>
 
@@ -157,18 +172,18 @@ export default function DoctorDashboardPage() {
             <div className="consult-context-item context-teal">
               <i className="bi bi-check-circle-fill" />
               <div className="flex-grow-1">
-                <div className="consult-context-title">Acesso concedido</div>
+                <div className="consult-context-title">{t('doctorDashboard.accessGranted')}</div>
                 <div className="consult-context-value">{scanResult.patientName}</div>
-                <div className="consult-context-sub">Expira: {scanResult.expiresAt.slice(0, 10)}</div>
+                <div className="consult-context-sub">{t('doctorDashboard.expiresOn', { date: scanResult.expiresAt.slice(0, 10) })}</div>
                 <div className="mt-2 d-flex gap-2">
                   <button
                     className="consult-finish-btn"
                     onClick={() => navigate(`/doctor/patient/${scanResult.userId}`, { state: { publicId: scanResult.publicId, patientName: scanResult.patientName } })}
                   >
-                    <i className="bi bi-eye" />Ver dados
+                    <i className="bi bi-eye" />{t('doctorAccess.viewData')}
                   </button>
                   <button className="dash-toolbar-btn" onClick={() => { setScanResult(null); setManualCode('') }}>
-                    Novo scan
+                    {t('doctorDashboard.newScan')}
                   </button>
                 </div>
               </div>
@@ -177,12 +192,12 @@ export default function DoctorDashboardPage() {
             <div className="consult-context-item context-danger">
               <i className="bi bi-shield-x" />
               <div className="flex-grow-1">
-                <div className="consult-context-title">MediCard suspenso</div>
-                <div className="consult-context-value">O utente suspendeu o seu cartão.</div>
-                <div className="consult-context-sub">Não é possível aceder aos dados enquanto o cartão estiver inativo.</div>
+                <div className="consult-context-title">{t('doctorDashboard.cardSuspended')}</div>
+                <div className="consult-context-value">{t('doctorDashboard.cardSuspendedByPatient')}</div>
+                <div className="consult-context-sub">{t('doctorDashboard.cardSuspendedHint')}</div>
                 <div className="mt-2">
                   <button className="dash-toolbar-btn" onClick={() => { setScanCardSuspended(false); setManualCode('') }}>
-                    Novo scan
+                    {t('doctorDashboard.newScan')}
                   </button>
                 </div>
               </div>
@@ -199,18 +214,18 @@ export default function DoctorDashboardPage() {
                 <div className="text-center">
                   <video ref={videoRef} className="w-100 rounded mb-2" style={{ maxHeight: 260 }} muted playsInline />
                   <canvas ref={canvasRef} className="d-none" />
-                  <p className="consult-context-sub mb-2">A detetar QR code…</p>
+                  <p className="consult-context-sub mb-2">{t('doctorDashboard.detectingQr')}</p>
                   <button className="dash-toolbar-btn" onClick={stopCamera}>
-                    <i className="bi bi-x-circle" />Cancelar
+                    <i className="bi bi-x-circle" />{t('common.cancel')}
                   </button>
                 </div>
               ) : (
                 <>
                   <canvas ref={canvasRef} className="d-none" />
                   <button className="consult-finish-btn mb-3" onClick={startCamera}>
-                    <i className="bi bi-camera-video" />Abrir câmara
+                    <i className="bi bi-camera-video" />{t('doctorDashboard.openCamera')}
                   </button>
-                  <div className="consult-context-sub mb-2">ou introduza o código manualmente:</div>
+                  <div className="consult-context-sub mb-2">{t('doctorDashboard.orEnterCodeManually')}</div>
                   <div className="input-group">
                     <input
                       className="form-control font-monospace"
@@ -234,14 +249,14 @@ export default function DoctorDashboardPage() {
           <div className="dash-card-header">
             <div className="dash-card-heading">
               <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-search" /></span>
-              <span className="dash-card-title">Pesquisar utente por número</span>
+              <span className="dash-card-title">{t('doctorDashboard.searchByNumberTitle')}</span>
             </div>
           </div>
 
           <div className="input-group mb-3">
             <input
               className="form-control"
-              placeholder="Número de utente (ex: 100000001)"
+              placeholder={t('doctorDashboard.utentNumberPlaceholder')}
               value={utentNumber}
               onChange={(e) => { setUtentNumber(e.target.value); setFound(null); setStatus(null) }}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -249,7 +264,7 @@ export default function DoctorDashboardPage() {
             <button className="consult-finish-btn" onClick={handleSearch} disabled={loading}>
               {loading
                 ? <span className="spinner-border spinner-border-sm" />
-                : <><i className="bi bi-search" />Pesquisar</>}
+                : <><i className="bi bi-search" />{t('common.search')}</>}
             </button>
           </div>
 
@@ -266,7 +281,7 @@ export default function DoctorDashboardPage() {
                 <div className="consult-context-item context-danger mb-2">
                   <i className="bi bi-shield-x" />
                   <div className="consult-context-value">
-                    <strong>MediCard suspenso.</strong> O utente suspendeu o seu cartão — não é possível aceder aos dados enquanto estiver inativo.
+                    <strong>{t('doctorDashboard.cardSuspendedShort')}</strong> {t('doctorDashboard.cardSuspendedHintInline')}
                   </div>
                 </div>
               )}
@@ -279,11 +294,11 @@ export default function DoctorDashboardPage() {
                   </div>
                   <div className="d-flex gap-2">
                     <button className="dash-toolbar-btn" onClick={handleRequestAccess}>
-                      <i className="bi bi-send" />Pedir acesso
+                      <i className="bi bi-send" />{t('doctorDashboard.requestAccess')}
                     </button>
                     {!foundCardSuspended && (
                       <button className="consult-finish-btn" onClick={handleViewData}>
-                        <i className="bi bi-eye" />Ver dados
+                        <i className="bi bi-eye" />{t('doctorAccess.viewData')}
                       </button>
                     )}
                   </div>
@@ -293,13 +308,51 @@ export default function DoctorDashboardPage() {
           )}
         </div>
 
+        {/* Draft consultations (standby) */}
+        {draftConsultations.length > 0 && (
+          <div className="dash-card mt-4">
+            <div className="dash-card-header">
+              <div className="dash-card-heading">
+                <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-hourglass-split" /></span>
+                <span className="dash-card-title">Rascunhos de Consultas</span>
+              </div>
+            </div>
+
+            {draftConsultations.map((c) => (
+              <div className="consult-context-item context-plain" key={c.id}>
+                <i className="bi bi-person-circle" />
+                <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <div className="consult-context-value fw-semibold">{c.patientName}</div>
+                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · Nº utente: {c.utentNumber}</div>
+                    <div className="consult-context-sub">
+                      Em standby desde {c.updatedAt.slice(0, 10)}
+                    </div>
+                  </div>
+                  <button
+                    className="consult-finish-btn"
+                    onClick={() => navigate(`/doctor/patient/${c.userId}`, {
+                      state: {
+                        publicId: c.patientPublicId, patientName: c.patientName,
+                        consultationId: c.id, startedAt: c.startedAt,
+                      },
+                    })}
+                  >
+                    <i className="bi bi-play-fill" />Retomar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Finished consultations */}
         {finishedConsultations.length > 0 && (
           <div className="dash-card mt-4">
             <div className="dash-card-header">
               <div className="dash-card-heading">
                 <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-clipboard2-check" /></span>
-                <span className="dash-card-title">Consultas Finalizadas</span>
+                <span className="dash-card-title">{t('doctorDashboard.finishedConsultationsTitle')}</span>
               </div>
             </div>
 
@@ -309,7 +362,7 @@ export default function DoctorDashboardPage() {
                 <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
                   <div>
                     <div className="consult-context-value fw-semibold">{c.patientName}</div>
-                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · Nº utente: {c.utentNumber}</div>
+                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · {t('doctorDashboard.utentNumberColumnLabel')}: {c.utentNumber}</div>
                     <div className="consult-context-sub">
                       {c.finishedAt.slice(0, 10)} · {c.durationMinutes} min
                     </div>
@@ -319,11 +372,12 @@ export default function DoctorDashboardPage() {
                     onClick={() => navigate(`/doctor/finished-consultation/${c.id}`, {
                       state: {
                         patientName: c.patientName, userId: c.userId, patientPublicId: c.patientPublicId,
-                        utentNumber: c.utentNumber, durationMinutes: c.durationMinutes, finishedAt: c.finishedAt,
+                        utentNumber: c.utentNumber, durationMinutes: c.durationMinutes,
+                        startedAt: c.startedAt, finishedAt: c.finishedAt,
                       },
                     })}
                   >
-                    <i className="bi bi-eye" />Ver
+                    <i className="bi bi-eye" />{t('doctorDashboard.viewButton')}
                   </button>
                 </div>
               </div>

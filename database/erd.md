@@ -94,6 +94,7 @@ erDiagram
         bool is_active
         bool card_active
         string photo_path
+        string language
         datetime created_at
         datetime updated_at
     }
@@ -108,6 +109,20 @@ erDiagram
         string speciality
         guid institution_id FK
         int nationality_id FK
+        string language
+        bool is_active
+        datetime created_at
+    }
+
+    %% -------------------------------------------------------
+    %% INSTITUTION CONTACTS
+    %% -------------------------------------------------------
+
+    INSTITUTION_CONTACTS {
+        int id PK
+        guid institution_id FK
+        string service_name
+        string extension
         bool is_active
         datetime created_at
     }

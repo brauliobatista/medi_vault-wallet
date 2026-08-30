@@ -21,7 +21,7 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
                 NationalityName = x.Nationality != null ? x.Nationality.Name : null,
                 x.MaritalStatus, x.BloodType,
                 x.AcceptsTransfusion, x.AcceptsResuscitation, x.EmergencyAccessCode,
-                x.IsDependent, x.Profession, x.Phone, x.CardActive, x.PhotoPath
+                x.IsDependent, x.Profession, x.Phone, x.CardActive, x.PhotoPath, x.Language
             })
             .FirstOrDefaultAsync();
         if (row is null) return null;
@@ -31,7 +31,7 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
             row.MaritalStatus, row.BloodType,
             row.AcceptsTransfusion == 1, row.AcceptsResuscitation == 1,
             row.EmergencyAccessCode == 1, row.IsDependent == 1, row.Profession, row.Phone,
-            row.CardActive == 1, ToPhotoUrl(row.PhotoPath));
+            row.CardActive == 1, ToPhotoUrl(row.PhotoPath), row.Language);
     }
 
     public async Task<bool> UpdateProfileAsync(string userId, UpdateUserRequest req)
@@ -47,6 +47,7 @@ public class UserService(MediVaultDbContext db, IWebHostEnvironment env)
         if (req.AcceptsResuscitation.HasValue) u.AcceptsResuscitation = req.AcceptsResuscitation.Value ? 1 : 0;
         if (req.BiologicalGender is not null) u.BiologicalGender = req.BiologicalGender;
         if (req.SexId.HasValue) u.SexId = req.SexId.Value;
+        if (req.Language is not null) u.Language = req.Language;
         u.UpdatedAt = DateTime.UtcNow.ToString("o");
 
         await db.SaveChangesAsync();

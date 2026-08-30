@@ -142,3 +142,10 @@ public record SaveConsultationRequest(int? ConsultationId, string StartedAt);
 public record FinishedConsultationDto(
     int Id, string UserId, string PatientName, string PatientPublicId, string UtentNumber,
     string StartedAt, string FinishedAt, int DurationMinutes);
+
+public record DraftConsultationDto(
+    int Id, string UserId, string PatientName, string PatientPublicId, string UtentNumber,
+    string StartedAt, string UpdatedAt);
+
+public record ConsultationActivityItemDto(
+    string Type, string Label, string Detail, string DoctorId, string DoctorName, string OccurredAt);

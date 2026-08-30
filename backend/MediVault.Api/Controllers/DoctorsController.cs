@@ -41,4 +41,8 @@ public class DoctorsController(DoctorService doctorService) : ControllerBase
     [HttpGet("me/finished-consultations")]
     public async Task<IActionResult> GetFinishedConsultations([FromServices] ClinicalRecordsService records) =>
         Ok(await records.GetFinishedConsultationsForDoctorAsync(DoctorId));
+
+    [HttpGet("me/draft-consultations")]
+    public async Task<IActionResult> GetDraftConsultations([FromServices] ClinicalRecordsService records) =>
+        Ok(await records.GetDraftConsultationsForDoctorAsync(DoctorId));
 }

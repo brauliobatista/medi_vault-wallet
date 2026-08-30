@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using MediVault.Api.DTOs.Users;
 using MediVault.Api.Entities;
 
@@ -231,7 +232,7 @@ public class UsersControllerTests
         var client = factory.CreateAuthorizedClient(user.Id, "Patient", user.UtentNumber);
 
         var response = await client.PutAsJsonAsync("/api/users/me",
-            new UpdateUserRequest("new@example.com", "912345678", null, null, null, null, null, null));
+            new UpdateUserRequest("new@example.com", "912345678", null, null, null, null, null, null, null));
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         using var verifyDb = factory.CreateDbContext();
@@ -327,6 +328,30 @@ public class UsersControllerTests
         var response = await client.PostAsync("/api/users/me/photo", content);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadPhoto_PhotoUrlIsServedByStaticFiles()
+    {
+        // Regression: UseStaticFiles() with no options binds to WebRootFileProvider, which
+        // resolves once when WebApplicationBuilder is constructed — if wwwroot doesn't exist on
+        // disk yet at that instant (true for a fresh checkout, and for this isolated test host's
+        // content root) it locked in a NullFileProvider and the uploaded photo 404'd forever.
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var client = factory.CreateAuthorizedClient(user.Id, "Patient", user.UtentNumber);
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new ByteArrayContent([1, 2, 3, 4]);
+        content.Add(fileContent, "photo", "avatar.png");
+        var uploadResponse = await client.PostAsync("/api/users/me/photo", content);
+        var uploadBody = await uploadResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var photoUrl = uploadBody.GetProperty("photoUrl").GetString();
+
+        var photoResponse = await client.GetAsync(photoUrl);
+
+        Assert.Equal(HttpStatusCode.OK, photoResponse.StatusCode);
+        Assert.Equal(new byte[] { 1, 2, 3, 4 }, await photoResponse.Content.ReadAsByteArrayAsync());
     }
 
     [Fact]

@@ -3,9 +3,11 @@ import { QRCodeSVG } from 'qrcode.react'
 import Layout from '../../components/Layout'
 import AccessRequestsTable, { type AccessRequestsColumn } from '../../components/AccessRequestsTable'
 import { getProfile, getAccessRequests, respondToRequest, deleteRequest, getQrCode, toggleCard, getGoogleWalletUrl } from '../../api/medical'
+import { useTranslation } from '../../i18n/LanguageContext'
 import type { AccessRequest } from '../../types/access'
 
 export default function AccessPage() {
+  const { t } = useTranslation()
   const [requests, setRequests] = useState<AccessRequest[]>([])
   const [qrPayload, setQrPayload] = useState<string | null>(null)
   const [qrLoading, setQrLoading] = useState(true)
@@ -32,7 +34,7 @@ export default function AccessPage() {
     setCardActive(activate)
     try {
       await toggleCard(activate)
-      setSuccessMsg(activate ? 'MediCard ativado. Os médicos aprovados voltaram a ter acesso.' : 'MediCard suspenso. Todos os médicos perderam acesso.')
+      setSuccessMsg(activate ? t('access.cardActivated') : t('access.cardSuspended'))
       setTimeout(() => setSuccessMsg(null), 4000)
     } catch {
       setCardActive(!activate)
@@ -51,8 +53,8 @@ export default function AccessPage() {
       const status = (err as { response?: { status?: number } }).response?.status
       setWalletError(
         status === 501
-          ? 'A Google Wallet ainda não está configurada neste servidor.'
-          : 'Não foi possível gerar o cartão para a Google Wallet.'
+          ? t('access.walletNotConfigured')
+          : t('access.walletGenericError')
       )
     } finally {
       setWalletLoading(false)
@@ -63,7 +65,7 @@ export default function AccessPage() {
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: 'approved' } : r))
     try {
       await respondToRequest(id, 'approve')
-      setSuccessMsg('Acesso aprovado com sucesso.')
+      setSuccessMsg(t('access.approvedSuccess'))
       setTimeout(() => setSuccessMsg(null), 3000)
       refresh()
     } catch {
@@ -90,10 +92,10 @@ export default function AccessPage() {
   }
 
   const statusLabel: Record<string, string> = {
-    pending: 'Pendente',
-    approved: 'Aprovado',
-    revoked: 'Revogado',
-    expired: 'Expirado',
+    pending: t('access.statusPending'),
+    approved: t('access.statusApproved'),
+    revoked: t('access.statusRevoked'),
+    expired: t('access.statusExpired'),
   }
 
   const formatDate = (value: string | null | undefined) => (value ? value.slice(0, 10) : '—')
@@ -117,21 +119,21 @@ export default function AccessPage() {
       {r.status === 'pending' && (
         <>
           <button className="btn btn-success btn-sm" onClick={() => handleApprove(r.id)}>
-            <i className="bi bi-check me-1" />Aprovar
+            <i className="bi bi-check me-1" />{t('access.approve')}
           </button>
-          <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(r.id, 'Pedido rejeitado.')}>
-            <i className="bi bi-x me-1" />Rejeitar
+          <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(r.id, t('access.requestRejected'))}>
+            <i className="bi bi-x me-1" />{t('access.reject')}
           </button>
         </>
       )}
       {r.status === 'approved' && (
-        <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(r.id, 'Acesso revogado com sucesso.')}>
-          <i className="bi bi-x me-1" />Revogar
+        <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(r.id, t('access.accessRevoked'))}>
+          <i className="bi bi-x me-1" />{t('access.revoke')}
         </button>
       )}
       {r.status === 'expired' && (
-        <button className="btn btn-outline-secondary btn-sm" onClick={() => handleDelete(r.id, 'Pedido removido.')}>
-          <i className="bi bi-trash me-1" />Remover
+        <button className="btn btn-outline-secondary btn-sm" onClick={() => handleDelete(r.id, t('access.requestRemoved'))}>
+          <i className="bi bi-trash me-1" />{t('access.remove')}
         </button>
       )}
     </>
@@ -149,11 +151,11 @@ export default function AccessPage() {
               <div className="d-flex align-items-center gap-3">
                 <i className={`bi ${cardActive ? 'bi-shield-check text-success' : 'bi-shield-x text-danger'}`} style={{ fontSize: '2rem' }} />
                 <div>
-                  <div className="fw-semibold">{cardActive ? 'MediCard Ativo' : 'MediCard Suspenso'}</div>
+                  <div className="fw-semibold">{cardActive ? t('access.cardActiveTitle') : t('access.cardSuspendedTitle')}</div>
                   <small className="text-muted">
                     {cardActive
-                      ? 'Os médicos aprovados podem aceder aos seus dados.'
-                      : 'Nenhum médico tem acesso enquanto o cartão estiver suspenso.'}
+                      ? t('access.cardActiveDesc')
+                      : t('access.cardSuspendedDesc')}
                   </small>
                 </div>
               </div>
@@ -161,22 +163,22 @@ export default function AccessPage() {
                 {cardActive ? (
                   confirmSuspend ? (
                     <div className="d-flex align-items-center gap-2 flex-wrap">
-                      <span className="text-muted small">Confirmar suspensão?</span>
+                      <span className="text-muted small">{t('access.confirmSuspendQuestion')}</span>
                       <button className="btn btn-danger btn-sm" disabled={cardLoading} onClick={() => handleCard(false)}>
-                        Sim, suspender
+                        {t('access.confirmSuspendYes')}
                       </button>
                       <button className="btn btn-outline-secondary btn-sm" onClick={() => setConfirmSuspend(false)}>
-                        Cancelar
+                        {t('common.cancel')}
                       </button>
                     </div>
                   ) : (
                     <button className="btn btn-outline-danger btn-sm" onClick={() => setConfirmSuspend(true)}>
-                      <i className="bi bi-lock me-1" />Suspender cartão
+                      <i className="bi bi-lock me-1" />{t('access.suspendCard')}
                     </button>
                   )
                 ) : (
                   <button className="btn btn-success btn-sm" disabled={cardLoading} onClick={() => handleCard(true)}>
-                    <i className="bi bi-lock-open me-1" />Ativar cartão
+                    <i className="bi bi-lock-open me-1" />{t('access.activateCard')}
                   </button>
                 )}
               </div>
@@ -188,7 +190,7 @@ export default function AccessPage() {
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-header bg-white fw-semibold border-bottom">
             <i className="bi bi-qr-code me-2 text-primary" />
-            O meu QR Code de Acesso
+            {t('access.myQrTitle')}
           </div>
           <div className="card-body text-center">
             {qrLoading ? (
@@ -197,14 +199,13 @@ export default function AccessPage() {
               <>
                 <QRCodeSVG value={qrPayload} size={200} className="mb-3" />
                 <p className="text-muted small mb-2">
-                  Mostre este código ao seu médico para partilhar o acesso imediatamente.
-                  O acesso expira após <strong>7 dias</strong>.
+                  {t('access.qrInstructions')} <strong>{t('access.qrExpiryDays')}</strong>.
                 </p>
                 <div className="d-flex justify-content-center align-items-center gap-2 mb-1">
                   <code className="bg-light border rounded px-3 py-2 fs-6 user-select-all">{qrPayload}</code>
                 </div>
                 <p className="text-muted" style={{ fontSize: '0.75rem' }}>
-                  Se o médico não conseguir ler o QR, pode introduzir o código acima manualmente.
+                  {t('access.qrManualCode')}
                 </p>
                 <button className="btn btn-outline-primary btn-sm" disabled={walletLoading} onClick={handleAddToGoogleWallet}>
                   {walletLoading ? (
@@ -212,24 +213,24 @@ export default function AccessPage() {
                   ) : (
                     <i className="bi bi-wallet2 me-2" />
                   )}
-                  Adicionar à Google Wallet
+                  {t('access.addToGoogleWallet')}
                 </button>
                 {walletError && <p className="text-danger small mt-2 mb-0">{walletError}</p>}
               </>
             ) : (
-              <p className="text-danger">Não foi possível gerar o QR Code.</p>
+              <p className="text-danger">{t('access.qrGenerateError')}</p>
             )}
           </div>
         </div>
 
         {/* Access requests */}
-        <h6 className="fw-semibold mb-1">Pedidos de Acesso de Médicos</h6>
-        <p className="text-muted small mb-3">Os médicos que pediram acesso via formulário aparecem aqui.</p>
+        <h6 className="fw-semibold mb-1">{t('access.requestsTitle')}</h6>
+        <p className="text-muted small mb-3">{t('access.requestsSubtitle')}</p>
         <AccessRequestsTable
           requests={requests}
           columns={columns}
           renderActions={renderActions}
-          emptyMessage="Sem pedidos de acesso."
+          emptyMessage={t('access.noRequests')}
         />
       </div>
     </Layout>

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { AxiosResponse } from 'axios'
 import VitalSignsModal from './VitalSignsModal'
 import { getVitalSigns, addVitalSign, updateVitalSign, deleteVitalSign } from '../api/medical'
+import { LanguageProvider } from '../i18n/LanguageContext'
 
 interface VitalSignPayload {
   recordedAt: string
@@ -39,7 +40,7 @@ describe('VitalSignsModal', () => {
   it('shows an empty state when there are no records', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<VitalSignsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><VitalSignsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Sem registos de sinais vitais.')).toBeInTheDocument()
   })
@@ -47,7 +48,7 @@ describe('VitalSignsModal', () => {
   it('lists a record and computes its BMI', async () => {
     mockedGet.mockResolvedValue([vital])
 
-    render(<VitalSignsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><VitalSignsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('120/80')).toBeInTheDocument()
     expect(screen.getByText('22.9')).toBeInTheDocument() // 70 / (1.75^2)
@@ -56,7 +57,7 @@ describe('VitalSignsModal', () => {
   it('shows a dash for BMI when weight or height is missing', async () => {
     mockedGet.mockResolvedValue([{ ...vital, weight: null }])
 
-    render(<VitalSignsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><VitalSignsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('120/80')
 
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
@@ -66,7 +67,7 @@ describe('VitalSignsModal', () => {
     mockedGet.mockResolvedValue([])
     mockedAdd.mockResolvedValue({})
 
-    render(<VitalSignsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><VitalSignsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem registos de sinais vitais.')
 
     fireEvent.click(screen.getByText('Novo registo'))
@@ -83,7 +84,7 @@ describe('VitalSignsModal', () => {
   it('does not submit without a recordedAt value', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<VitalSignsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><VitalSignsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem registos de sinais vitais.')
 
     fireEvent.click(screen.getByText('Novo registo'))
@@ -97,7 +98,7 @@ describe('VitalSignsModal', () => {
     mockedGet.mockResolvedValue([vital])
     mockedUpdate.mockResolvedValue(fakeAxiosResponse)
 
-    render(<VitalSignsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><VitalSignsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('120/80')
 
     const [editButton] = screen.getAllByRole('button', { name: '' })
@@ -119,7 +120,7 @@ describe('VitalSignsModal', () => {
     mockedDelete.mockResolvedValue(fakeAxiosResponse)
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-    render(<VitalSignsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><VitalSignsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('120/80')
 
     const buttons = screen.getAllByRole('button', { name: '' })

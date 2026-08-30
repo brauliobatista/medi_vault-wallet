@@ -1,34 +1,52 @@
 import { useEffect, useState } from 'react'
 import { useParams, useLocation, Link } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import { getDoctorNotes, getChatMessages } from '../../api/medical'
+import { getDoctorNotes, getChatMessages, getConsultationActivity } from '../../api/medical'
+import { useTranslation } from '../../i18n/LanguageContext'
 
 interface DoctorNote { id: number; doctorId: string; doctorName: string; section: string; noteText: string; createdAt: string; updatedAt: string }
 interface ChatMessage { id: number; authorDoctorId: string; authorName: string; message: string; createdAt: string }
+interface ActivityItem { type: string; label: string; detail: string; doctorId: string; doctorName: string; occurredAt: string }
+
+const ACTIVITY_ICONS: Record<string, string> = {
+  anamnese: 'bi-person-lines-fill',
+  vitais: 'bi-heart-pulse',
+  avaliacao: 'bi-clipboard2-check',
+  prescricao: 'bi-capsule',
+  documento: 'bi-file-earmark-text',
+}
 
 export default function FinishedConsultationPage() {
+  const { t } = useTranslation()
   useParams<{ consultationId: string }>()
   const location = useLocation()
   const navState = location.state as {
     patientName?: string; userId?: string; patientPublicId?: string; utentNumber?: string
-    durationMinutes?: number; finishedAt?: string
+    durationMinutes?: number; startedAt?: string; finishedAt?: string
   } | null
 
   const [notes, setNotes] = useState<DoctorNote[]>([])
+  const [activity, setActivity] = useState<ActivityItem[]>([])
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!navState?.userId) { setLoading(false); return }
-    Promise.all([getDoctorNotes(navState.userId), getChatMessages(navState.userId)])
-      .then(([notesRes, chatRes]) => { setNotes(notesRes); setChatMessages(chatRes) })
+    Promise.all([
+      getDoctorNotes(navState.userId),
+      getChatMessages(navState.userId),
+      navState.startedAt
+        ? getConsultationActivity(navState.userId, navState.startedAt, navState.finishedAt)
+        : Promise.resolve([]),
+    ])
+      .then(([notesRes, chatRes, activityRes]) => { setNotes(notesRes); setChatMessages(chatRes); setActivity(activityRes) })
       .finally(() => setLoading(false))
-  }, [navState?.userId])
+  }, [navState?.userId, navState?.startedAt, navState?.finishedAt])
 
   if (!navState?.userId) {
     return (
       <Layout>
-        <p className="text-muted">Consulta não encontrada. <Link to="/doctor">Voltar ao dashboard</Link></p>
+        <p className="text-muted">{t('finishedConsultation.notFound')} <Link to="/doctor">{t('finishedConsultation.backToDashboard')}</Link></p>
       </Layout>
     )
   }
@@ -36,7 +54,7 @@ export default function FinishedConsultationPage() {
   return (
     <Layout>
       <Link to="/doctor" className="consult-back mb-3 d-inline-block">
-        <i className="bi bi-arrow-left" /> Voltar
+        <i className="bi bi-arrow-left" /> {t('common.back')}
       </Link>
 
       <div className="dash-card mb-4">
@@ -46,28 +64,28 @@ export default function FinishedConsultationPage() {
             <span className="dash-card-title">{navState.patientName}</span>
           </div>
         </div>
-        <div className="consult-context-sub font-monospace">{navState.patientPublicId} · Nº utente: {navState.utentNumber}</div>
+        <div className="consult-context-sub font-monospace">{navState.patientPublicId} · {t('doctorDashboard.utentNumberColumnLabel')}: {navState.utentNumber}</div>
         <div className="consult-context-sub">
-          Consulta finalizada em {navState.finishedAt?.slice(0, 10)} · Duração: {navState.durationMinutes} min
+          {t('finishedConsultation.summary', { date: navState.finishedAt?.slice(0, 10) ?? '', duration: navState.durationMinutes ?? 0 })}
         </div>
         <div className="consult-context-sub mt-1">
-          O acesso aos dados clínicos completos deste utente terminou. Só tens acesso de leitura às tuas notas e ao chat da equipa abaixo.
+          {t('finishedConsultation.readOnlyNotice')}
         </div>
       </div>
 
       {loading ? (
-        <p className="text-muted">A carregar…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       ) : (
         <>
           <div className="dash-card mb-4">
             <div className="dash-card-header">
               <div className="dash-card-heading">
                 <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-journal-text" /></span>
-                <span className="dash-card-title">Notas</span>
+                <span className="dash-card-title">{t('finishedConsultation.notesTitle')}</span>
               </div>
             </div>
             {notes.length === 0 ? (
-              <p className="mv-empty-state">Sem notas registadas.</p>
+              <p className="mv-empty-state">{t('finishedConsultation.noNotes')}</p>
             ) : (
               notes.map((n) => (
                 <div className="consult-context-item context-plain" key={n.id}>
@@ -82,15 +100,38 @@ export default function FinishedConsultationPage() {
             )}
           </div>
 
+          <div className="dash-card mb-4">
+            <div className="dash-card-header">
+              <div className="dash-card-heading">
+                <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-list-check" /></span>
+                <span className="dash-card-title">Atividade da Consulta</span>
+              </div>
+            </div>
+            {activity.length === 0 ? (
+              <p className="mv-empty-state">Sem atividade registada nesta consulta.</p>
+            ) : (
+              activity.map((a, idx) => (
+                <div className="consult-context-item context-plain" key={`${a.type}-${idx}`}>
+                  <i className={`bi ${ACTIVITY_ICONS[a.type] ?? 'bi-journal-text'}`} />
+                  <div className="flex-grow-1">
+                    <div className="consult-context-title">{a.label}</div>
+                    <div className="consult-context-value">{a.detail}</div>
+                    <div className="consult-context-sub">{a.doctorName} · {a.occurredAt.slice(0, 16).replace('T', ' ')}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
           <div className="dash-card">
             <div className="dash-card-header">
               <div className="dash-card-heading">
                 <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-chat-dots" /></span>
-                <span className="dash-card-title">Chat da Equipa</span>
+                <span className="dash-card-title">{t('patientRecord.teamChat')}</span>
               </div>
             </div>
             {chatMessages.length === 0 ? (
-              <p className="mv-empty-state">Sem mensagens.</p>
+              <p className="mv-empty-state">{t('finishedConsultation.noMessages')}</p>
             ) : (
               chatMessages.map((m) => (
                 <div className="consult-context-item context-plain" key={m.id}>

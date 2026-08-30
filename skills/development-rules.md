@@ -16,6 +16,14 @@ Load this skill at the start of every ticket/task in this project, whenever writ
   - These check different things: the unit test can't catch a wrong `[Authorize(Roles=...)]` or route; the API test is too slow/coarse to cover every business-logic branch. Neither replaces the other.
   - CI runs them as separate jobs (`backend-unit`, `backend-api` in `.github/workflows/ci.yml`) — keep new tests in the matching folder so the `--filter` split (`FullyQualifiedName~MediVault.Api.Tests.Api`) keeps working.
 
+### Internationalization (i18n)
+- The app supports 6 languages: Portuguese (default), English, Spanish, French, German, Italian.
+- Every new screen, component, or modal, and every new/changed piece of user-facing text on an existing one, must use the `useTranslation()` hook (`frontend/medivault-web/src/i18n/LanguageContext.tsx`) — no hardcoded UI strings (labels, buttons, headings, empty-state text, aria-labels, placeholders, status/badge labels, dynamically formatted dates/months/weekdays, etc.).
+- Add the corresponding key to **all 6** locale files, not just `pt`: `src/i18n/locales/{pt,en,es,fr,de,it}/{common,patient,doctor,modals}.ts`. A translation added to only one language is an incomplete change.
+- Pick the right namespace file to avoid key collisions across parallel changes: `common.ts` (nav/login/shared actions), `patient.ts` (patient pages + shared `profile.*` fields), `doctor.ts` (doctor pages), `modals.ts` (`src/components/*Modal.tsx`). Keys must be globally unique across the 4 files per language.
+- For helper functions defined outside a component that need translated text (formatters, label lookups), pass `t` in as an explicit parameter — don't hardcode strings in module-level constants/functions.
+- Any `.test.tsx` for a component using `useTranslation()` must wrap the render in `<LanguageProvider>` from `../i18n/LanguageContext` (relative path depends on file location).
+
 ### Code style
 - New code must follow the same patterns and conventions already used in the codebase (naming, structure, error handling, layer boundaries, etc.). Do not introduce a different style for the same kind of code — match what's already there instead of inventing an alternative.
 - No dead code or commented-out code, and no leftover debug statements (`console.log`, `Debug.WriteLine`, etc.) in a PR.
@@ -29,10 +37,12 @@ Load this skill at the start of every ticket/task in this project, whenever writ
 - Every Pull Request must always target `main` as its base branch, and each ticket must have its own separate PR — never bundle more than one ticket's changes into a single PR.
 - A PR needs at least one reviewer approval before it can be merged.
 - Branch names follow the ticket key (`KAN##-short-description`).
-- Claude may run `git commit` and `git push` for ticket branches and to open Pull Requests. Claude must never commit or push directly to `main` without human review — that always goes through a PR.
+- Claude may run `git commit` and `git push` (to a feature/ticket branch, never directly to `main`) and open the Pull Request itself. This does not skip review — the PR still needs at least one reviewer approval before merging, and Claude must never merge a PR itself.
+- Force-pushing, amending a commit that's already been pushed, or any other destructive/history-rewriting git operation still requires explicit confirmation from the developer first.
 
 ## Checklist before finishing a ticket
 
+- [ ] All new/changed user-facing text uses `useTranslation()` and has keys added to all 6 locale files (pt/en/es/fr/de/it)
 - [ ] Automated tests added for the change (and for the bug being fixed, if applicable)
 - [ ] New/changed API endpoints have both a Service unit test and a Controller API test
 - [ ] Full test suite passes locally / in CI
