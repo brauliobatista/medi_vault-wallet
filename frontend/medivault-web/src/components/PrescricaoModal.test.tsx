@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { AxiosResponse } from 'axios'
 import PrescricaoModal from './PrescricaoModal'
 import { getMedications, addMedication, deleteMedication } from '../api/medical'
+import { LanguageProvider } from '../i18n/LanguageContext'
 
 vi.mock('../api/medical', () => ({
   getMedications: vi.fn(),
@@ -23,7 +24,7 @@ describe('PrescricaoModal', () => {
   it('shows an empty state when there is no medication', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<PrescricaoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><PrescricaoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Sem medicação prescrita.')).toBeInTheDocument()
   })
@@ -33,7 +34,7 @@ describe('PrescricaoModal', () => {
       { id: 1, activeSubstance: 'Ibuprofeno', dose: '400mg', posology: '1x/dia', startDate: '2024-01-01', endDate: null },
     ])
 
-    render(<PrescricaoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><PrescricaoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Ibuprofeno')).toBeInTheDocument()
     expect(screen.getByText('400mg')).toBeInTheDocument()
@@ -43,7 +44,7 @@ describe('PrescricaoModal', () => {
     mockedGet.mockResolvedValue([])
     mockedAdd.mockResolvedValue({})
 
-    render(<PrescricaoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><PrescricaoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem medicação prescrita.')
 
     fireEvent.click(screen.getByText('Adicionar medicação'))
@@ -60,7 +61,7 @@ describe('PrescricaoModal', () => {
   it('does not submit the form when the substance is blank', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<PrescricaoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><PrescricaoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem medicação prescrita.')
 
     fireEvent.click(screen.getByText('Adicionar medicação'))
@@ -76,7 +77,7 @@ describe('PrescricaoModal', () => {
     mockedDelete.mockResolvedValue(fakeAxiosResponse)
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-    render(<PrescricaoModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><PrescricaoModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Ibuprofeno')
 
     fireEvent.click(screen.getByRole('button', { name: '' }))

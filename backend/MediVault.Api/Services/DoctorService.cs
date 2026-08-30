@@ -14,7 +14,11 @@ public class DoctorService(MediVaultDbContext db)
                 x.Id, x.OrdemMedicosId, x.Email, x.FirstName, x.LastName,
                 x.Speciality, x.InstitutionId,
                 x.Institution != null ? x.Institution.Name : string.Empty,
-                x.Nationality != null ? x.Nationality.Name : null))
+                x.Institution != null ? x.Institution.Type : string.Empty,
+                x.Institution != null ? x.Institution.Address : null,
+                x.Institution != null ? x.Institution.Phone : null,
+                x.Nationality != null ? x.Nationality.Name : null,
+                x.Language))
             .FirstOrDefaultAsync();
     }
 
@@ -24,6 +28,7 @@ public class DoctorService(MediVaultDbContext db)
         if (d is null) return false;
         if (req.Email is not null) d.Email = req.Email;
         if (req.Speciality is not null) d.Speciality = req.Speciality;
+        if (req.Language is not null) d.Language = req.Language;
         await db.SaveChangesAsync();
         return true;
     }

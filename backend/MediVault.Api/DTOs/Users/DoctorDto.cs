@@ -9,10 +9,15 @@ public record DoctorProfileDto(
     string? Speciality,
     string InstitutionId,
     string InstitutionName,
-    string? NationalityName
+    string InstitutionType,
+    string? InstitutionAddress,
+    string? InstitutionPhone,
+    string? NationalityName,
+    string Language
 );
 
 public record UpdateDoctorRequest(
     string? Email,
-    string? Speciality
+    string? Speciality,
+    string? Language
 );

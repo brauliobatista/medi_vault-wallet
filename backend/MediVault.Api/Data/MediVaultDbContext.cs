@@ -40,10 +40,16 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
     public DbSet<PendingReviewFlag> PendingReviewFlags => Set<PendingReviewFlag>();
     public DbSet<SchemaVersion> SchemaVersions => Set<SchemaVersion>();
     public DbSet<AppVersion> AppVersions => Set<AppVersion>();
+    public DbSet<ScheduleEventType> ScheduleEventTypes => Set<ScheduleEventType>();
+    public DbSet<AppointmentType> AppointmentTypes => Set<AppointmentType>();
+    public DbSet<InstitutionContact> InstitutionContacts => Set<InstitutionContact>();
+    public DbSet<DoctorScheduleEvent> DoctorScheduleEvents => Set<DoctorScheduleEvent>();
+    public DbSet<PatientAppointment> PatientAppointments => Set<PatientAppointment>();
     public DbSet<VitalSign> VitalSigns => Set<VitalSign>();
     public DbSet<ClinicalAssessment> ClinicalAssessments => Set<ClinicalAssessment>();
     public DbSet<Anamnesis> Anamneses => Set<Anamnesis>();
     public DbSet<TeamChatMessage> TeamChatMessages => Set<TeamChatMessage>();
+    public DbSet<Consultation> Consultations => Set<Consultation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -139,6 +145,12 @@ public class MediVaultDbContext(DbContextOptions<MediVaultDbContext> options) : 
             .HasOne(f => f.ReviewedByDoctor)
             .WithMany(d => d.ReviewedFlags)
             .HasForeignKey(f => f.ReviewedBy)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<PatientAppointment>()
+            .HasOne(a => a.CreatedByDoctor)
+            .WithMany()
+            .HasForeignKey(a => a.CreatedByDoctorId)
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<RelationshipType>()

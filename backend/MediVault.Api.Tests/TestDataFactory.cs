@@ -27,9 +27,15 @@ public static class TestDataFactory
         return c;
     }
 
-    public static Institution SeedInstitution(MediVaultDbContext db, string? id = null, string name = "Hospital Central")
+    public static Institution SeedInstitution(
+        MediVaultDbContext db,
+        string? id = null,
+        string name = "Hospital Central",
+        string type = "hospital",
+        string? address = null,
+        string? phone = null)
     {
-        var i = new Institution { Id = id ?? Guid.NewGuid().ToString(), Name = name, Type = "hospital" };
+        var i = new Institution { Id = id ?? Guid.NewGuid().ToString(), Name = name, Type = type, Address = address, Phone = phone };
         db.Institutions.Add(i);
         db.SaveChanges();
         return i;

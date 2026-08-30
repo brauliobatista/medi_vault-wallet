@@ -43,6 +43,31 @@ public class AccessControlService(MediVaultDbContext db, IMemoryCache cache)
         return has ? (true, "granted") : (false, "no_access");
     }
 
+    // Called when a doctor finishes a consultation (KAN-67): the approved access request for
+    // this doctor/patient pair is closed out. ExpiresAt is also set to now so that an
+    // is_emergency-granted row (which DoctorHasAccessAsync treats as always-on regardless of
+    // status) stops granting access too.
+    public async Task FinishAccessForConsultationAsync(string doctorId, string userId)
+    {
+        var now = DateTime.UtcNow.ToString("o");
+        var requests = await db.AccessRequests
+            .Where(r => r.DoctorId == doctorId && r.UserId == userId && r.Status == "approved")
+            .ToListAsync();
+
+        foreach (var r in requests)
+        {
+            r.Status = "finished";
+            r.ExpiresAt = now;
+        }
+        if (requests.Count > 0) await db.SaveChangesAsync();
+        cache.Remove(DoctorAccessCacheKey(doctorId, userId));
+    }
+
+    // Carve-out for read-only doctor notes / team chat (KAN-67): a doctor who no longer has
+    // full access can still read those for a patient they had a finished consultation with.
+    public async Task<bool> DoctorHadFinishedConsultationAsync(string doctorId, string userId) =>
+        await db.Consultations.AnyAsync(c => c.DoctorId == doctorId && c.UserId == userId && c.Status == "finished");
+
     public async Task<bool> GuardianHasAccessAsync(string guardianUserId, string dependentUserId)
     {
         return await db.FamilyGuardianships.AnyAsync(f =>

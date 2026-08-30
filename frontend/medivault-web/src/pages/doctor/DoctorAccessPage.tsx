@@ -1,33 +1,24 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import AccessRequestsTable, { type AccessRequestsColumn } from '../../components/AccessRequestsTable'
 import { getAccessRequests } from '../../api/medical'
+import { useTranslation } from '../../i18n/LanguageContext'
+import type { AccessRequest } from '../../types/access'
 
-interface AccessRequest {
-  id: number
-  userId: string
-  patientName: string
-  patientPublicId: string
-  utentNumber: string
-  status: string
-  isEmergency: boolean
-  requestedAt: string
-  approvedAt: string | null
-  expiresAt: string | null
-}
-
-type StatusFilter = 'approved' | 'rejected' | 'expired' | 'pending' | 'revoked' | 'all'
-
-const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: 'approved', label: 'Aprovados' },
-  { value: 'rejected', label: 'Rejeitados' },
-  { value: 'expired', label: 'Expirados' },
-  { value: 'pending', label: 'Pendentes' },
-  { value: 'revoked', label: 'Revogados' },
-  { value: 'all', label: 'Todos os estados' },
-]
+type StatusFilter = 'approved' | 'rejected' | 'expired' | 'pending' | 'revoked' | 'finished' | 'all'
 
 export default function DoctorAccessPage() {
+  const { t } = useTranslation()
+  const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+    { value: 'approved', label: t('doctorAccess.filterApproved') },
+    { value: 'rejected', label: t('doctorAccess.filterRejected') },
+    { value: 'expired', label: t('doctorAccess.filterExpired') },
+    { value: 'pending', label: t('doctorAccess.filterPending') },
+    { value: 'revoked', label: t('doctorAccess.filterRevoked') },
+    { value: 'finished', label: t('doctorAccess.filterFinished') },
+    { value: 'all', label: t('doctorAccess.filterAll') },
+  ]
   const [requests, setRequests] = useState<AccessRequest[]>([])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('approved')
   const [search, setSearch] = useState('')
@@ -49,14 +40,16 @@ export default function DoctorAccessPage() {
     rejected: 'danger',
     expired: 'dark',
     revoked: 'secondary',
+    finished: 'info text-dark',
   }
 
   const statusLabel: Record<string, string> = {
-    pending: 'Pendente',
-    approved: 'Aprovado',
-    rejected: 'Rejeitado',
-    expired: 'Expirado',
-    revoked: 'Revogado',
+    pending: t('doctorAccess.statusPending'),
+    approved: t('doctorAccess.statusApproved'),
+    rejected: t('doctorAccess.statusRejected'),
+    expired: t('doctorAccess.statusExpired'),
+    revoked: t('doctorAccess.statusRevoked'),
+    finished: t('doctorAccess.statusFinished'),
   }
 
   const filteredRequests = useMemo(() => {
@@ -78,12 +71,49 @@ export default function DoctorAccessPage() {
     })
   }, [requests, statusFilter, search, dateFrom, dateTo])
 
+  const formatDate = (value: string | null | undefined) => (value ? value.slice(0, 10) : '—')
+
+  const columns: AccessRequestsColumn[] = [
+    {
+      key: 'patientName',
+      label: 'Paciente',
+      sortable: true,
+      sortValue: (r) => r.patientName ?? '',
+      render: (r) => (
+        <>
+          <i className="bi bi-person me-1" />
+          {r.patientName} <span className="text-muted small font-monospace">{r.patientPublicId ?? ''}</span>
+        </>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Estado',
+      sortable: true,
+      sortValue: (r) => r.status,
+      render: (r) => <span className={`badge bg-${badgeClass[r.status] ?? 'secondary'}`}>{statusLabel[r.status] ?? r.status}</span>,
+    },
+    { key: 'requestedAt', label: 'Pedido em', sortable: true, sortValue: (r) => r.requestedAt, render: (r) => formatDate(r.requestedAt) },
+    { key: 'approvedAt', label: 'Aprovado em', sortable: true, sortValue: (r) => r.approvedAt ?? '', render: (r) => formatDate(r.approvedAt) },
+    { key: 'expiresAt', label: 'Expira em', sortable: true, sortValue: (r) => r.expiresAt ?? '', render: (r) => formatDate(r.expiresAt) },
+  ]
+
+  const renderActions = (r: AccessRequest) =>
+    r.status === 'approved' ? (
+      <button
+        className="btn btn-sm btn-primary"
+        onClick={() => navigate(`/doctor/patient/${r.userId}`, { state: { publicId: r.patientPublicId, patientName: r.patientName } })}
+      >
+        <i className="bi bi-eye me-1" />{t('doctorAccess.viewData')}
+      </button>
+    ) : null
+
   return (
     <Layout>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h6 className="fw-semibold mb-0">Pedidos de Acesso</h6>
+        <h6 className="fw-semibold mb-0">{t('doctorAccess.title')}</h6>
         <button className="btn btn-outline-secondary btn-sm" onClick={refresh}>
-          <i className="bi bi-arrow-clockwise me-1" />Atualizar
+          <i className="bi bi-arrow-clockwise me-1" />{t('doctorAccess.refresh')}
         </button>
       </div>
 
@@ -91,7 +121,7 @@ export default function DoctorAccessPage() {
         <div className="card-body py-2">
           <div className="row g-2 align-items-end">
             <div className="col-12 col-md-3">
-              <label className="form-label small text-muted mb-1">Estado</label>
+              <label className="form-label small text-muted mb-1">{t('doctorAccess.statusLabel')}</label>
               <select
                 className="form-select form-select-sm"
                 value={statusFilter}
@@ -103,17 +133,17 @@ export default function DoctorAccessPage() {
               </select>
             </div>
             <div className="col-12 col-md-5">
-              <label className="form-label small text-muted mb-1">Nome, nº de cartão ou nº de utente</label>
+              <label className="form-label small text-muted mb-1">{t('doctorAccess.searchLabel')}</label>
               <input
                 type="text"
                 className="form-control form-control-sm"
-                placeholder="Pesquisar..."
+                placeholder={`${t('common.search')}...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <div className="col-6 col-md-2">
-              <label className="form-label small text-muted mb-1">De</label>
+              <label className="form-label small text-muted mb-1">{t('doctorAccess.dateFrom')}</label>
               <input
                 type="date"
                 className="form-control form-control-sm"
@@ -122,7 +152,7 @@ export default function DoctorAccessPage() {
               />
             </div>
             <div className="col-6 col-md-2">
-              <label className="form-label small text-muted mb-1">Até</label>
+              <label className="form-label small text-muted mb-1">{t('doctorAccess.dateTo')}</label>
               <input
                 type="date"
                 className="form-control form-control-sm"
@@ -134,42 +164,12 @@ export default function DoctorAccessPage() {
         </div>
       </div>
 
-      {filteredRequests.length === 0 ? (
-        <p className="text-muted">Sem pedidos de acesso para os filtros selecionados.</p>
-      ) : (
-        <div className="list-group shadow-sm">
-          {filteredRequests.map((r) => (
-            <div key={String(r.id)} className="list-group-item">
-              <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                  <div className="fw-semibold">
-                    <i className="bi bi-person me-1" />
-                    {String(r.patientName)} <span className="text-muted small font-monospace">{String(r.patientPublicId ?? '')}</span>
-                  </div>
-                  <small className="text-muted">
-                    Pedido: {String(r.requestedAt).slice(0, 10)}
-                    {r.approvedAt ? ` · Aprovado: ${String(r.approvedAt).slice(0, 10)}` : ''}
-                    {r.expiresAt ? ` · Expira: ${String(r.expiresAt).slice(0, 10)}` : ''}
-                  </small>
-                </div>
-                <div className="d-flex align-items-center gap-2">
-                  <span className={`badge bg-${badgeClass[String(r.status)] ?? 'secondary'}`}>
-                    {statusLabel[String(r.status)] ?? String(r.status)}
-                  </span>
-                  {r.status === 'approved' && (
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => navigate(`/doctor/patient/${r.userId}`, { state: { publicId: r.patientPublicId, patientName: r.patientName } })}
-                    >
-                      <i className="bi bi-eye me-1" />Ver dados
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <AccessRequestsTable
+        requests={filteredRequests}
+        columns={columns}
+        renderActions={renderActions}
+        emptyMessage={t('doctorAccess.noRequests')}
+      />
     </Layout>
   )
 }

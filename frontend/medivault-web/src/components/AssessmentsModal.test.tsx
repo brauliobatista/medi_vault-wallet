@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { AxiosResponse } from 'axios'
 import AssessmentsModal from './AssessmentsModal'
 import { getAssessments, addAssessment, updateAssessment, deleteAssessment } from '../api/medical'
+import { LanguageProvider } from '../i18n/LanguageContext'
 
 vi.mock('../api/medical', () => ({
   getAssessments: vi.fn(),
@@ -28,7 +29,7 @@ describe('AssessmentsModal', () => {
   it('shows an empty state when there are no assessments', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<AssessmentsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AssessmentsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Sem avaliações registadas.')).toBeInTheDocument()
   })
@@ -36,7 +37,7 @@ describe('AssessmentsModal', () => {
   it('lists assessments with hypothesis and plan', async () => {
     mockedGet.mockResolvedValue([{ id: 1, hypothesis: 'Gripe', plan: 'Repouso', createdAt: '2024-01-01T10:00:00' }])
 
-    render(<AssessmentsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AssessmentsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Gripe')).toBeInTheDocument()
     expect(screen.getByText('Repouso')).toBeInTheDocument()
@@ -46,7 +47,7 @@ describe('AssessmentsModal', () => {
     mockedGet.mockResolvedValue([])
     mockedAdd.mockResolvedValue({})
 
-    render(<AssessmentsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AssessmentsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem avaliações registadas.')
 
     fireEvent.click(screen.getByText('Adicionar avaliação'))
@@ -61,7 +62,7 @@ describe('AssessmentsModal', () => {
   it('does not submit when hypothesis or plan is blank', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<AssessmentsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AssessmentsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem avaliações registadas.')
 
     fireEvent.click(screen.getByText('Adicionar avaliação'))
@@ -75,7 +76,7 @@ describe('AssessmentsModal', () => {
     mockedGet.mockResolvedValue([{ id: 1, hypothesis: 'Gripe', plan: 'Repouso', createdAt: '2024-01-01T10:00:00' }])
     mockedUpdate.mockResolvedValue(fakeAxiosResponse)
 
-    render(<AssessmentsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AssessmentsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Gripe')
 
     fireEvent.click(screen.getByText('Editar'))
@@ -91,7 +92,7 @@ describe('AssessmentsModal', () => {
     mockedDelete.mockResolvedValue(fakeAxiosResponse)
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-    render(<AssessmentsModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AssessmentsModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Gripe')
 
     fireEvent.click(screen.getByRole('button', { name: '' }))

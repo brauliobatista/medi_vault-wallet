@@ -302,6 +302,163 @@ public class ClinicalRecordsControllerTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    // --- Consultation (draft / finish) ---
+
+    [Fact]
+    public async Task SaveConsultationDraft_ReturnsOk_ForDoctorWithAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        GrantDoctorAccess(db, doctor.Id, user.Id);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SaveConsultationDraft_ReturnsForbidden_ForDoctorWithoutAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task FinishConsultation_ReturnsOk_ForDoctorWithAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        GrantDoctorAccess(db, doctor.Id, user.Id);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/finish", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<ConsultationDto>();
+        Assert.Equal("finished", dto!.Status);
+    }
+
+    [Fact]
+    public async Task SaveConsultationDraft_ReturnsForbidden_ForPatientRole()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var client = factory.CreateAuthorizedClient(user.Id, "Patient", user.UtentNumber);
+
+        var response = await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, DateTime.UtcNow.ToString("o")));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SaveConsultationDraft_ReusesExistingDraft_AcrossRepeatedRequestsWithoutConsultationId()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        GrantDoctorAccess(db, doctor.Id, user.Id);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+        var started = DateTime.UtcNow.ToString("o");
+
+        var first = await (await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, started)))
+            .Content.ReadFromJsonAsync<ConsultationDto>();
+        var second = await (await client.PostAsJsonAsync($"/api/patients/{user.Id}/consultation/draft", new SaveConsultationRequest(null, started)))
+            .Content.ReadFromJsonAsync<ConsultationDto>();
+
+        Assert.Equal(first!.Id, second!.Id);
+        using var verifyDb = factory.CreateDbContext();
+        Assert.Single(verifyDb.Consultations.Where(c => c.UserId == user.Id && c.DoctorId == doctor.Id));
+    }
+
+    // --- Consultation activity ---
+
+    [Fact]
+    public async Task GetConsultationActivity_ReturnsOk_ForDoctorWithAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        GrantDoctorAccess(db, doctor.Id, user.Id);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+        var startedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o");
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/consultation/activity?startedAt={Uri.EscapeDataString(startedAt)}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetConsultationActivity_ReturnsOk_ForDoctorWithFinishedConsultation_ButNoActiveAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+        var startedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o");
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/consultation/activity?startedAt={Uri.EscapeDataString(startedAt)}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetConsultationActivity_ReturnsForbidden_ForDoctorWithoutAccessOrFinishedConsultation()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+        var startedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o");
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/consultation/activity?startedAt={Uri.EscapeDataString(startedAt)}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetConsultationActivity_ReturnsItemsCreatedDuringTheWindow()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        GrantDoctorAccess(db, doctor.Id, user.Id);
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+        var startedAt = DateTime.UtcNow.AddMinutes(-5).ToString("o");
+        await client.PostAsJsonAsync($"/api/patients/{user.Id}/assessments", new CreateAssessmentRequest("Gripe", "Repouso"));
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/consultation/activity?startedAt={Uri.EscapeDataString(startedAt)}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<ConsultationActivityItemDto>>();
+        Assert.Single(body!);
+        Assert.Equal("avaliacao", body![0].Type);
+        Assert.Equal("Gripe", body[0].Detail);
+    }
+
     // --- Documents ---
 
     [Fact]
@@ -383,6 +540,42 @@ public class ClinicalRecordsControllerTests
         var response = await client.GetAsync($"/api/patients/{user.Id}/chat-messages");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetChatMessages_ReturnsOk_ForDoctorWithFinishedConsultation_ButNoActiveAccess()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-10).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/chat-messages");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetChatMessages_ReturnsForbidden_ForDoctorWithOnlyDraftConsultation()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation { UserId = user.Id, DoctorId = doctor.Id, Status = "draft", StartedAt = DateTime.UtcNow.ToString("o") });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync($"/api/patients/{user.Id}/chat-messages");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

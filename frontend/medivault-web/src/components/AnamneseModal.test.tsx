@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { AxiosResponse } from 'axios'
 import AnamneseModal from './AnamneseModal'
 import { getAnamneses, addAnamnesis, updateAnamnesis } from '../api/medical'
+import { LanguageProvider } from '../i18n/LanguageContext'
 
 vi.mock('../api/medical', () => ({
   getAnamneses: vi.fn(),
@@ -32,7 +33,7 @@ describe('AnamneseModal', () => {
   it('shows an empty state when there are no records', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<AnamneseModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AnamneseModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Sem registos de anamnese.')).toBeInTheDocument()
   })
@@ -40,7 +41,7 @@ describe('AnamneseModal', () => {
   it('lists the current record with the authoring doctor', async () => {
     mockedGet.mockResolvedValue([currentAnamnesis])
 
-    render(<AnamneseModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AnamneseModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText(/Atual — Dr\. João Costa/)).toBeInTheDocument()
     expect(screen.getByText('Dor de cabeça')).toBeInTheDocument()
@@ -49,7 +50,7 @@ describe('AnamneseModal', () => {
   it('disables editing the current record when canEdit is false', async () => {
     mockedGet.mockResolvedValue([{ ...currentAnamnesis, canEdit: false }])
 
-    render(<AnamneseModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AnamneseModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText(/Atual/)
 
     expect(screen.getByRole('button', { name: /Editar atual/ })).toBeDisabled()
@@ -59,7 +60,7 @@ describe('AnamneseModal', () => {
     mockedGet.mockResolvedValue([])
     mockedAdd.mockResolvedValue({})
 
-    render(<AnamneseModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AnamneseModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem registos de anamnese.')
 
     fireEvent.click(screen.getByText('Nova anamnese'))
@@ -75,7 +76,7 @@ describe('AnamneseModal', () => {
     mockedGet.mockResolvedValue([currentAnamnesis])
     mockedUpdate.mockResolvedValue(fakeAxiosResponse)
 
-    render(<AnamneseModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AnamneseModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText(/Atual/)
 
     fireEvent.click(screen.getByRole('button', { name: /Editar atual/ }))
@@ -95,7 +96,7 @@ describe('AnamneseModal', () => {
     mockedGet.mockResolvedValue([])
     mockedAdd.mockRejectedValue({ response: { data: { message: 'Prazo de edição expirado.' } } })
 
-    render(<AnamneseModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><AnamneseModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem registos de anamnese.')
 
     fireEvent.click(screen.getByText('Nova anamnese'))

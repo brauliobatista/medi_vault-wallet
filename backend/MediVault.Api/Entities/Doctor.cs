@@ -15,6 +15,7 @@ public class Doctor
     [Column("speciality")] public string? Speciality { get; set; }
     [Column("institution_id")] public string InstitutionId { get; set; } = null!;
     [Column("nationality_id")] public int NationalityId { get; set; }
+    [Column("language")] public string Language { get; set; } = "pt";
     [Column("is_active")] public int IsActive { get; set; } = 1;
     [Column("created_at")] public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
 

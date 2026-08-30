@@ -122,6 +122,34 @@ public class ClinicalRecordsController(ClinicalRecordsService records, AccessCon
         return NoContent();
     }
 
+    // --- Consultation (draft / finish) ---
+
+    [HttpPost("consultation/draft")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> SaveConsultationDraft(string userId, SaveConsultationRequest req)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        return Ok(await records.SaveConsultationDraftAsync(userId, CurrentId, req));
+    }
+
+    [HttpPost("consultation/finish")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> FinishConsultation(string userId, SaveConsultationRequest req)
+    {
+        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        return Ok(await records.FinishConsultationAsync(userId, CurrentId, req));
+    }
+
+    [HttpGet("consultation/activity")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> GetConsultationActivity(string userId, [FromQuery] string startedAt, [FromQuery] string? endedAt)
+    {
+        if (!await accessControl.DoctorHasAccessAsync(CurrentId, userId) &&
+            !await accessControl.DoctorHadFinishedConsultationAsync(CurrentId, userId))
+            return Forbid();
+        return Ok(await records.GetConsultationActivityAsync(userId, CurrentId, startedAt, endedAt));
+    }
+
     // --- Documents ---
 
     [HttpGet("documents")]
@@ -156,7 +184,11 @@ public class ClinicalRecordsController(ClinicalRecordsService records, AccessCon
     [HttpGet("chat-messages")]
     public async Task<IActionResult> GetChatMessages(string userId, [FromServices] TeamChatService chat)
     {
-        if (!await CanAccessPatientAsync(userId)) return Forbid();
+        // Read-only carve-out (KAN-67): a doctor keeps access to the team chat for a patient
+        // even after the consultation that granted full access has finished.
+        if (!await CanAccessPatientAsync(userId) &&
+            !(CurrentRole == "Doctor" && await accessControl.DoctorHadFinishedConsultationAsync(CurrentId, userId)))
+            return Forbid();
         return Ok(await chat.GetMessagesAsync(userId));
     }
 

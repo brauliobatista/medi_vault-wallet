@@ -6,6 +6,7 @@ import {
   getImagingExams, addImagingExam,
   getOptometryExams, addOptometryExam,
 } from '../api/medical'
+import { LanguageProvider } from '../i18n/LanguageContext'
 
 vi.mock('../api/medical', () => ({
   getAnalyticalExams: vi.fn(),
@@ -39,7 +40,7 @@ describe('ExamesModal', () => {
   it('defaults to the analytical tab and shows its empty state', async () => {
     mockAllEmpty()
 
-    render(<ExamesModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ExamesModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Sem exames analíticos.')).toBeInTheDocument()
   })
@@ -50,7 +51,7 @@ describe('ExamesModal', () => {
       { id: 1, examType: 'Ecocardiograma', bodyArea: 'Coração', examDate: '2024-01-01', institution: 'Hospital X' },
     ])
 
-    render(<ExamesModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ExamesModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem exames analíticos.')
 
     fireEvent.click(screen.getByText('Imagem'))
@@ -62,7 +63,7 @@ describe('ExamesModal', () => {
     mockAllEmpty()
     mockedGetOptometry.mockResolvedValue([{ id: 1, examDate: '2024-01-01', rightSphere: -1.5, leftSphere: -1 }])
 
-    render(<ExamesModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ExamesModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem exames analíticos.')
 
     fireEvent.click(screen.getByText('Optometria'))
@@ -74,7 +75,7 @@ describe('ExamesModal', () => {
     mockAllEmpty()
     mockedAddAnalytical.mockResolvedValue({})
 
-    render(<ExamesModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ExamesModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem exames analíticos.')
 
     fireEvent.click(screen.getByText('Adicionar exame'))
@@ -89,7 +90,7 @@ describe('ExamesModal', () => {
   it('does not add an analytical exam without a date', async () => {
     mockAllEmpty()
 
-    render(<ExamesModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ExamesModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem exames analíticos.')
 
     fireEvent.click(screen.getByText('Adicionar exame'))
@@ -102,7 +103,7 @@ describe('ExamesModal', () => {
     mockAllEmpty()
     mockedAddImaging.mockResolvedValue({})
 
-    render(<ExamesModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ExamesModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem exames analíticos.')
 
     fireEvent.click(screen.getByText('Imagem'))
@@ -122,7 +123,7 @@ describe('ExamesModal', () => {
     mockAllEmpty()
     mockedAddOptometry.mockResolvedValue({})
 
-    render(<ExamesModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ExamesModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem exames analíticos.')
 
     fireEvent.click(screen.getByText('Optometria'))

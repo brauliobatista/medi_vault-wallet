@@ -94,6 +94,7 @@ erDiagram
         bool is_active
         bool card_active
         string photo_path
+        string language
         datetime created_at
         datetime updated_at
     }
@@ -108,6 +109,33 @@ erDiagram
         string speciality
         guid institution_id FK
         int nationality_id FK
+        string language
+        bool is_active
+        datetime created_at
+    }
+
+    %% -------------------------------------------------------
+    %% INSTITUTION CONTACTS
+    %% -------------------------------------------------------
+
+    INSTITUTION_CONTACTS {
+        int id PK
+        guid institution_id FK
+        string service_name
+        string extension
+        bool is_active
+        datetime created_at
+    }
+
+    %% -------------------------------------------------------
+    %% INSTITUTION CONTACTS
+    %% -------------------------------------------------------
+
+    INSTITUTION_CONTACTS {
+        int id PK
+        guid institution_id FK
+        string service_name
+        string extension
         bool is_active
         datetime created_at
     }
@@ -203,6 +231,51 @@ erDiagram
     }
 
     %% -------------------------------------------------------
+    %% SCHEDULING & AGENDA
+    %% Rule: same doctor cannot have overlapping DOCTOR_SCHEDULE_EVENTS date ranges,
+    %% or two non-cancelled PATIENT_APPOINTMENTS at the same scheduled_at
+    %% (enforced by DB trigger, see schema_*.sql)
+    %% -------------------------------------------------------
+
+    SCHEDULE_EVENT_TYPES {
+        int id PK
+        string code UK
+        string description
+    }
+
+    DOCTOR_SCHEDULE_EVENTS {
+        int id PK
+        guid doctor_id FK
+        int event_type_id FK
+        string title
+        string location
+        date start_date
+        date end_date
+        string notes
+        datetime created_at
+    }
+
+    APPOINTMENT_TYPES {
+        int id PK
+        string code UK
+        string description
+    }
+
+    PATIENT_APPOINTMENTS {
+        int id PK
+        guid user_id FK
+        guid doctor_id FK
+        int appointment_type_id FK
+        string modality
+        datetime scheduled_at
+        string status
+        string created_by_role
+        guid created_by_doctor_id FK
+        string notes
+        datetime created_at
+    }
+
+    %% -------------------------------------------------------
     %% CLINICAL CONSULTATION RECORDS
     %% -------------------------------------------------------
 
@@ -253,6 +326,19 @@ erDiagram
         guid author_doctor_id FK
         text message
         datetime created_at
+    }
+
+    %% A doctor's visit to a patient: saved as a draft while in progress,
+    %% closed by finishing it (status -> finished, finished_at set).
+    CONSULTATIONS {
+        int id PK
+        guid user_id FK
+        guid doctor_id FK
+        string status
+        datetime started_at
+        datetime finished_at
+        datetime created_at
+        datetime updated_at
     }
 
     %% -------------------------------------------------------
@@ -458,6 +544,7 @@ erDiagram
     %% Institutions & Doctors
     INSTITUTIONS                ||--|{ DOCTORS                    : "employs"
     INSTITUTIONS                ||--o{ INSTITUTION_LICENSES       : "has"
+    INSTITUTIONS                ||--o{ INSTITUTION_CONTACTS       : "provides"
     COUNTRIES                   ||--o{ DOCTORS                    : "nationality"
 
     %% Users — profile
@@ -476,6 +563,13 @@ erDiagram
     USERS                       ||--o{ ACCESS_REQUESTS            : "receives"
     DOCTORS                     ||--o{ ACCESS_REQUESTS            : "requests"
 
+    %% Doctor scheduling & patient appointments
+    DOCTORS                     ||--o{ DOCTOR_SCHEDULE_EVENTS     : "schedules"
+    SCHEDULE_EVENT_TYPES        ||--o{ DOCTOR_SCHEDULE_EVENTS     : "classifies"
+    USERS                       ||--o{ PATIENT_APPOINTMENTS       : "attends"
+    DOCTORS                     ||--o{ PATIENT_APPOINTMENTS       : "sees"
+    APPOINTMENT_TYPES           ||--o{ PATIENT_APPOINTMENTS       : "classifies"
+
     %% Clinical consultation records
     USERS                       ||--o{ VITAL_SIGNS                : "has"
     DOCTORS                     ||--o{ VITAL_SIGNS                : "records"
@@ -485,6 +579,8 @@ erDiagram
     DOCTORS                     ||--o{ ANAMNESES                  : "records"
     USERS                       ||--o{ PATIENT_CHAT_MESSAGES      : "concerns"
     DOCTORS                     ||--o{ PATIENT_CHAT_MESSAGES      : "authors"
+    USERS                       ||--o{ CONSULTATIONS              : "has"
+    DOCTORS                     ||--o{ CONSULTATIONS              : "conducts"
 
     %% Users — files
     USERS                       ||--o{ MEDICAL_FILES              : "owns"

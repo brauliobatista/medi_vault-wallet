@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal'
 import { getChatMessages, sendChatMessage } from '../api/medical'
+import { useTranslation } from '../i18n/LanguageContext'
 
 interface Props { userId: string; onClose: () => void }
 interface ChatMessage { id: number; authorDoctorId: string; authorName: string; message: string; createdAt: string }
@@ -8,6 +9,7 @@ interface ChatMessage { id: number; authorDoctorId: string; authorName: string; 
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 
 export default function ChatModal({ userId, onClose }: Props) {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState('')
@@ -29,11 +31,11 @@ export default function ChatModal({ userId, onClose }: Props) {
   }
 
   return (
-    <Modal title="Chat da Equipa" onClose={onClose}>
+    <Modal title={t('chatModal.title')} onClose={onClose}>
       {loading ? (
-        <p className="text-muted">A carregar…</p>
+        <p className="text-muted">{t('common.loading')}</p>
       ) : messages.length === 0 ? (
-        <p className="mv-empty-state">Sem mensagens ainda.</p>
+        <p className="mv-empty-state">{t('chatModal.emptyState')}</p>
       ) : (
         <div className="mb-3">
           {messages.map((m) => (
@@ -55,7 +57,7 @@ export default function ChatModal({ userId, onClose }: Props) {
         <div className="input-group">
           <input
             className="form-control"
-            placeholder="Escrever mensagem…"
+            placeholder={t('chatModal.messagePlaceholder')}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}

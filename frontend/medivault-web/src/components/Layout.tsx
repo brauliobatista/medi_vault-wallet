@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getUser, logout } from '../hooks/useAuth'
 import { usePendingAccessRequests } from '../hooks/usePendingAccessRequests'
+import { useTranslation } from '../i18n/LanguageContext'
 
 interface NavItem {
   path: string
@@ -10,54 +11,69 @@ interface NavItem {
   exact?: boolean
 }
 
-const patientNav: NavItem[] = [
-  { path: '/dashboard',       label: 'Dashboard',        icon: 'bi-grid-1x2',          exact: true },
-  { path: '/profile',         label: 'Perfil de Saúde',  icon: 'bi-heart-pulse' },
-  { path: '/medical-history', label: 'Histórico Médico', icon: 'bi-clipboard2-pulse' },
-  { path: '/exams',           label: 'Exames',           icon: 'bi-activity' },
-  { path: '/habits',          label: 'Hábitos de Saúde', icon: 'bi-heart' },
-  { path: '/vaccinations',    label: 'Vacinas',          icon: 'bi-shield-plus' },
-  { path: '/access',          label: 'Acessos',          icon: 'bi-key' },
-  { path: '/family',          label: 'Agregado Familiar', icon: 'bi-people' },
-]
+function getPatientNav(t: (key: string) => string): NavItem[] {
+  return [
+    { path: '/dashboard',       label: t('nav.dashboard'),       icon: 'bi-grid-1x2',        exact: true },
+    { path: '/medical-history', label: t('nav.medicalHistory'),  icon: 'bi-clipboard2-pulse' },
+    { path: '/exams',           label: t('nav.exams'),           icon: 'bi-activity' },
+    { path: '/habits',          label: t('nav.habits'),          icon: 'bi-heart' },
+    { path: '/vaccinations',    label: t('nav.vaccinations'),    icon: 'bi-shield-plus' },
+    { path: '/access',          label: t('nav.access'),          icon: 'bi-key' },
+    { path: '/family',          label: t('nav.family'),          icon: 'bi-people' },
+    { path: '/profile',         label: t('nav.profile'),         icon: 'bi-heart-pulse' },
+  ]
+}
 
-const doctorNav: NavItem[] = [
-  { path: '/doctor',          label: 'Consulta',         icon: 'bi-qr-code-scan',       exact: true },
-  { path: '/doctor/profile',  label: 'Perfil',           icon: 'bi-person-badge' },
-  { path: '/doctor/access',   label: 'Pedidos de Acesso', icon: 'bi-key' },
-]
+function getDoctorNav(t: (key: string) => string): NavItem[] {
+  return [
+    { path: '/doctor',          label: t('nav.consultation'),    icon: 'bi-qr-code-scan',    exact: true },
+    { path: '/doctor/agendas',  label: t('nav.agendas'),         icon: 'bi-calendar-week' },
+    { path: '/doctor/access',   label: t('nav.accessRequests'),  icon: 'bi-key' },
+    { path: '/doctor/profile',  label: t('nav.doctorProfile'),   icon: 'bi-person-badge' },
+  ]
+}
 
-const pageInfo: Record<string, { title: string; subtitle: string; icon: string }> = {
-  '/dashboard':       { title: 'Dashboard',          subtitle: 'Visão geral da sua saúde',                           icon: 'bi-grid-1x2' },
-  '/profile':         { title: 'Perfil de Saúde',    subtitle: 'As suas informações pessoais e médicas',              icon: 'bi-heart-pulse' },
-  '/medical-history': { title: 'Histórico Médico',   subtitle: 'Cirurgias, medicação, alergias e historial familiar', icon: 'bi-clipboard2-pulse' },
-  '/exams':           { title: 'Exames',              subtitle: 'Consulte e gira os seus exames MCDTS',                icon: 'bi-activity' },
-  '/habits':          { title: 'Hábitos de Saúde',   subtitle: 'Estilos de vida e hábitos registados',                icon: 'bi-heart' },
-  '/vaccinations':    { title: 'Vacinas',             subtitle: 'Registo do seu plano vacinal',                        icon: 'bi-shield-plus' },
-  '/access':          { title: 'Acessos e Partilhas', subtitle: 'Gira quem tem acesso ao seu perfil',                 icon: 'bi-key' },
-  '/family':          { title: 'Agregado Familiar',   subtitle: 'Gira os membros do seu agregado familiar',           icon: 'bi-people' },
-  '/doctor':          { title: 'Consulta',            subtitle: 'Leia o QR code ou pesquise um utente por número',    icon: 'bi-qr-code-scan' },
-  '/doctor/profile':  { title: 'Perfil do Médico',   subtitle: 'As suas informações profissionais',                   icon: 'bi-person-badge' },
-  '/doctor/access':   { title: 'Pedidos de Acesso',  subtitle: 'Consulte e gira pedidos de acesso a utentes',         icon: 'bi-key' },
+function getPageInfo(t: (key: string) => string): Record<string, { title: string; subtitle: string; icon: string }> {
+  return {
+    '/dashboard':       { title: t('nav.dashboard'),      subtitle: t('page.dashboard.subtitle'),      icon: 'bi-grid-1x2' },
+    '/profile':         { title: t('nav.profile'),        subtitle: t('page.profile.subtitle'),        icon: 'bi-heart-pulse' },
+    '/medical-history': { title: t('nav.medicalHistory'), subtitle: t('page.medicalHistory.subtitle'), icon: 'bi-clipboard2-pulse' },
+    '/exams':           { title: t('nav.exams'),          subtitle: t('page.exams.subtitle'),          icon: 'bi-activity' },
+    '/habits':          { title: t('nav.habits'),         subtitle: t('page.habits.subtitle'),         icon: 'bi-heart' },
+    '/vaccinations':    { title: t('nav.vaccinations'),   subtitle: t('page.vaccinations.subtitle'),   icon: 'bi-shield-plus' },
+    '/access':          { title: t('nav.access'),         subtitle: t('page.access.subtitle'),         icon: 'bi-key' },
+    '/family':          { title: t('nav.family'),         subtitle: t('page.family.subtitle'),         icon: 'bi-people' },
+    '/doctor':          { title: t('nav.consultation'),   subtitle: t('page.consultation.subtitle'),   icon: 'bi-qr-code-scan' },
+    '/doctor/agendas':  { title: t('nav.agendas'),        subtitle: t('page.agendas.subtitle'),        icon: 'bi-calendar-week' },
+    '/doctor/patient':  { title: t('page.patientRecord.title'), subtitle: t('page.patientRecord.subtitle'), icon: 'bi-qr-code-scan' },
+    '/doctor/profile':  { title: t('page.doctorProfile.title'), subtitle: t('page.doctorProfile.subtitle'), icon: 'bi-person-badge' },
+    '/doctor/access':   { title: t('page.doctorAccess.title'),  subtitle: t('page.doctorAccess.subtitle'),  icon: 'bi-key' },
+  }
 }
 
 interface Props { children: React.ReactNode }
 
 export default function Layout({ children }: Props) {
+  const { t } = useTranslation()
   const user = getUser()
   const location = useLocation()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const isDoctor = user?.role === 'Doctor'
-  const navItems = isDoctor ? doctorNav : patientNav
+  const navItems = isDoctor ? getDoctorNav(t) : getPatientNav(t)
+  const pageInfo = getPageInfo(t)
   const { pendingRequests, count: pendingCount } = usePendingAccessRequests()
 
   const currentPath = location.pathname
   const info =
     pageInfo[currentPath] ??
-    pageInfo[Object.keys(pageInfo).find((k) => currentPath.startsWith(k + '/')) ?? ''] ??
-    { title: 'MediVault', subtitle: '', icon: 'bi-heart-pulse' }
+    pageInfo[
+      Object.keys(pageInfo)
+        .filter((k) => currentPath.startsWith(k + '/'))
+        .sort((a, b) => b.length - a.length)[0] ?? ''
+    ] ??
+    { title: t('app.name'), subtitle: '', icon: 'bi-heart-pulse' }
 
   const isActive = (item: NavItem) => {
     if (item.exact) return currentPath === item.path
@@ -86,8 +102,8 @@ export default function Layout({ children }: Props) {
             <i className="bi bi-heart-pulse-fill" />
           </div>
           <div>
-            <div className="mv-logo-name">MediVault</div>
-            <div className="mv-logo-sub">O seu espaço de saúde.</div>
+            <div className="mv-logo-name">{t('app.name')}</div>
+            <div className="mv-logo-sub">{t('app.tagline')}</div>
           </div>
         </div>
 
@@ -110,12 +126,12 @@ export default function Layout({ children }: Props) {
             <div className="mv-sidebar-avatar">{avatarContent}</div>
             <div>
               <div className="mv-user-name">{user?.name}</div>
-              <div className="mv-user-role">{user?.role === 'Doctor' ? 'Médico' : 'Paciente'}</div>
+              <div className="mv-user-role">{user?.role === 'Doctor' ? t('role.doctor') : t('role.patient')}</div>
             </div>
           </div>
           <button className="mv-logout-btn" onClick={handleLogout}>
             <i className="bi bi-box-arrow-right" />
-            <span>Sair</span>
+            <span>{t('sidebar.logout')}</span>
           </button>
         </div>
       </aside>
@@ -124,7 +140,7 @@ export default function Layout({ children }: Props) {
       <div className="mv-main">
         <header className="mv-topbar">
           {/* Hamburger — only visible on mobile */}
-          <button className="mv-hamburger" onClick={() => setMenuOpen(true)} aria-label="Abrir menu">
+          <button className="mv-hamburger" onClick={() => setMenuOpen(true)} aria-label={t('sidebar.openMenu')}>
             <i className="bi bi-list" />
           </button>
 
@@ -144,7 +160,7 @@ export default function Layout({ children }: Props) {
                 <button
                   className="mv-notif-btn"
                   onClick={() => setNotifOpen((o) => !o)}
-                  aria-label="Notificações"
+                  aria-label={t('notif.aria')}
                 >
                   <i className="bi bi-bell" />
                   {pendingCount > 0 && (
@@ -155,9 +171,9 @@ export default function Layout({ children }: Props) {
                   <>
                     <div className="mv-notif-backdrop" onClick={() => setNotifOpen(false)} />
                     <div className="mv-notif-dropdown">
-                      <div className="mv-notif-dropdown-header">Pedidos de Acesso</div>
+                      <div className="mv-notif-dropdown-header">{t('notif.title')}</div>
                       {pendingRequests.length === 0 ? (
-                        <div className="mv-notif-empty">Sem pedidos pendentes.</div>
+                        <div className="mv-notif-empty">{t('notif.empty')}</div>
                       ) : (
                         pendingRequests.map((r) => (
                           <Link
@@ -169,7 +185,7 @@ export default function Layout({ children }: Props) {
                             <i className="bi bi-person-badge" />
                             <div>
                               <div className="mv-notif-item-title">{r.doctorName}</div>
-                              <div className="mv-notif-item-sub">Pedido em {r.requestedAt.slice(0, 10)}</div>
+                              <div className="mv-notif-item-sub">{t('notif.requestedOn', { date: r.requestedAt.slice(0, 10) })}</div>
                             </div>
                           </Link>
                         ))
@@ -182,7 +198,7 @@ export default function Layout({ children }: Props) {
             <div className="mv-topbar-avatar">{avatarContent}</div>
             <span className="mv-topbar-name">{user?.name}</span>
             <span className={`badge ${isDoctor ? 'bg-success' : 'bg-primary'}`}>
-              {user?.role === 'Doctor' ? 'Médico' : 'Paciente'}
+              {user?.role === 'Doctor' ? t('role.doctor') : t('role.patient')}
             </span>
           </div>
         </header>

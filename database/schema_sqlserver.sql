@@ -98,6 +98,7 @@ CREATE TABLE users (
     card_active           BIT           NOT NULL DEFAULT 1,
     share_code            NVARCHAR(50)  NOT NULL DEFAULT '',
     photo_path            NVARCHAR(255),
+    language              NVARCHAR(5)   NOT NULL DEFAULT 'pt',
     created_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
     updated_at            DATETIME2     NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),
@@ -118,6 +119,7 @@ CREATE TABLE doctors (
     speciality       NVARCHAR(255),
     institution_id   UNIQUEIDENTIFIER NOT NULL,
     nationality_id   INT           NOT NULL,
+    language         NVARCHAR(5)   NOT NULL DEFAULT 'pt',
     is_active        BIT           NOT NULL DEFAULT 1,
     created_at       DATETIME2     NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_doctors_institution  FOREIGN KEY (institution_id) REFERENCES institutions(id),
@@ -218,7 +220,7 @@ CREATE TABLE access_requests (
     requested_at DATETIME2     NOT NULL DEFAULT GETDATE(),
     approved_at  DATETIME2,
     expires_at   DATETIME2,
-    status       NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked')),
+    status       NVARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked', 'finished')),
     is_emergency BIT           NOT NULL DEFAULT 0,
     access_code  NVARCHAR(100),
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -508,6 +510,166 @@ CREATE TABLE app_versions (
 );
 GO
 
+-- -------------------------------------------------------
+-- SCHEDULING & AGENDA
+-- -------------------------------------------------------
+
+CREATE TABLE schedule_event_types (
+    id          INT           IDENTITY(1,1) PRIMARY KEY,
+    code        NVARCHAR(20)  NOT NULL UNIQUE,
+    description NVARCHAR(255)
+);
+GO
+
+CREATE TABLE appointment_types (
+    id          INT           IDENTITY(1,1) PRIMARY KEY,
+    code        NVARCHAR(20)  NOT NULL UNIQUE,
+    description NVARCHAR(255)
+);
+GO
+
+CREATE TABLE institution_contacts (
+    id             INT              IDENTITY(1,1) PRIMARY KEY,
+    institution_id UNIQUEIDENTIFIER NOT NULL,
+    service_name   NVARCHAR(255)    NOT NULL,
+    extension      NVARCHAR(50)     NOT NULL,
+    is_active      BIT              NOT NULL DEFAULT 1,
+    created_at     DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_institution_contacts_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+GO
+
+CREATE TABLE doctor_schedule_events (
+    id            INT              IDENTITY(1,1) PRIMARY KEY,
+    doctor_id     UNIQUEIDENTIFIER NOT NULL,
+    event_type_id INT              NOT NULL,
+    title         NVARCHAR(255)    NOT NULL,
+    location      NVARCHAR(255),
+    start_date    DATE             NOT NULL,
+    end_date      DATE             NOT NULL,
+    notes         NVARCHAR(MAX),
+    created_at    DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT chk_doctor_schedule_events_dates CHECK (end_date >= start_date),
+    CONSTRAINT fk_doctor_schedule_events_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_doctor_schedule_events_type   FOREIGN KEY (event_type_id) REFERENCES schedule_event_types(id)
+);
+GO
+
+-- Prevent overlapping schedule events (congress/training/vacation) for the same doctor
+CREATE TRIGGER trg_doctor_schedule_events_no_overlap
+ON doctor_schedule_events
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN doctor_schedule_events e
+          ON e.doctor_id = i.doctor_id
+         AND e.id <> i.id
+         AND i.start_date <= e.end_date
+         AND i.end_date >= e.start_date
+    )
+    BEGIN
+        RAISERROR ('doctor_schedule_events: overlapping date range for this doctor', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+GO
+
+CREATE TABLE patient_appointments (
+    id                   INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id              UNIQUEIDENTIFIER NOT NULL,
+    doctor_id            UNIQUEIDENTIFIER NOT NULL,
+    appointment_type_id  INT              NOT NULL,
+    modality             NVARCHAR(20)     NOT NULL CHECK (modality IN ('presencial', 'teleconsulta')),
+    scheduled_at         DATETIME2        NOT NULL,
+    status               NVARCHAR(20)     NOT NULL DEFAULT 'confirmada' CHECK (status IN ('pendente', 'confirmada', 'em_curso', 'concluida', 'cancelada')),
+    created_by_role      NVARCHAR(10)     NOT NULL CHECK (created_by_role IN ('doctor', 'staff')),
+    created_by_doctor_id UNIQUEIDENTIFIER,
+    notes                NVARCHAR(MAX),
+    created_at           DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT chk_patient_appointments_created_by CHECK (
+        (created_by_role = 'doctor' AND created_by_doctor_id IS NOT NULL) OR
+        (created_by_role = 'staff'  AND created_by_doctor_id IS NULL)
+    ),
+    CONSTRAINT fk_patient_appointments_user             FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_patient_appointments_doctor           FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_patient_appointments_type             FOREIGN KEY (appointment_type_id) REFERENCES appointment_types(id),
+    CONSTRAINT fk_patient_appointments_created_by_doctor FOREIGN KEY (created_by_doctor_id) REFERENCES doctors(id)
+);
+GO
+
+-- Prevent double-booking: same doctor cannot have two active appointments at the same scheduled_at
+CREATE TRIGGER trg_patient_appointments_no_overlap
+ON patient_appointments
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN patient_appointments p
+          ON p.doctor_id = i.doctor_id
+         AND p.scheduled_at = i.scheduled_at
+         AND p.id <> i.id
+         AND p.status <> 'cancelada'
+        WHERE i.status <> 'cancelada'
+    )
+    BEGIN
+        RAISERROR ('patient_appointments: doctor already has an appointment at this time', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+GO
+
+-- Prevent a patient appointment on a date the doctor has a scheduled event (congress/training/vacation)
+CREATE TRIGGER trg_patient_appointments_no_schedule_conflict
+ON patient_appointments
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN doctor_schedule_events e
+          ON e.doctor_id = i.doctor_id
+         AND CAST(i.scheduled_at AS DATE) BETWEEN e.start_date AND e.end_date
+        WHERE i.status <> 'cancelada'
+    )
+    BEGIN
+        RAISERROR ('patient_appointments: doctor has a schedule event covering this date', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+GO
+
+-- Prevent scheduling a doctor event (congress/training/vacation) over a date with an active patient appointment
+CREATE TRIGGER trg_doctor_schedule_events_no_appointment_conflict
+ON doctor_schedule_events
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        JOIN patient_appointments p
+          ON p.doctor_id = i.doctor_id
+         AND p.status <> 'cancelada'
+         AND CAST(p.scheduled_at AS DATE) BETWEEN i.start_date AND i.end_date
+    )
+    BEGIN
+        RAISERROR ('doctor_schedule_events: doctor already has an appointment within this date range', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+GO
+
+-- -------------------------------------------------------
 -- CLINICAL CONSULTATION RECORDS
 -- -------------------------------------------------------
 
@@ -569,5 +731,21 @@ CREATE TABLE patient_chat_messages (
     created_at        DATETIME2        NOT NULL DEFAULT GETDATE(),
     CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
     CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+GO
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          INT              IDENTITY(1,1) PRIMARY KEY,
+    user_id     UNIQUEIDENTIFIER NOT NULL,
+    doctor_id   UNIQUEIDENTIFIER NOT NULL,
+    status      NVARCHAR(20)     NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+    started_at  DATETIME2        NOT NULL,
+    finished_at DATETIME2,
+    created_at  DATETIME2        NOT NULL DEFAULT GETDATE(),
+    updated_at  DATETIME2        NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT fk_consultations_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_consultations_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );
 GO

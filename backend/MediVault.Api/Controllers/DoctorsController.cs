@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MediVault.Api.DTOs.Medical;
 using MediVault.Api.DTOs.Users;
 using MediVault.Api.Services;
 
@@ -36,4 +37,12 @@ public class DoctorsController(DoctorService doctorService) : ControllerBase
         if (!success) return BadRequest(new { message = "Password atual incorreta" });
         return NoContent();
     }
+
+    [HttpGet("me/finished-consultations")]
+    public async Task<IActionResult> GetFinishedConsultations([FromServices] ClinicalRecordsService records) =>
+        Ok(await records.GetFinishedConsultationsForDoctorAsync(DoctorId));
+
+    [HttpGet("me/draft-consultations")]
+    public async Task<IActionResult> GetDraftConsultations([FromServices] ClinicalRecordsService records) =>
+        Ok(await records.GetDraftConsultationsForDoctorAsync(DoctorId));
 }

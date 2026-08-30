@@ -98,6 +98,7 @@ CREATE TABLE users (
     card_active           BOOLEAN   NOT NULL DEFAULT TRUE,
     share_code            TEXT      NOT NULL DEFAULT '',
     photo_path            TEXT,
+    language              TEXT      NOT NULL DEFAULT 'pt',
     created_at            TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_users_gender      FOREIGN KEY (sex_id)         REFERENCES genders(id),
@@ -118,6 +119,7 @@ CREATE TABLE doctors (
     speciality       TEXT,
     institution_id   UUID      NOT NULL,
     nationality_id   INT       NOT NULL,
+    language         TEXT      NOT NULL DEFAULT 'pt',
     is_active        BOOLEAN   NOT NULL DEFAULT TRUE,
     created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_doctors_institution FOREIGN KEY (institution_id) REFERENCES institutions(id),
@@ -218,7 +220,7 @@ CREATE TABLE access_requests (
     requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
     approved_at  TIMESTAMP,
     expires_at   TIMESTAMP,
-    status       TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked')),
+    status       TEXT      NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'revoked', 'finished')),
     is_emergency BOOLEAN   NOT NULL DEFAULT FALSE,
     access_code  TEXT,
     CONSTRAINT fk_access_requests_user   FOREIGN KEY (user_id)   REFERENCES users(id),
@@ -505,6 +507,154 @@ CREATE TABLE app_versions (
 );
 
 -- -------------------------------------------------------
+-- SCHEDULING & AGENDA
+-- -------------------------------------------------------
+
+CREATE TABLE schedule_event_types (
+    id          SERIAL PRIMARY KEY,
+    code        TEXT   NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE appointment_types (
+    id          SERIAL PRIMARY KEY,
+    code        TEXT   NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE institution_contacts (
+    id             SERIAL    PRIMARY KEY,
+    institution_id UUID      NOT NULL,
+    service_name   TEXT      NOT NULL,
+    extension      TEXT      NOT NULL,
+    is_active      BOOLEAN   NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_institution_contacts_institution FOREIGN KEY (institution_id) REFERENCES institutions(id)
+);
+
+CREATE TABLE doctor_schedule_events (
+    id            SERIAL    PRIMARY KEY,
+    doctor_id     UUID      NOT NULL,
+    event_type_id INT       NOT NULL,
+    title         TEXT      NOT NULL,
+    location      TEXT,
+    start_date    DATE      NOT NULL,
+    end_date      DATE      NOT NULL,
+    notes         TEXT,
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_doctor_schedule_events_dates CHECK (end_date >= start_date),
+    CONSTRAINT fk_doctor_schedule_events_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_doctor_schedule_events_type   FOREIGN KEY (event_type_id) REFERENCES schedule_event_types(id)
+);
+
+-- Prevent overlapping schedule events (congress/training/vacation) for the same doctor
+CREATE OR REPLACE FUNCTION check_doctor_schedule_events_no_overlap()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND id <> COALESCE(NEW.id, -1)
+          AND NEW.start_date <= end_date
+          AND NEW.end_date >= start_date
+    ) THEN
+        RAISE EXCEPTION 'doctor_schedule_events: overlapping date range for doctor_id %', NEW.doctor_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_doctor_schedule_events_no_overlap
+BEFORE INSERT OR UPDATE ON doctor_schedule_events
+FOR EACH ROW
+EXECUTE FUNCTION check_doctor_schedule_events_no_overlap();
+
+CREATE TABLE patient_appointments (
+    id                   SERIAL    PRIMARY KEY,
+    user_id              UUID      NOT NULL,
+    doctor_id            UUID      NOT NULL,
+    appointment_type_id  INT       NOT NULL,
+    modality             TEXT      NOT NULL CHECK (modality IN ('presencial', 'teleconsulta')),
+    scheduled_at         TIMESTAMP NOT NULL,
+    status               TEXT      NOT NULL DEFAULT 'confirmada' CHECK (status IN ('pendente', 'confirmada', 'em_curso', 'concluida', 'cancelada')),
+    created_by_role      TEXT      NOT NULL CHECK (created_by_role IN ('doctor', 'staff')),
+    created_by_doctor_id UUID,
+    notes                TEXT,
+    created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_patient_appointments_created_by CHECK (
+        (created_by_role = 'doctor' AND created_by_doctor_id IS NOT NULL) OR
+        (created_by_role = 'staff'  AND created_by_doctor_id IS NULL)
+    ),
+    CONSTRAINT fk_patient_appointments_user             FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_patient_appointments_doctor           FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+    CONSTRAINT fk_patient_appointments_type             FOREIGN KEY (appointment_type_id) REFERENCES appointment_types(id),
+    CONSTRAINT fk_patient_appointments_created_by_doctor FOREIGN KEY (created_by_doctor_id) REFERENCES doctors(id)
+);
+
+-- Prevent double-booking: same doctor cannot have two active appointments at the same scheduled_at
+CREATE OR REPLACE FUNCTION check_patient_appointments_no_overlap()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND scheduled_at = NEW.scheduled_at
+          AND status <> 'cancelada'
+          AND id <> COALESCE(NEW.id, -1)
+    ) THEN
+        RAISE EXCEPTION 'patient_appointments: doctor % already has an appointment at %', NEW.doctor_id, NEW.scheduled_at;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_patient_appointments_no_overlap
+BEFORE INSERT OR UPDATE ON patient_appointments
+FOR EACH ROW
+EXECUTE FUNCTION check_patient_appointments_no_overlap();
+
+-- Prevent a patient appointment on a date the doctor has a scheduled event (congress/training/vacation)
+CREATE OR REPLACE FUNCTION check_patient_appointments_no_schedule_conflict()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status <> 'cancelada' AND EXISTS (
+        SELECT 1 FROM doctor_schedule_events
+        WHERE doctor_id = NEW.doctor_id
+          AND NEW.scheduled_at::date BETWEEN start_date AND end_date
+    ) THEN
+        RAISE EXCEPTION 'patient_appointments: doctor % has a schedule event covering %', NEW.doctor_id, NEW.scheduled_at::date;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_patient_appointments_no_schedule_conflict
+BEFORE INSERT OR UPDATE ON patient_appointments
+FOR EACH ROW
+EXECUTE FUNCTION check_patient_appointments_no_schedule_conflict();
+
+-- Prevent scheduling a doctor event (congress/training/vacation) over a date with an active patient appointment
+CREATE OR REPLACE FUNCTION check_doctor_schedule_events_no_appointment_conflict()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM patient_appointments
+        WHERE doctor_id = NEW.doctor_id
+          AND status <> 'cancelada'
+          AND scheduled_at::date BETWEEN NEW.start_date AND NEW.end_date
+    ) THEN
+        RAISE EXCEPTION 'doctor_schedule_events: doctor % already has an appointment within % and %', NEW.doctor_id, NEW.start_date, NEW.end_date;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_doctor_schedule_events_no_appointment_conflict
+BEFORE INSERT OR UPDATE ON doctor_schedule_events
+FOR EACH ROW
+EXECUTE FUNCTION check_doctor_schedule_events_no_appointment_conflict();
+
+-- -------------------------------------------------------
 -- CLINICAL CONSULTATION RECORDS
 -- -------------------------------------------------------
 
@@ -563,4 +713,19 @@ CREATE TABLE patient_chat_messages (
     created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_patient_chat_messages_user   FOREIGN KEY (user_id)          REFERENCES users(id),
     CONSTRAINT fk_patient_chat_messages_author FOREIGN KEY (author_doctor_id) REFERENCES doctors(id)
+);
+
+-- A consultation session: a doctor's visit to a patient, saved as a draft while in
+-- progress and closed by finishing it (status -> 'finished', finished_at set).
+CREATE TABLE consultations (
+    id          SERIAL    PRIMARY KEY,
+    user_id     UUID      NOT NULL,
+    doctor_id   UUID      NOT NULL,
+    status      TEXT      NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'finished')),
+    started_at  TIMESTAMP NOT NULL,
+    finished_at TIMESTAMP,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_consultations_user   FOREIGN KEY (user_id)   REFERENCES users(id),
+    CONSTRAINT fk_consultations_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id)
 );

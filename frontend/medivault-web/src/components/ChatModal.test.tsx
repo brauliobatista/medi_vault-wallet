@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ChatModal from './ChatModal'
 import { getChatMessages, sendChatMessage } from '../api/medical'
+import { LanguageProvider } from '../i18n/LanguageContext'
 
 vi.mock('../api/medical', () => ({
   getChatMessages: vi.fn(),
@@ -19,7 +20,7 @@ describe('ChatModal', () => {
   it('shows an empty state when there are no messages', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<ChatModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ChatModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Sem mensagens ainda.')).toBeInTheDocument()
   })
@@ -29,7 +30,7 @@ describe('ChatModal', () => {
       { id: 1, authorDoctorId: 'd1', authorName: 'Dr. João Costa', message: 'Olá', createdAt: '2024-01-01T10:00:00' },
     ])
 
-    render(<ChatModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ChatModal userId="u1" onClose={() => {}} /></LanguageProvider>)
 
     expect(await screen.findByText('Dr. João Costa')).toBeInTheDocument()
     expect(screen.getByText('Olá')).toBeInTheDocument()
@@ -39,7 +40,7 @@ describe('ChatModal', () => {
     mockedGet.mockResolvedValue([])
     mockedSend.mockResolvedValue({ id: 2, authorDoctorId: 'd1', authorName: 'Dr. João Costa', message: 'nova', createdAt: '2024-01-01T10:00:00' })
 
-    render(<ChatModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ChatModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem mensagens ainda.')
 
     fireEvent.change(screen.getByPlaceholderText('Escrever mensagem…'), { target: { value: 'nova' } })
@@ -53,7 +54,7 @@ describe('ChatModal', () => {
   it('does not send an empty or whitespace-only message', async () => {
     mockedGet.mockResolvedValue([])
 
-    render(<ChatModal userId="u1" onClose={() => {}} />)
+    render(<LanguageProvider><ChatModal userId="u1" onClose={() => {}} /></LanguageProvider>)
     await screen.findByText('Sem mensagens ainda.')
 
     fireEvent.change(screen.getByPlaceholderText('Escrever mensagem…'), { target: { value: '   ' } })

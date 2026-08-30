@@ -5,7 +5,7 @@ using MediVault.Api.Entities;
 
 namespace MediVault.Api.Services;
 
-public class ClinicalRecordsService(MediVaultDbContext db)
+public class ClinicalRecordsService(MediVaultDbContext db, AccessControlService accessControl)
 {
     // --- Vital signs ---
 
@@ -146,5 +146,121 @@ public class ClinicalRecordsService(MediVaultDbContext db)
         entry.UpdatedAt = DateTime.UtcNow.ToString("o");
         await db.SaveChangesAsync();
         return (true, null);
+    }
+
+    // --- Consultation (draft / finish) ---
+
+    private async Task<Consultation> GetOrCreateConsultationAsync(string userId, string doctorId, SaveConsultationRequest req)
+    {
+        var entry = req.ConsultationId is int id
+            ? await db.Consultations.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId && c.DoctorId == doctorId)
+            : await db.Consultations.FirstOrDefaultAsync(c => c.UserId == userId && c.DoctorId == doctorId && c.Status == "draft");
+
+        if (entry is null)
+        {
+            var now = DateTime.UtcNow.ToString("o");
+            entry = new Consultation { UserId = userId, DoctorId = doctorId, Status = "draft", StartedAt = req.StartedAt, CreatedAt = now, UpdatedAt = now };
+            db.Consultations.Add(entry);
+        }
+        return entry;
+    }
+
+    public async Task<ConsultationDto> SaveConsultationDraftAsync(string userId, string doctorId, SaveConsultationRequest req)
+    {
+        var entry = await GetOrCreateConsultationAsync(userId, doctorId, req);
+        entry.UpdatedAt = DateTime.UtcNow.ToString("o");
+        await db.SaveChangesAsync();
+        return new ConsultationDto(entry.Id, entry.Status, entry.StartedAt, entry.FinishedAt, entry.UpdatedAt);
+    }
+
+    public async Task<ConsultationDto> FinishConsultationAsync(string userId, string doctorId, SaveConsultationRequest req)
+    {
+        var entry = await GetOrCreateConsultationAsync(userId, doctorId, req);
+        var now = DateTime.UtcNow.ToString("o");
+        entry.Status = "finished";
+        entry.FinishedAt = now;
+        entry.UpdatedAt = now;
+        await db.SaveChangesAsync();
+        await accessControl.FinishAccessForConsultationAsync(doctorId, userId);
+        return new ConsultationDto(entry.Id, entry.Status, entry.StartedAt, entry.FinishedAt, entry.UpdatedAt);
+    }
+
+    public async Task<List<FinishedConsultationDto>> GetFinishedConsultationsForDoctorAsync(string doctorId)
+    {
+        var rows = await db.Consultations
+            .Include(c => c.User)
+            .Where(c => c.DoctorId == doctorId && c.Status == "finished")
+            .OrderByDescending(c => c.FinishedAt)
+            .ToListAsync();
+
+        return rows.Select(c =>
+        {
+            var started = DateTime.Parse(c.StartedAt).ToUniversalTime();
+            var finished = DateTime.Parse(c.FinishedAt!).ToUniversalTime();
+            var minutes = (int)Math.Round((finished - started).TotalMinutes);
+            return new FinishedConsultationDto(
+                c.Id, c.UserId, $"{c.User.FirstName} {c.User.LastName}", c.User.Id, c.User.UtentNumber,
+                c.StartedAt, c.FinishedAt!, minutes);
+        }).ToList();
+    }
+
+    public async Task<List<DraftConsultationDto>> GetDraftConsultationsForDoctorAsync(string doctorId)
+    {
+        var rows = await db.Consultations
+            .Include(c => c.User)
+            .Where(c => c.DoctorId == doctorId && c.Status == "draft")
+            .OrderByDescending(c => c.UpdatedAt)
+            .ToListAsync();
+
+        return rows.Select(c => new DraftConsultationDto(
+            c.Id, c.UserId, $"{c.User.FirstName} {c.User.LastName}", c.User.Id, c.User.UtentNumber,
+            c.StartedAt, c.UpdatedAt)).ToList();
+    }
+
+    // --- Consultation activity (everything a doctor did during a consultation's time window) ---
+
+    public async Task<List<ConsultationActivityItemDto>> GetConsultationActivityAsync(
+        string userId, string doctorId, string startedAt, string? endedAt)
+    {
+        var windowEnd = endedAt ?? DateTime.UtcNow.ToString("o");
+        bool InWindow(string ts) =>
+            string.Compare(ts, startedAt, StringComparison.Ordinal) >= 0 &&
+            string.Compare(ts, windowEnd, StringComparison.Ordinal) <= 0;
+
+        var items = new List<ConsultationActivityItemDto>();
+
+        var anamneses = await db.Anamneses.Include(a => a.Doctor)
+            .Where(a => a.UserId == userId && a.DoctorId == doctorId).ToListAsync();
+        items.AddRange(anamneses.Where(a => InWindow(a.CreatedAt)).Select(a => new ConsultationActivityItemDto(
+            "anamnese", "Anamnese", a.ChiefComplaint ?? "Anamnese registada",
+            a.DoctorId, $"{a.Doctor.FirstName} {a.Doctor.LastName}", a.CreatedAt)));
+
+        var vitals = await db.VitalSigns.Include(v => v.Doctor)
+            .Where(v => v.UserId == userId && v.DoctorId == doctorId).ToListAsync();
+        items.AddRange(vitals.Where(v => InWindow(v.CreatedAt)).Select(v => new ConsultationActivityItemDto(
+            "vitais", "Sinais Vitais", v.Notes ?? "Registo de sinais vitais",
+            v.DoctorId, $"{v.Doctor.FirstName} {v.Doctor.LastName}", v.CreatedAt)));
+
+        var assessments = await db.ClinicalAssessments.Include(a => a.Doctor)
+            .Where(a => a.UserId == userId && a.DoctorId == doctorId).ToListAsync();
+        items.AddRange(assessments.Where(a => InWindow(a.CreatedAt)).Select(a => new ConsultationActivityItemDto(
+            "avaliacao", "Avaliação", a.Hypothesis,
+            a.DoctorId, $"{a.Doctor.FirstName} {a.Doctor.LastName}", a.CreatedAt)));
+
+        var medications = await db.ChronicMedications.Include(m => m.PrescribedByDoctor)
+            .Where(m => m.UserId == userId && m.PrescribedBy == doctorId).ToListAsync();
+        items.AddRange(medications.Where(m => InWindow(m.CreatedAt)).Select(m => new ConsultationActivityItemDto(
+            "prescricao", "Prescrição", m.Dose is not null ? $"{m.ActiveSubstance} {m.Dose}" : m.ActiveSubstance,
+            doctorId, m.PrescribedByDoctor is not null ? $"{m.PrescribedByDoctor.FirstName} {m.PrescribedByDoctor.LastName}" : "",
+            m.CreatedAt)));
+
+        var documents = await db.MedicalFiles.Include(f => f.UploadedByDoctor)
+            .Where(f => f.UserId == userId && f.UploadedBy == doctorId).ToListAsync();
+        items.AddRange(documents.Where(f => InWindow(f.UploadedAt)).Select(f => new ConsultationActivityItemDto(
+            "documento", "Documento", f.FileName,
+            doctorId, f.UploadedByDoctor is not null ? $"{f.UploadedByDoctor.FirstName} {f.UploadedByDoctor.LastName}" : "",
+            f.UploadedAt)));
+
+        return items.OrderByDescending(i => i.OccurredAt).ToList();
     }
 }

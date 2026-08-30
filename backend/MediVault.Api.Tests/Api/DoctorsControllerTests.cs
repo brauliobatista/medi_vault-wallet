@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using MediVault.Api.DTOs.Medical;
 using MediVault.Api.DTOs.Users;
+using MediVault.Api.Entities;
 
 namespace MediVault.Api.Tests.Api;
 
@@ -21,6 +23,9 @@ public class DoctorsControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<DoctorProfileDto>();
         Assert.Equal(doctor.Id, body!.Id);
+        Assert.Equal(doctor.InstitutionId, body.InstitutionId);
+        Assert.False(string.IsNullOrEmpty(body.InstitutionName));
+        Assert.False(string.IsNullOrEmpty(body.InstitutionType));
     }
 
     [Fact]
@@ -57,7 +62,7 @@ public class DoctorsControllerTests
         var doctor = TestDataFactory.SeedDoctor(db);
         var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
 
-        var response = await client.PutAsJsonAsync("/api/doctors/me", new UpdateDoctorRequest("new@example.com", "Cardiologia"));
+        var response = await client.PutAsJsonAsync("/api/doctors/me", new UpdateDoctorRequest("new@example.com", "Cardiologia", null));
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         using var verifyDb = factory.CreateDbContext();
@@ -90,5 +95,80 @@ public class DoctorsControllerTests
         var response = await client.PutAsJsonAsync("/api/doctors/me/password", new ChangePasswordRequest("wrong-password", "new-password"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    // --- GET /api/doctors/me/finished-consultations ---
+
+    [Fact]
+    public async Task GetFinishedConsultations_ReturnsOnlyThisDoctorsFinishedConsultations()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var otherDoctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-15).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.Consultations.Add(new Consultation { UserId = user.Id, DoctorId = doctor.Id, Status = "draft", StartedAt = DateTime.UtcNow.ToString("o") });
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = otherDoctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-15).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync("/api/doctors/me/finished-consultations");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<FinishedConsultationDto>>();
+        Assert.Single(body!);
+        Assert.Equal(user.Id, body![0].UserId);
+        Assert.Equal(user.Id, body[0].PatientPublicId);
+        Assert.Equal(user.UtentNumber, body[0].UtentNumber);
+    }
+
+    // --- GET /api/doctors/me/draft-consultations ---
+
+    [Fact]
+    public async Task GetDraftConsultations_ReturnsOnlyThisDoctorsDrafts()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var doctor = TestDataFactory.SeedDoctor(db);
+        var otherDoctor = TestDataFactory.SeedDoctor(db);
+        db.Consultations.Add(new Consultation { UserId = user.Id, DoctorId = doctor.Id, Status = "draft", StartedAt = DateTime.UtcNow.ToString("o") });
+        db.Consultations.Add(new Consultation
+        {
+            UserId = user.Id, DoctorId = doctor.Id, Status = "finished",
+            StartedAt = DateTime.UtcNow.AddMinutes(-15).ToString("o"), FinishedAt = DateTime.UtcNow.ToString("o"),
+        });
+        db.Consultations.Add(new Consultation { UserId = user.Id, DoctorId = otherDoctor.Id, Status = "draft", StartedAt = DateTime.UtcNow.ToString("o") });
+        db.SaveChanges();
+        var client = factory.CreateAuthorizedClient(doctor.Id, "Doctor", doctor.OrdemMedicosId);
+
+        var response = await client.GetAsync("/api/doctors/me/draft-consultations");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<DraftConsultationDto>>();
+        Assert.Single(body!);
+        Assert.Equal(user.Id, body![0].UserId);
+    }
+
+    [Fact]
+    public async Task GetDraftConsultations_ReturnsForbidden_ForPatientToken()
+    {
+        using var factory = new ApiTestFactory();
+        using var db = factory.CreateDbContext();
+        var user = TestDataFactory.SeedUser(db);
+        var client = factory.CreateAuthorizedClient(user.Id, "Patient", user.UtentNumber);
+
+        var response = await client.GetAsync("/api/doctors/me/draft-consultations");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }
