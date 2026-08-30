@@ -181,4 +181,8 @@ export const finishConsultation = (userId: string, data: object) =>
   api.post(`/patients/${userId}/consultation/finish`, data).then((r) => r.data)
 export const getFinishedConsultations = () =>
   api.get('/doctors/me/finished-consultations').then((r) => r.data)
+export const getDraftConsultations = () =>
+  api.get('/doctors/me/draft-consultations').then((r) => r.data)
+export const getConsultationActivity = (userId: string, startedAt: string, endedAt?: string) =>
+  api.get(`/patients/${userId}/consultation/activity`, { params: { startedAt, endedAt } }).then((r) => r.data)
 
