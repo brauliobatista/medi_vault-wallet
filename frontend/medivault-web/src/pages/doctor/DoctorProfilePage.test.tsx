@@ -14,6 +14,12 @@ vi.mock('../../api/medical', () => ({
   deleteDoctorPhoto: vi.fn(),
 }))
 
+// jsdom has no canvas/createImageBitmap, so exercise the photo flow with the
+// crop step stubbed to a pass-through.
+vi.mock('../../utils/image', () => ({
+  cropToSquare: (file: File) => Promise.resolve(file),
+}))
+
 const mockedGet = vi.mocked(getDoctorProfile)
 const mockedUpload = vi.mocked(uploadDoctorPhoto)
 const mockedDelete = vi.mocked(deleteDoctorPhoto)

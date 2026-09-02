@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom'
 import ProfilePage from './ProfilePage'
 import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto, getAccessRequests, changePassword } from '../../api/medical'
-import { saveUser } from '../../hooks/useAuth'
+import { saveUser, getUser } from '../../hooks/useAuth'
 import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../api/medical', () => ({
@@ -13,6 +13,12 @@ vi.mock('../../api/medical', () => ({
   deleteProfilePhoto: vi.fn(),
   getAccessRequests: vi.fn().mockResolvedValue([]),
   changePassword: vi.fn(),
+}))
+
+// jsdom has no canvas/createImageBitmap, so exercise the photo flow with the
+// crop step stubbed to a pass-through.
+vi.mock('../../utils/image', () => ({
+  cropToSquare: (file: File) => Promise.resolve(file),
 }))
 
 const mockedGetProfile = vi.mocked(getProfile)
@@ -54,33 +60,34 @@ describe('ProfilePage', () => {
     saveUser({ id: '1', name: 'Ana Silva', role: 'Patient' }, 'token')
   })
 
-  it('shows an "Adicionar foto" button and no photo <img> when there is no photo', async () => {
+  it('shows the upload and camera buttons and no photo <img> when there is no photo', async () => {
     mockedGetProfile.mockResolvedValue({ ...baseProfile })
 
     renderPage()
 
-    expect(await screen.findByRole('button', { name: /Adicionar foto/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Carregar foto/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Usar câmara/ })).toBeInTheDocument()
     expect(screen.queryByAltText('Foto de perfil')).not.toBeInTheDocument()
   })
 
   it('renders the photo file input with camera capture enabled for mobile', async () => {
     mockedGetProfile.mockResolvedValue({ ...baseProfile })
     const { container } = renderPage()
-    await screen.findByRole('button', { name: /Adicionar foto/ })
+    await screen.findByRole('button', { name: /Carregar foto/ })
 
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     expect(input).toHaveAttribute('capture', 'user')
     expect(input).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp')
   })
 
-  it('uploads the selected photo and refreshes the profile', async () => {
+  it('uploads the selected photo, refreshes the profile and syncs the stored user', async () => {
     mockedGetProfile
       .mockResolvedValueOnce({ ...baseProfile })
       .mockResolvedValueOnce({ ...baseProfile, photoUrl: '/uploads/profile-photos/ana.jpg' })
     mockedUpload.mockResolvedValue({ photoUrl: '/uploads/profile-photos/ana.jpg' })
 
     const { container } = renderPage()
-    await screen.findByRole('button', { name: /Adicionar foto/ })
+    await screen.findByRole('button', { name: /Carregar foto/ })
 
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['conteudo'], 'foto.jpg', { type: 'image/jpeg' })
@@ -88,6 +95,23 @@ describe('ProfilePage', () => {
 
     await waitFor(() => expect(mockedUpload).toHaveBeenCalledWith(file))
     expect(await screen.findByAltText('Foto de perfil')).toHaveAttribute('src', '/uploads/profile-photos/ana.jpg')
+    expect(getUser()?.photoUrl).toBe('/uploads/profile-photos/ana.jpg')
+  })
+
+  it('opens the camera modal and closes it on cancel', async () => {
+    mockedGetProfile.mockResolvedValue({ ...baseProfile })
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia: vi.fn().mockRejectedValue(new Error('no camera')) },
+    })
+
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: /Usar câmara/ }))
+    expect(await screen.findByText('Não foi possível aceder à câmara.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByText('Não foi possível aceder à câmara.')).not.toBeInTheDocument()
   })
 
   it('shows an error message when the upload fails', async () => {
@@ -95,7 +119,7 @@ describe('ProfilePage', () => {
     mockedUpload.mockRejectedValue(new Error('invalid file'))
 
     const { container } = renderPage()
-    await screen.findByRole('button', { name: /Adicionar foto/ })
+    await screen.findByRole('button', { name: /Carregar foto/ })
 
     const input = container.querySelector('input[type="file"]') as HTMLInputElement
     const file = new File(['conteudo'], 'malware.exe')
@@ -104,12 +128,13 @@ describe('ProfilePage', () => {
     expect(await screen.findByText(/Não foi possível carregar a imagem/)).toBeInTheDocument()
   })
 
-  it('removes the photo after confirming', async () => {
+  it('removes the photo after confirming and clears it from the stored user', async () => {
     mockedGetProfile
       .mockResolvedValueOnce({ ...baseProfile, photoUrl: '/uploads/profile-photos/ana.jpg' })
       .mockResolvedValueOnce({ ...baseProfile, photoUrl: null })
     mockedDelete.mockResolvedValue({} as never)
     vi.spyOn(window, 'confirm').mockReturnValue(true)
+    saveUser({ id: '1', name: 'Ana Silva', role: 'Patient', photoUrl: '/uploads/profile-photos/ana.jpg' }, 'token')
 
     renderPage()
     await screen.findByRole('button', { name: /Remover/ })
@@ -117,7 +142,8 @@ describe('ProfilePage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Remover/ }))
 
     await waitFor(() => expect(mockedDelete).toHaveBeenCalled())
-    expect(await screen.findByRole('button', { name: /Adicionar foto/ })).toBeInTheDocument()
+    expect(screen.queryByAltText('Foto de perfil')).not.toBeInTheDocument()
+    expect(getUser()?.photoUrl).toBeNull()
   })
 
   it('logs the patient out shortly after a successful password change', async () => {
@@ -127,7 +153,7 @@ describe('ProfilePage', () => {
     Object.defineProperty(window, 'location', { configurable: true, value: { ...originalLocation, href: '' } })
 
     const { container } = renderPage()
-    await screen.findByRole('button', { name: /Adicionar foto/ })
+    await screen.findByRole('button', { name: /Carregar foto/ })
 
     fireEvent.click(screen.getByText('Alterar password'))
     const [current, next, confirm] = container.querySelectorAll('input[type="password"]')
@@ -147,7 +173,7 @@ describe('ProfilePage', () => {
     mockedGetProfile.mockResolvedValue({ ...baseProfile })
 
     const { container } = renderPage()
-    await screen.findByRole('button', { name: /Adicionar foto/ })
+    await screen.findByRole('button', { name: /Carregar foto/ })
 
     fireEvent.click(screen.getByText('Alterar password'))
     const [current, next, confirm] = container.querySelectorAll('input[type="password"]')

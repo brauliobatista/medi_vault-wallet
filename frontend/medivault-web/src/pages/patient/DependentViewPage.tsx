@@ -12,6 +12,7 @@ import {
   getProfileFor, getQrCodeFor, toggleCardFor,
   getAccessRequestsFor, respondToRequestFor, deleteRequestFor,
 } from '../../api/medical'
+import { mediaUrl } from '../../api/client'
 import { useTranslation } from '../../i18n/LanguageContext'
 import type { AccessRequest } from '../../types/access'
 
@@ -138,7 +139,7 @@ export default function DependentViewPage() {
         </Link>
         {profile.photoUrl ? (
           <img
-            src={String(profile.photoUrl)}
+            src={mediaUrl(String(profile.photoUrl))}
             alt={String(profile.firstName ?? t('dependentView.familyMemberAlt'))}
             className="rounded-circle"
             style={{ width: 44, height: 44, objectFit: 'cover' }}
