@@ -104,6 +104,69 @@ body {
   color: white;
 }
 
+/* Doctor: quick access to the ongoing / draft consultations */
+.mv-nav-consultations {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mv-nav-section-title {
+  padding: 4px 12px 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #516480;
+}
+
+.mv-nav-consultation .mv-nav-consultation-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mv-nav-consultation-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mv-nav-consultation-tag {
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: #516480;
+}
+
+.mv-nav-consultation.active .mv-nav-consultation-tag {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.mv-consultation-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+}
+
+.mv-nav-consultations-more {
+  padding: 6px 12px 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #7d96b8;
+  text-decoration: none;
+}
+
+.mv-nav-consultations-more:hover {
+  color: #c9d4e4;
+  text-decoration: underline;
+}
+
 /* Bottom user area */
 .mv-sidebar-bottom {
   padding: 14px 12px;

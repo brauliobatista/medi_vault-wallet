@@ -9,6 +9,7 @@ vi.mock('../../api/medical', () => ({
   getDoctorNotes: vi.fn(),
   getChatMessages: vi.fn(),
   getConsultationActivity: vi.fn(),
+  getDraftConsultations: vi.fn().mockResolvedValue([]),
 }))
 
 const mockedGetNotes = vi.mocked(getDoctorNotes)

@@ -12,6 +12,7 @@ vi.mock('../../api/medical', () => ({
   changeDoctorPassword: vi.fn(),
   uploadDoctorPhoto: vi.fn(),
   deleteDoctorPhoto: vi.fn(),
+  getDraftConsultations: vi.fn().mockResolvedValue([]),
 }))
 
 const mockedGet = vi.mocked(getDoctorProfile)

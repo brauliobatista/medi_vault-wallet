@@ -73,6 +73,9 @@ export default {
   'doctorDashboard.finishedConsultationsTitle': 'Abgeschlossene Konsultationen',
   'doctorDashboard.utentNumberColumnLabel': 'Patientennummer',
   'doctorDashboard.viewButton': 'Anzeigen',
+  'doctorDashboard.draftConsultationsTitle': 'Konsultationsentwürfe',
+  'doctorDashboard.draftStandbySince': 'Im Standby seit {date}',
+  'doctorDashboard.resumeButton': 'Fortsetzen',
 
   // PatientViewPage (Konsultationsbildschirm)
   'patientRecord.cardSuspendedTitle': 'MediCard gesperrt',

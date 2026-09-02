@@ -18,6 +18,10 @@ export default {
   'nav.agendas': 'Agendas',
   'nav.accessRequests': 'Pedidos de Acesso',
   'nav.doctorProfile': 'Perfil',
+  'nav.consultationsSection': 'Consultas em curso',
+  'nav.consultationInProgress': 'Em curso',
+  'nav.consultationDraft': 'Rascunho',
+  'nav.consultationsSeeAll': 'Ver todas ({count})',
 
   'page.dashboard.subtitle': 'Visão geral da sua saúde',
   'page.profile.subtitle': 'As suas informações pessoais e médicas',

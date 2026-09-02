@@ -73,6 +73,9 @@ export default {
   'doctorDashboard.finishedConsultationsTitle': 'Consultas Finalizadas',
   'doctorDashboard.utentNumberColumnLabel': 'Nº de paciente',
   'doctorDashboard.viewButton': 'Ver',
+  'doctorDashboard.draftConsultationsTitle': 'Borradores de Consultas',
+  'doctorDashboard.draftStandbySince': 'En espera desde {date}',
+  'doctorDashboard.resumeButton': 'Reanudar',
 
   // PatientViewPage (pantalla de consulta)
   'patientRecord.cardSuspendedTitle': 'MediCard Suspendida',
