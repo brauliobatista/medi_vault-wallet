@@ -1,8 +1,23 @@
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api',
+  baseURL: API_URL,
 })
+
+// Uploaded files (profile photos, documents) are served by the API from its own
+// root, outside the /api prefix. A stored path like "/uploads/profile-photos/x.jpg"
+// only resolves against the frontend origin in local dev, where Vite proxies
+// /uploads to the API; in production the SPA and the API live on different
+// origins, so the path has to be resolved against the API origin explicitly or
+// the browser fetches it from the SPA host and gets index.html back.
+export function mediaUrl(path?: string | null): string | undefined {
+  if (!path) return undefined
+  if (/^https?:\/\//i.test(path)) return path
+  const origin = API_URL.replace(/\/api\/?$/, '')
+  return origin + (path.startsWith('/') ? path : `/${path}`)
+}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')

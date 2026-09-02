@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import api from '../../api/client'
+import api, { mediaUrl } from '../../api/client'
 import {
   getPatientSummary,
   getPathologies,
@@ -313,7 +313,7 @@ export default function PatientViewPage() {
         </Link>
 
         {summary?.photoUrl ? (
-          <img src={summary.photoUrl} alt={patientName || t('patientRecord.patientFallback')} className="consult-patient-photo" />
+          <img src={mediaUrl(summary.photoUrl)} alt={patientName || t('patientRecord.patientFallback')} className="consult-patient-photo" />
         ) : (
           <div className="consult-patient-photo consult-patient-photo-placeholder">
             {(patientName || 'U').charAt(0).toUpperCase()}

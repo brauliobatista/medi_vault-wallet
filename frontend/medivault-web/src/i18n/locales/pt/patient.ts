@@ -3,8 +3,6 @@
 export default {
   'profile.personalInfo': 'Informações pessoais',
   'profile.photoAlt': 'Foto de perfil',
-  'profile.changePhoto': 'Alterar foto',
-  'profile.addPhoto': 'Adicionar foto',
   'profile.removePhoto': 'Remover',
   'profile.photoUploadError': 'Não foi possível carregar a imagem. Use JPG, PNG ou WEBP até 5MB.',
   'profile.confirmRemovePhoto': 'Remover a foto de perfil?',

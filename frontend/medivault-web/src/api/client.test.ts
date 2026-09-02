@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
-import api from './client'
+import api, { mediaUrl } from './client'
 
 // axios doesn't expose interceptors for direct invocation, but each registered
 // interceptor is reachable via the (undocumented but stable) `.handlers` array,
@@ -81,5 +81,36 @@ describe('api client', () => {
 
     expect(localStorage.getItem('token')).toBe('valid-token')
     expect(window.location.href).toBe('')
+  })
+})
+
+describe('mediaUrl', () => {
+  it('returns undefined for a nullish path', () => {
+    expect(mediaUrl(null)).toBeUndefined()
+    expect(mediaUrl(undefined)).toBeUndefined()
+    expect(mediaUrl('')).toBeUndefined()
+  })
+
+  it('leaves an already-absolute URL untouched', () => {
+    expect(mediaUrl('https://cdn.example.com/a.jpg')).toBe('https://cdn.example.com/a.jpg')
+  })
+
+  it('keeps a root-relative path as-is when the API shares the frontend origin (dev proxy)', () => {
+    // The test env has VITE_API_URL=/api, so there is no separate API origin.
+    expect(mediaUrl('/uploads/profile-photos/a.jpg')).toBe('/uploads/profile-photos/a.jpg')
+    expect(mediaUrl('uploads/profile-photos/a.jpg')).toBe('/uploads/profile-photos/a.jpg')
+  })
+
+  it('resolves the path against the API origin when the API is on another origin (prod)', async () => {
+    vi.resetModules()
+    vi.stubEnv('VITE_API_URL', 'https://medivault-api.onrender.com/api')
+    const { mediaUrl: prodMediaUrl } = await import('./client')
+
+    expect(prodMediaUrl('/uploads/profile-photos/a.jpg')).toBe(
+      'https://medivault-api.onrender.com/uploads/profile-photos/a.jpg',
+    )
+
+    vi.unstubAllEnvs()
+    vi.resetModules()
   })
 })

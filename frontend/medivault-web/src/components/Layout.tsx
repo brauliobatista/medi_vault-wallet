@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AUTH_USER_UPDATED_EVENT, getUser, logout } from '../hooks/useAuth'
+import { mediaUrl } from '../api/client'
 import { usePendingAccessRequests } from '../hooks/usePendingAccessRequests'
 import { useTranslation } from '../i18n/LanguageContext'
 
@@ -96,7 +97,7 @@ export default function Layout({ children }: Props) {
   const initial = user?.name?.charAt(0).toUpperCase() ?? 'U'
   const fallbackAvatarContent = isDoctor ? '👩‍⚕️' : initial
   const avatar = user?.photoUrl
-    ? <img src={user.photoUrl} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    ? <img src={mediaUrl(user.photoUrl)} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
     : fallbackAvatarContent
 
   return (

@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Layout from '../../components/Layout'
 import LanguageSelector from '../../components/LanguageSelector'
 import CountryCodeSelect from '../../components/CountryCodeSelect'
 import Modal from '../../components/Modal'
+import ProfilePhotoCard from '../../components/ProfilePhotoCard'
 import { getProfile, updateProfile, uploadProfilePhoto, deleteProfilePhoto, changePassword } from '../../api/medical'
-import { logout } from '../../hooks/useAuth'
+import { logout, updateUserPhoto } from '../../hooks/useAuth'
 import { useTranslation } from '../../i18n/LanguageContext'
 import { isLanguage, type Language } from '../../i18n/languages'
 import { COUNTRY_CALLING_CODES } from '../../data/countryCallingCodes'
@@ -22,14 +23,11 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Record<string, unknown>>({})
   const [saved, setSaved] = useState(false)
-  const [photoError, setPhotoError] = useState<string | null>(null)
-  const [photoUploading, setPhotoUploading] = useState(false)
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
   const [showPw, setShowPw] = useState(false)
   const [pwError, setPwError] = useState('')
   const [pwOk, setPwOk] = useState(false)
   const [pendingCritical, setPendingCritical] = useState<{ field: string; value: boolean } | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getProfile().then((p) => {
@@ -58,28 +56,9 @@ export default function ProfilePage() {
     setProfile(p)
   }
 
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setPhotoError(null)
-    setPhotoUploading(true)
-    try {
-      await uploadProfilePhoto(file)
-      const p = await getProfile()
-      setProfile(p)
-    } catch {
-      setPhotoError(t('profile.photoUploadError'))
-    } finally {
-      setPhotoUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  const handlePhotoRemove = async () => {
-    if (!confirm(t('profile.confirmRemovePhoto'))) return
-    await deleteProfilePhoto()
-    const p = await getProfile()
-    setProfile(p)
+  const handlePhotoChange = async (url: string | null) => {
+    updateUserPhoto(url)
+    setProfile(await getProfile())
   }
 
   const handleLanguageSave = async (lang: Language) => {
@@ -137,50 +116,13 @@ export default function ProfilePage() {
         {saved && <div className="alert alert-success py-2">{t('common.savedSuccess')}</div>}
         {pwOk && <div className="alert alert-success py-2">{t('profile.passwordChangedSuccess')}</div>}
 
-        <div className="card border-0 shadow-sm mb-3">
-          <div className="card-body d-flex align-items-center gap-3 flex-wrap">
-            {profile.photoUrl ? (
-              <img
-                src={String(profile.photoUrl)}
-                alt={t('profile.photoAlt')}
-                className="rounded-circle"
-                style={{ width: 80, height: 80, objectFit: 'cover' }}
-              />
-            ) : (
-              <div
-                className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold"
-                style={{ width: 80, height: 80, fontSize: '1.75rem' }}
-              >
-                {String(profile.firstName ?? 'U').charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                capture="user"
-                className="d-none"
-                onChange={handlePhotoSelect}
-              />
-              <button
-                className="btn btn-outline-primary btn-sm me-2"
-                disabled={photoUploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {photoUploading
-                  ? <span className="spinner-border spinner-border-sm" />
-                  : <><i className="bi bi-camera me-1" />{profile.photoUrl ? t('profile.changePhoto') : t('profile.addPhoto')}</>}
-              </button>
-              {Boolean(profile.photoUrl) && (
-                <button className="btn btn-outline-danger btn-sm" onClick={handlePhotoRemove}>
-                  <i className="bi bi-trash me-1" />{t('profile.removePhoto')}
-                </button>
-              )}
-              {photoError && <div className="text-danger small mt-1">{photoError}</div>}
-            </div>
-          </div>
-        </div>
+        <ProfilePhotoCard
+          photoUrl={(profile.photoUrl as string | null) ?? null}
+          fallbackInitial={String(profile.firstName ?? 'U').charAt(0).toUpperCase()}
+          uploadPhoto={uploadProfilePhoto}
+          deletePhoto={deleteProfilePhoto}
+          onPhotoChange={handlePhotoChange}
+        />
 
         <div className="card border-0 shadow-sm">
           <div className="card-body">
