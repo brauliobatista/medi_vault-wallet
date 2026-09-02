@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import DoctorDashboardPage from './DoctorDashboardPage'
 import { saveUser } from '../../hooks/useAuth'
@@ -95,10 +95,11 @@ describe('DoctorDashboardPage', () => {
 
     renderPage()
 
-    expect(await screen.findByText('Rascunhos de Consultas')).toBeInTheDocument()
-    expect(screen.getByText('João Silva')).toBeInTheDocument()
-    expect(screen.getByText(/PUB123/)).toBeInTheDocument()
-    expect(screen.getByText(/123456789/)).toBeInTheDocument()
+    const heading = await screen.findByText('Rascunhos de Consultas')
+    const card = within(heading.closest('.dash-card') as HTMLElement)
+    expect(card.getByText('João Silva')).toBeInTheDocument()
+    expect(card.getByText(/PUB123/)).toBeInTheDocument()
+    expect(card.getByText(/123456789/)).toBeInTheDocument()
   })
 
   it('resumes a draft consultation on "Retomar", carrying the consultation id and start time', async () => {

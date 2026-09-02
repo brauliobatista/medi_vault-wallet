@@ -9,6 +9,7 @@ import { LanguageProvider } from '../../i18n/LanguageContext'
 
 vi.mock('../../api/medical', () => ({
   getAccessRequests: vi.fn(),
+  getDraftConsultations: vi.fn().mockResolvedValue([]),
 }))
 
 const mockedGetAccessRequests = vi.mocked(getAccessRequests)

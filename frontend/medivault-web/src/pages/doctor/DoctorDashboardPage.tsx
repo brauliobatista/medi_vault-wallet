@@ -314,7 +314,7 @@ export default function DoctorDashboardPage() {
             <div className="dash-card-header">
               <div className="dash-card-heading">
                 <span className="dash-card-icon dash-card-icon-blue"><i className="bi bi-hourglass-split" /></span>
-                <span className="dash-card-title">Rascunhos de Consultas</span>
+                <span className="dash-card-title">{t('doctorDashboard.draftConsultationsTitle')}</span>
               </div>
             </div>
 
@@ -324,9 +324,9 @@ export default function DoctorDashboardPage() {
                 <div className="flex-grow-1 d-flex justify-content-between align-items-center flex-wrap gap-2">
                   <div>
                     <div className="consult-context-value fw-semibold">{c.patientName}</div>
-                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · Nº utente: {c.utentNumber}</div>
+                    <div className="consult-context-sub font-monospace">{c.patientPublicId} · {t('doctorDashboard.utentNumberColumnLabel')}: {c.utentNumber}</div>
                     <div className="consult-context-sub">
-                      Em standby desde {c.updatedAt.slice(0, 10)}
+                      {t('doctorDashboard.draftStandbySince', { date: c.updatedAt.slice(0, 10) })}
                     </div>
                   </div>
                   <button
@@ -338,7 +338,7 @@ export default function DoctorDashboardPage() {
                       },
                     })}
                   >
-                    <i className="bi bi-play-fill" />Retomar
+                    <i className="bi bi-play-fill" />{t('doctorDashboard.resumeButton')}
                   </button>
                 </div>
               </div>

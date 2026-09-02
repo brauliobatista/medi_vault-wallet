@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AUTH_USER_UPDATED_EVENT, getUser, logout } from '../hooks/useAuth'
 import { usePendingAccessRequests } from '../hooks/usePendingAccessRequests'
+import { useActiveConsultation } from '../hooks/useActiveConsultation'
 import { useTranslation } from '../i18n/LanguageContext'
 
 interface NavItem {
@@ -64,6 +65,15 @@ export default function Layout({ children }: Props) {
   const navItems = isDoctor ? getDoctorNav(t) : getPatientNav(t)
   const pageInfo = getPageInfo(t)
   const { pendingRequests, count: pendingCount } = usePendingAccessRequests()
+  const { active: activeConsultation, drafts: draftConsultations } = useActiveConsultation()
+  const draftsToShow = draftConsultations.filter(
+    (d) => !activeConsultation || d.userId !== activeConsultation.userId,
+  )
+  // The sidebar shows at most 3 consultations; the rest stay reachable from the
+  // dashboard's full drafts list.
+  const MAX_SIDEBAR_CONSULTATIONS = 3
+  const visibleDrafts = draftsToShow.slice(0, MAX_SIDEBAR_CONSULTATIONS - (activeConsultation ? 1 : 0))
+  const totalConsultations = (activeConsultation ? 1 : 0) + draftsToShow.length
 
   useEffect(() => {
     const handleUserUpdated = () => setUser(getUser())
@@ -128,6 +138,61 @@ export default function Layout({ children }: Props) {
               <span>{item.label}</span>
             </Link>
           ))}
+
+          {isDoctor && (activeConsultation || draftsToShow.length > 0) && (
+            <div className="mv-nav-consultations">
+              <div className="mv-nav-section-title">{t('nav.consultationsSection')}</div>
+
+              {activeConsultation && (
+                <Link
+                  to={`/doctor/patient/${activeConsultation.userId}`}
+                  state={{
+                    publicId: activeConsultation.publicId,
+                    patientName: activeConsultation.patientName,
+                    consultationId: activeConsultation.consultationId ?? undefined,
+                    startedAt: activeConsultation.startedAt,
+                  }}
+                  className={`mv-nav-item mv-nav-consultation${
+                    currentPath === `/doctor/patient/${activeConsultation.userId}` ? ' active' : ''
+                  }`}
+                  onClick={closeMenu}
+                >
+                  <span className="mv-consultation-dot" />
+                  <span className="mv-nav-consultation-body">
+                    <span className="mv-nav-consultation-name">{activeConsultation.patientName}</span>
+                    <span className="mv-nav-consultation-tag">{t('nav.consultationInProgress')}</span>
+                  </span>
+                </Link>
+              )}
+
+              {visibleDrafts.map((d) => (
+                <Link
+                  key={d.id}
+                  to={`/doctor/patient/${d.userId}`}
+                  state={{
+                    publicId: d.patientPublicId,
+                    patientName: d.patientName,
+                    consultationId: d.id,
+                    startedAt: d.startedAt,
+                  }}
+                  className="mv-nav-item mv-nav-consultation"
+                  onClick={closeMenu}
+                >
+                  <i className="bi bi-hourglass-split" />
+                  <span className="mv-nav-consultation-body">
+                    <span className="mv-nav-consultation-name">{d.patientName}</span>
+                    <span className="mv-nav-consultation-tag">{t('nav.consultationDraft')}</span>
+                  </span>
+                </Link>
+              ))}
+
+              {totalConsultations > MAX_SIDEBAR_CONSULTATIONS && (
+                <Link to="/doctor" className="mv-nav-consultations-more" onClick={closeMenu}>
+                  {t('nav.consultationsSeeAll', { count: totalConsultations })}
+                </Link>
+              )}
+            </div>
+          )}
         </nav>
 
         <div className="mv-sidebar-bottom">

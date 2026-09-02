@@ -49,6 +49,7 @@ vi.mock('../../api/medical', () => ({
   getDoctorNotes: vi.fn(),
   saveConsultationDraft: vi.fn(),
   finishConsultation: vi.fn(),
+  getDraftConsultations: vi.fn().mockResolvedValue([]),
 }))
 
 const mockedApiGet = vi.mocked(api.get)
@@ -140,6 +141,37 @@ describe('PatientViewPage', () => {
     fireEvent.click(draftButton)
 
     await waitFor(() => expect(mockedSaveDraft).toHaveBeenCalledWith('u1', expect.objectContaining({ consultationId: 5 })))
+  })
+
+  it('registers the open consultation as the active one so the sidebar can link back to it', async () => {
+    renderPage({ patientName: 'João Silva', publicId: 'PUB123', startedAt: '2026-08-19T10:00:00Z' })
+
+    await screen.findByRole('button', { name: /Guardar rascunho/ })
+
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem('activeConsultation') ?? 'null')
+      expect(stored).toMatchObject({ userId: 'u1', patientName: 'João Silva', publicId: 'PUB123' })
+    })
+  })
+
+  it('clears the active consultation once the consultation is finished', async () => {
+    mockedFinish.mockResolvedValue({ id: 7, status: 'finished', startedAt: '2026-08-19T10:00:00Z', finishedAt: '2026-08-19T10:20:00Z', updatedAt: '2026-08-19T10:20:00Z' })
+    renderPage({ patientName: 'João Silva', publicId: 'PUB123', startedAt: '2026-08-19T10:00:00Z' })
+
+    const finishButton = await screen.findByRole('button', { name: /Finalizar consulta/ })
+    await waitFor(() => expect(localStorage.getItem('activeConsultation')).not.toBeNull())
+
+    fireEvent.click(finishButton)
+
+    await waitFor(() => expect(localStorage.getItem('activeConsultation')).toBeNull())
+  })
+
+  it('does not keep an active consultation when access is denied', async () => {
+    mockedGetAccessStatus.mockResolvedValue({ hasAccess: false, reason: 'no_access' })
+    renderPage({ patientName: 'João Silva', publicId: 'PUB123', startedAt: '2026-08-19T10:00:00Z' })
+
+    expect(await screen.findByText('Este utente ainda não aprovou o seu pedido de acesso.')).toBeInTheDocument()
+    await waitFor(() => expect(localStorage.getItem('activeConsultation')).toBeNull())
   })
 
   it('shows an empty state in the Notas panel when there are no notes', async () => {

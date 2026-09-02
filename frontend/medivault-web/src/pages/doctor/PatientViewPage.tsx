@@ -30,6 +30,7 @@ import AnamneseModal from '../../components/AnamneseModal'
 import DocumentsModal from '../../components/DocumentsModal'
 import ChatModal from '../../components/ChatModal'
 import NotesModal from '../../components/NotesModal'
+import { setActiveConsultation, clearActiveConsultation } from '../../hooks/useActiveConsultation'
 import { useTranslation } from '../../i18n/LanguageContext'
 
 type CenterTab = 'anamnese' | 'exame' | 'diagnostico' | 'plano' | 'prescricao' | 'documentos'
@@ -152,6 +153,24 @@ export default function PatientViewPage() {
     return () => clearInterval(timerId)
   }, [startedAt])
 
+  // Keep the sidebar "active consultation" shortcut pointing here while the
+  // doctor navigates around the app. Cleared only when the consultation is
+  // finished (see handleFinishConsultation) or when access is denied.
+  useEffect(() => {
+    if (deniedReason || !patientName) return
+    setActiveConsultation({
+      userId: uid,
+      patientName,
+      publicId,
+      consultationId,
+      startedAt: startedAt.toISOString(),
+    })
+  }, [uid, patientName, publicId, consultationId, deniedReason, startedAt])
+
+  useEffect(() => {
+    if (deniedReason) clearActiveConsultation()
+  }, [deniedReason])
+
   useEffect(() => {
     api.get(`/users/${uid}/public-info`).then((r) => {
       if (!navState?.patientName) {
@@ -249,6 +268,7 @@ export default function PatientViewPage() {
     setFinishing(true)
     try {
       await finishConsultation(uid, { consultationId, startedAt: startedAt.toISOString() })
+      clearActiveConsultation()
       navigate('/doctor')
     } catch {
       setFinishing(false)
